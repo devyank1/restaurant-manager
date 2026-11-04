@@ -163,6 +163,14 @@ export async function seedDemo(
 ): Promise<{ restauranteId: string }> {
   return prisma.$transaction(
     async (tx) => {
+      // Mantém os tokens já gravados nas etiquetas NFC da demo.
+      const mesasAnteriores = await tx.mesa.findMany({
+        where: { restaurante: { slug: SLUG_DEMO } },
+      });
+      const tokenPorNumero = new Map(
+        mesasAnteriores.map((mesa) => [mesa.numero, mesa.token]),
+      );
+
       await tx.restaurante.deleteMany({ where: { slug: SLUG_DEMO } });
 
       const restaurante = await tx.restaurante.create({
@@ -180,7 +188,7 @@ export async function seedDemo(
         data: Array.from({ length: TOTAL_MESAS }, (_, i) => ({
           restauranteId,
           numero: i + 1,
-          token: gerarTokenMesa(),
+          token: tokenPorNumero.get(i + 1) ?? gerarTokenMesa(),
         })),
       });
 

@@ -40,4 +40,11 @@ describe('seedDemo', () => {
     expect(tamanho.opcoes.map((o) => o.nome)).toEqual(['P', 'M', 'G']);
     expect(pizza.grupos.find((g) => g.nome === 'Sabores')!.max).toBe(2);
   });
+
+  it('mantém os tokens das mesas entre execuções', async () => {
+    const antes = await prisma.mesa.findMany({ orderBy: { numero: 'asc' } });
+    await seedDemo(prisma);
+    const depois = await prisma.mesa.findMany({ orderBy: { numero: 'asc' } });
+    expect(depois.map((m) => m.token)).toEqual(antes.map((m) => m.token));
+  });
 });
