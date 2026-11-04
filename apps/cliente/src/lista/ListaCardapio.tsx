@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { CardapioPublico } from '../api/tipos'
 import { useCarrinho } from '../carrinho/useCarrinho'
+import StoryViewer from '../story/StoryViewer'
 import CartaoPrato from './CartaoPrato'
 import { DESTAQUES, pratosDoFiltro } from './filtro'
 import WifiSheet from './WifiSheet'
@@ -19,6 +20,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const [filtro, setFiltro] = useState(chips[0]?.id ?? '')
   const [wifiAberto, setWifiAberto] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [storyAberto, setStoryAberto] = useState<number | null>(null)
   const { quantidade } = useCarrinho(token)
 
   const pratos = pratosDoFiltro(cardapio, filtro)
@@ -59,8 +61,8 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
       </nav>
 
       <main className="lista">
-        {pratos.map((prato) => (
-          <CartaoPrato key={prato.id} prato={prato} onAbrir={() => {}} />
+        {pratos.map((prato, i) => (
+          <CartaoPrato key={prato.id} prato={prato} onAbrir={() => setStoryAberto(i)} />
         ))}
 
         {restaurante.googleAvaliacaoUrl && (
@@ -84,6 +86,15 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
           {`🧾 Realizar pedido (${quantidade})`}
         </button>
       </footer>
+
+      {storyAberto !== null && (
+        <StoryViewer
+          pratos={pratos}
+          indiceInicial={storyAberto}
+          onFechar={() => setStoryAberto(null)}
+          onAdicionar={() => {}}
+        />
+      )}
 
       {wifiAberto && restaurante.wifi && (
         <WifiSheet ssid={restaurante.wifi.ssid} senha={restaurante.wifi.senha} onFechar={() => setWifiAberto(false)} />

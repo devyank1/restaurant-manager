@@ -114,6 +114,13 @@ describe('ListaCardapio', () => {
     ).toBeInTheDocument()
   })
 
+  it('tocar no cartão abre o story no prato tocado', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(cartao('Pizza Margherita'))
+    expect(screen.getByRole('dialog', { name: 'Pizza Margherita' })).toBeInTheDocument()
+    expect(screen.getByText('2 de 2')).toBeInTheDocument()
+  })
+
   it('mostra Realizar pedido com a quantidade do carrinho', () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
     expect(screen.getByRole('button', { name: /Realizar pedido \(0\)/ })).toBeInTheDocument()
