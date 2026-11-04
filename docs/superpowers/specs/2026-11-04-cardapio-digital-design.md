@@ -143,7 +143,7 @@ Todos os passos geram eventos persistidos (`ChamadoCriado`, `PedidoCriado`, `Ped
 | Etapa | Entrega | Demo mostra |
 |---|---|---|
 | 0 | Monorepo (pnpm), API NestJS, Postgres/Prisma via Docker Compose, seed de um restaurante de exemplo | — |
-| 1 | Cardápio do cliente: lista, filtros, preço com desconto, stories com vídeo, botão Wi-Fi, avaliação Google | Já dá para mostrar ao dono |
+| 1 | Cardápio do cliente: lista, filtros, preço com desconto, stories com vídeo, botão Wi-Fi, avaliação Google, seleção de opções + observação e **carrinho local** (só no aparelho; "Realizar pedido" e "Chamar atendente" visíveis, ativos na Etapa 2). Vídeos da demo: Pexels comprimidos, servidos estáticos. Visual aprovado: `.superpowers/brainstorm/*/content/cardapio-v1.html` | Já dá para mostrar ao dono |
 | 2 | Carrinho compartilhado, sessão de mesa, chamar garçom, app do garçom, escolha do garçom, repasse do chamado sem resposta, confirmação na mesa, Push | Garçom recebe e confirma |
 | 3 | Telas de produção por estação (cozinha/bar), status por item, conta da mesa e fechamento, janela de cancelamento | **Demo completa de ponta a ponta** |
 | 4 | Painel do dono: cadastros, upload e conversão de vídeo, configurações, relatórios, regenerar token; super-admin para criar restaurantes | Produto vendável |
