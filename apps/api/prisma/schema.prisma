@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoGrupoOpcao {
+  UNICA
+  MULTIPLA
+  SABORES
+}
+
+model Restaurante {
+  id                 String   @id @default(uuid())
+  nome               String
+  slug               String   @unique
+  logoUrl            String?
+  wifiSsid           String?
+  wifiSenha          String?
+  googleAvaliacaoUrl String?
+  criadoEm           DateTime @default(now())
+
+  mesas       Mesa[]
+  categorias  Categoria[]
+  pratos      Prato[]
+  gruposOpcao GrupoOpcao[]
+  opcoes      Opcao[]
+}
+
+model Mesa {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  numero        Int
+  token         String      @unique
+  criadoEm      DateTime    @default(now())
+
+  @@unique([restauranteId, numero])
+}
+
+model Categoria {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  nome          String
+  ordem         Int
+  criadoEm      DateTime    @default(now())
+
+  pratos Prato[]
+}
+
+model Prato {
+  id                       String      @id @default(uuid())
+  restauranteId            String
+  restaurante              Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  categoriaId              String
+  categoria                Categoria   @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  nome                     String
+  descricao                String
+  precoCentavos            Int
+  precoPromocionalCentavos Int?
+  destaque                 Boolean     @default(false)
+  esgotado                 Boolean     @default(false)
+  videoUrl                 String?
+  posterUrl                String?
+  ordem                    Int
+  criadoEm                 DateTime    @default(now())
+
+  grupos GrupoOpcao[]
+}
+
+model GrupoOpcao {
+  id            String         @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante    @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  pratoId       String
+  prato         Prato          @relation(fields: [pratoId], references: [id], onDelete: Cascade)
+  nome          String
+  tipo          TipoGrupoOpcao
+  obrigatorio   Boolean
+  min           Int
+  max           Int
+  ordem         Int
+  criadoEm      DateTime       @default(now())
+
+  opcoes Opcao[]
+}
+
+model Opcao {
+  id                       String      @id @default(uuid())
+  restauranteId            String
+  restaurante              Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  grupoId                  String
+  grupo                    GrupoOpcao  @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  nome                     String
+  precoCentavos            Int
+  precoPromocionalCentavos Int?
+  ordem                    Int
+  criadoEm                 DateTime    @default(now())
+}

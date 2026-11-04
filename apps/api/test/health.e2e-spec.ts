@@ -23,6 +23,6 @@ describe('GET /health', () => {
     return request(app.getHttpServer())
       .get('/health')
       .expect(200)
-      .expect({ status: 'ok' });
+      .expect({ status: 'ok', db: 'ok' });
   });
 });
