@@ -47,4 +47,15 @@ describe('seedDemo', () => {
     const depois = await prisma.mesa.findMany({ orderBy: { numero: 'asc' } });
     expect(depois.map((m) => m.token)).toEqual(antes.map((m) => m.token));
   });
+
+  it('pratos da demo apontam para os vídeos e posters estáticos', async () => {
+    const mix = await prisma.prato.findFirstOrThrow({
+      where: { nome: 'Mix da Casa' },
+    });
+    expect(mix.videoUrl).toBe('/demo/videos/mix-da-casa.mp4');
+    expect(mix.posterUrl).toBe('/demo/videos/mix-da-casa.jpg');
+    expect(
+      await prisma.prato.count({ where: { videoUrl: { not: null } } }),
+    ).toBe(6);
+  });
 });

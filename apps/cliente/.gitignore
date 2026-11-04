@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vídeos originais (pesados) ficam fora do git; só os convertidos em public/ entram.
+videos-brutos/*.mp4
