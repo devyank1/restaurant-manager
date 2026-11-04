@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { buscarCardapio, ErroMesaNaoEncontrada } from './api/cardapio'
 import type { CardapioPublico } from './api/tipos'
+import ListaCardapio from './lista/ListaCardapio'
 import { extrairToken } from './rota'
 
 type Estado =
@@ -51,6 +52,6 @@ export default function App() {
         </main>
       )
     case 'pronto':
-      return <h1>{estado.cardapio.restaurante.nome}</h1>
+      return <ListaCardapio cardapio={estado.cardapio} token={token ?? ''} />
   }
 }

@@ -24,6 +24,9 @@ describe('App', () => {
     fetchMock.mockReturnValueOnce(resposta(200, cardapioDemo))
     render(<App />)
     expect(await screen.findByText('Cantina Demo')).toBeInTheDocument()
+    // A tela carregada é a lista do cardápio, não só o título.
+    expect(screen.getByText('Mesa 7')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Realizar pedido/ })).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/api/publico/mesas/token-da-mesa/cardapio')
   })
 
