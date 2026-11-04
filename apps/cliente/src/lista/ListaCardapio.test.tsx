@@ -1,14 +1,11 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CardapioPublico } from '../api/tipos'
-import { formatarReais } from '../preco/preco'
+import { reais } from '../test/reais'
 import { cardapioDemo } from '../test/fixtures'
 import ListaCardapio from './ListaCardapio'
 import { pratosDoFiltro } from './filtro'
-
-// A Testing Library normaliza o espaço sem quebra (U+00A0) do texto renderizado, mas não o do esperado.
-const reais = (centavos: number) => formatarReais(centavos).replace(/ /g, ' ')
 
 const cartao = (nome: string) => screen.getByRole('button', { name: new RegExp(nome) })
 
@@ -119,6 +116,41 @@ describe('ListaCardapio', () => {
     await userEvent.click(cartao('Pizza Margherita'))
     expect(screen.getByRole('dialog', { name: 'Pizza Margherita' })).toBeInTheDocument()
     expect(screen.getByText('2 de 2')).toBeInTheDocument()
+  })
+
+  it('adicionar prato sem opções pelo story soma no pedido', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(cartao('Mix da Casa'))
+    await userEvent.click(screen.getByRole('button', { name: '+ Adicionar ao pedido' }))
+    expect(screen.getByText('Adicionado ao pedido')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Realizar pedido \(1\)/ })).toBeInTheDocument()
+  })
+
+  it('o aviso some depois de alguns segundos', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+      await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
+      expect(screen.getByRole('status')).toBeInTheDocument()
+      act(() => vi.advanceTimersByTime(3000))
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('adicionar prato com opções abre o seletor', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(cartao('Pizza Margherita'))
+    await userEvent.click(screen.getByRole('button', { name: '+ Adicionar ao pedido' }))
+    expect(screen.getByRole('dialog', { name: 'Opções de Pizza Margherita' })).toBeInTheDocument()
+  })
+
+  it('Realizar pedido abre o carrinho', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(screen.getByRole('button', { name: /Realizar pedido/ }))
+    expect(screen.getByRole('dialog', { name: 'Seu pedido' })).toBeInTheDocument()
+    expect(screen.getByText('Seu pedido está vazio')).toBeInTheDocument()
   })
 
   it('mostra Realizar pedido com a quantidade do carrinho', () => {

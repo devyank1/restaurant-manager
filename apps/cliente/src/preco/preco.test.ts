@@ -10,7 +10,7 @@ import {
 
 describe('formatarReais', () => {
   it('formata centavos em reais pt-BR', () => {
-    expect(formatarReais(5990)).toBe('R$ 59,90')
+    expect(formatarReais(5990)).toBe(`R$${String.fromCharCode(0xa0)}59,90`)
   })
 })
 

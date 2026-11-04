@@ -1,6 +1,10 @@
-import { useState } from 'react'
-import type { CardapioPublico } from '../api/tipos'
+import { useEffect, useState } from 'react'
+import type { CardapioPublico, PratoPublico } from '../api/tipos'
+import type { ItemCarrinho } from '../carrinho/carrinho'
 import { useCarrinho } from '../carrinho/useCarrinho'
+import CarrinhoSheet from '../pedido/CarrinhoSheet'
+import SeletorOpcoes from '../pedido/SeletorOpcoes'
+import { precoUnitario } from '../preco/preco'
 import StoryViewer from '../story/StoryViewer'
 import CartaoPrato from './CartaoPrato'
 import { DESTAQUES, pratosDoFiltro } from './filtro'
@@ -8,6 +12,7 @@ import WifiSheet from './WifiSheet'
 import './lista.css'
 
 const AVISO_ATENDENTE = 'Em breve: o garçom receberá seu chamado por aqui.'
+const DURACAO_AVISO_MS = 3000
 
 export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioPublico; token: string }) {
   const { restaurante, mesa, categorias } = cardapio
@@ -19,11 +24,43 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
 
   const [filtro, setFiltro] = useState(chips[0]?.id ?? '')
   const [wifiAberto, setWifiAberto] = useState(false)
-  const [aviso, setAviso] = useState<string | null>(null)
+  // `id` muda a cada aviso, para reiniciar o tempo mesmo com o mesmo texto.
+  const [aviso, setAviso] = useState<{ texto: string; id: number } | null>(null)
   const [storyAberto, setStoryAberto] = useState<number | null>(null)
-  const { quantidade } = useCarrinho(token)
+  const [pratoComOpcoes, setPratoComOpcoes] = useState<PratoPublico | null>(null)
+  const [carrinhoAberto, setCarrinhoAberto] = useState(false)
+  const { itens, despachar, total, quantidade } = useCarrinho(token)
 
   const pratos = pratosDoFiltro(cardapio, filtro)
+
+  useEffect(() => {
+    if (!aviso) return
+    const temporizador = setTimeout(() => setAviso(null), DURACAO_AVISO_MS)
+    return () => clearTimeout(temporizador)
+  }, [aviso])
+
+  const mostrarAviso = (texto: string) => setAviso({ texto, id: Date.now() })
+
+  const adicionarAoPedido = (item: Omit<ItemCarrinho, 'id'>) => {
+    despachar({ tipo: 'adicionar', item })
+    mostrarAviso('Adicionado ao pedido')
+  }
+
+  const aoAdicionar = (prato: PratoPublico) => {
+    if (prato.grupos.length > 0) {
+      setPratoComOpcoes(prato)
+      return
+    }
+    adicionarAoPedido({
+      pratoId: prato.id,
+      nome: prato.nome,
+      resumoOpcoes: '',
+      selecao: {},
+      observacao: '',
+      quantidade: 1,
+      precoUnitarioCentavos: precoUnitario(prato, {}),
+    })
+  }
 
   return (
     <div className="lista-tela">
@@ -74,15 +111,15 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
 
       {aviso && (
         <p className="aviso" role="status">
-          {aviso}
+          {aviso.texto}
         </p>
       )}
 
       <footer className="barra-fundo">
-        <button type="button" className="botao botao--secundario" onClick={() => setAviso(AVISO_ATENDENTE)}>
+        <button type="button" className="botao botao--secundario" onClick={() => mostrarAviso(AVISO_ATENDENTE)}>
           🙋 Chamar atendente
         </button>
-        <button type="button" className="botao botao--primario">
+        <button type="button" className="botao botao--primario" onClick={() => setCarrinhoAberto(true)}>
           {`🧾 Realizar pedido (${quantidade})`}
         </button>
       </footer>
@@ -92,8 +129,23 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
           pratos={pratos}
           indiceInicial={storyAberto}
           onFechar={() => setStoryAberto(null)}
-          onAdicionar={() => {}}
+          onAdicionar={aoAdicionar}
         />
+      )}
+
+      {pratoComOpcoes && (
+        <SeletorOpcoes
+          prato={pratoComOpcoes}
+          onCancelar={() => setPratoComOpcoes(null)}
+          onConfirmar={(item) => {
+            adicionarAoPedido(item)
+            setPratoComOpcoes(null)
+          }}
+        />
+      )}
+
+      {carrinhoAberto && (
+        <CarrinhoSheet itens={itens} total={total} despachar={despachar} onFechar={() => setCarrinhoAberto(false)} />
       )}
 
       {wifiAberto && restaurante.wifi && (
