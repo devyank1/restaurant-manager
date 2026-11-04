@@ -9,13 +9,20 @@ import {
   type ItemCarrinho,
 } from './carrinho'
 
-export function useCarrinho(token: string): {
+/** `pratosDisponiveis`: ids do cardápio atual; itens de pratos removidos são descartados. */
+export function useCarrinho(
+  token: string,
+  pratosDisponiveis?: ReadonlySet<string>,
+): {
   itens: ItemCarrinho[]
   despachar: (acao: AcaoCarrinho) => void
   total: number
   quantidade: number
 } {
-  const [itens, despachar] = useReducer(reduzirCarrinho, token, carregarCarrinho)
+  const [itens, despachar] = useReducer(reduzirCarrinho, token, (t) => {
+    const salvos = carregarCarrinho(t)
+    return pratosDisponiveis ? salvos.filter((item) => pratosDisponiveis.has(item.pratoId)) : salvos
+  })
 
   useEffect(() => {
     salvarCarrinho(token, itens)

@@ -53,6 +53,38 @@ describe('StoryViewer', () => {
     expect(screen.getByText('3 de 5')).toBeInTheDocument()
   })
 
+  it('botões de próximo e anterior navegam', async () => {
+    renderizar(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo prato' }))
+    expect(screen.getByText('3 de 5')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Prato anterior' }))
+    expect(screen.getByText('2 de 5')).toBeInTheDocument()
+  })
+
+  it('deslizar começando no nome do prato também avança', () => {
+    renderizar(1)
+    const nome = screen.getByRole('heading', { name: 'Pizza Margherita' })
+    fireEvent.pointerDown(nome, { clientY: 500 })
+    fireEvent.pointerUp(nome, { clientY: 400 })
+    expect(screen.getByText('3 de 5')).toBeInTheDocument()
+  })
+
+  it('se o navegador bloquear o som, volta para mudo e segue tocando', async () => {
+    const original = HTMLMediaElement.prototype.play
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      return this.muted ? Promise.resolve() : Promise.reject(new DOMException('', 'NotAllowedError'))
+    }
+    try {
+      renderizar(0)
+      await userEvent.click(screen.getByRole('button', { name: 'Ativar som' }))
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+      expect(await screen.findByRole('button', { name: 'Ativar som' })).toBeInTheDocument()
+      expect(videoPrincipal().muted).toBe(true)
+    } finally {
+      HTMLMediaElement.prototype.play = original
+    }
+  })
+
   it('não passa do último prato', () => {
     renderizar(4)
     fireEvent.keyDown(window, { key: 'ArrowDown' })

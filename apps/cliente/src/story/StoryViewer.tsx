@@ -5,6 +5,9 @@ import './story.css'
 
 const LIMIAR_DESLIZE = 50
 const LIMIAR_TOQUE = 10
+// Navegadores antigos devolvem undefined em vez de Promise.
+const tocar = (video: HTMLVideoElement) => Promise.resolve(video.play())
+const ELEMENTOS_INTERATIVOS = 'button, a, input, textarea, select, label'
 
 export default function StoryViewer({
   pratos,
@@ -48,12 +51,24 @@ export default function StoryViewer({
   })
 
   // O atributo `muted` do React não acompanha mudanças; a propriedade sim.
+  // Com som ligado, o iOS pode recusar o autoplay do próximo vídeo: nesse caso
+  // volta para mudo e segue tocando, em vez de travar no poster.
   useEffect(() => {
-    if (videoRef.current) videoRef.current.muted = mudo
+    const video = videoRef.current
+    if (!video) return
+    video.muted = mudo
+    tocar(video).catch(() => {
+      if (video.muted) return
+      video.muted = true
+      setMudo(true)
+      tocar(video).catch(() => {})
+    })
   }, [mudo, indice, mostrarVideo])
 
   const aoPressionar = (evento: PointerEvent) => {
-    inicioToque.current = evento.clientY
+    const alvo = evento.target as Element
+    // Toques em botões e links são deles; o resto da tela vale para deslizar.
+    inicioToque.current = alvo.closest(ELEMENTOS_INTERATIVOS) ? null : evento.clientY
   }
 
   const aoSoltar = (evento: PointerEvent) => {
@@ -69,7 +84,7 @@ export default function StoryViewer({
   const alternarPausa = () => {
     const video = videoRef.current
     if (!video) return
-    if (video.paused) void video.play()
+    if (video.paused) tocar(video).catch(() => {})
     else video.pause()
   }
 
@@ -78,13 +93,15 @@ export default function StoryViewer({
   }
 
   return (
-    <div className="story" role="dialog" aria-modal="true" aria-label={prato.nome}>
-      <div
-        className="story-palco"
-        data-testid="story-palco"
-        onPointerDown={aoPressionar}
-        onPointerUp={aoSoltar}
-      >
+    <div
+      className="story"
+      role="dialog"
+      aria-modal="true"
+      aria-label={prato.nome}
+      onPointerDown={aoPressionar}
+      onPointerUp={aoSoltar}
+    >
+      <div className="story-palco" data-testid="story-palco">
         {mostrarVideo ? (
           <video
             key={prato.id}
@@ -142,9 +159,18 @@ export default function StoryViewer({
         </button>
       </div>
 
-      <div className="story-setas" aria-hidden="true">
-        <span>▲</span>
-        <span>▼</span>
+      <div className="story-setas">
+        <button type="button" aria-label="Prato anterior" disabled={indice === 0} onClick={() => irPara(indice - 1)}>
+          ▲
+        </button>
+        <button
+          type="button"
+          aria-label="Próximo prato"
+          disabled={indice === pratos.length - 1}
+          onClick={() => irPara(indice + 1)}
+        >
+          ▼
+        </button>
       </div>
 
       <div className="story-rodape">

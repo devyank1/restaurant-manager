@@ -29,7 +29,8 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const [storyAberto, setStoryAberto] = useState<number | null>(null)
   const [pratoComOpcoes, setPratoComOpcoes] = useState<PratoPublico | null>(null)
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
-  const { itens, despachar, total, quantidade } = useCarrinho(token)
+  const [idsDoCardapio] = useState(() => new Set(categorias.flatMap((c) => c.pratos.map((p) => p.id))))
+  const { itens, despachar, total, quantidade } = useCarrinho(token, idsDoCardapio)
 
   const pratos = pratosDoFiltro(cardapio, filtro)
 

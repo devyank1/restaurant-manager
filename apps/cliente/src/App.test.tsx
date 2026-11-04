@@ -37,6 +37,12 @@ describe('App', () => {
     expect(screen.getByText('Peça ajuda ao atendente.')).toBeInTheDocument()
   })
 
+  it('API recusando o token (400) também mostra "Mesa não encontrada"', async () => {
+    fetchMock.mockReturnValueOnce(resposta(400, { message: 'Failed to decode param' }))
+    render(<App />)
+    expect(await screen.findByText('Mesa não encontrada')).toBeInTheDocument()
+  })
+
   it('falha de rede permite tentar novamente', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     fetchMock.mockReturnValueOnce(resposta(200, cardapioDemo))

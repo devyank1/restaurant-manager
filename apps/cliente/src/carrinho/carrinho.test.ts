@@ -90,3 +90,31 @@ describe('persistência', () => {
     expect(carregarCarrinho('abc', storage)).toEqual([])
   })
 })
+
+describe('ambiente sem crypto.randomUUID (HTTP fora de localhost)', () => {
+  it('ainda gera ids únicos', () => {
+    const original = crypto.randomUUID
+    Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true })
+    try {
+      let itens: ItemCarrinho[] = []
+      itens = reduzirCarrinho(itens, { tipo: 'adicionar', item: novoItem(5990, 1) })
+      itens = reduzirCarrinho(itens, { tipo: 'adicionar', item: novoItem(5990, 1) })
+      expect(itens[0].id).toBeTruthy()
+      expect(itens[0].id).not.toBe(itens[1].id)
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', { value: original, configurable: true })
+    }
+  })
+})
+
+describe('carrinho salvo inválido', () => {
+  it('descarta itens com formato inválido', () => {
+    const storage = storageEmMemoria()
+    const valido = reduzirCarrinho([], { tipo: 'adicionar', item: novoItem(5990, 1) })[0]
+    storage.setItem(
+      'carrinho:abc',
+      JSON.stringify([null, { nome: 'sem campos' }, { ...valido, quantidade: 0 }, { ...valido, precoUnitarioCentavos: 'x' }, valido]),
+    )
+    expect(carregarCarrinho('abc', storage)).toEqual([valido])
+  })
+})

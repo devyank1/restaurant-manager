@@ -96,13 +96,17 @@ describe('GET /publico/mesas/:token/cardapio', () => {
     ]);
   });
 
-  it.each(['nao-existe', "x'%3B--", 'a'.repeat(500)])(
-    'responde 404 limpo para token %s',
-    async (t) => {
-      await request(app.getHttpServer())
-        .get(`/publico/mesas/${encodeURIComponent(t)}/cardapio`)
-        .expect(404)
-        .expect({ mensagem: 'Mesa não encontrada' });
-    },
-  );
+  it.each([
+    'nao-existe',
+    "x'%3B--",
+    'a'.repeat(500),
+    // Byte nulo: o Postgres recusa 0x00 em texto e a consulta estourava 500.
+    `abc${String.fromCharCode(0)}`,
+    'mesa 7',
+  ])('responde 404 limpo para token %s', async (t) => {
+    await request(app.getHttpServer())
+      .get(`/publico/mesas/${encodeURIComponent(t)}/cardapio`)
+      .expect(404)
+      .expect({ mensagem: 'Mesa não encontrada' });
+  });
 });

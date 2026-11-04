@@ -9,8 +9,9 @@ export function formatarReais(centavos: number): string {
   return formatador.format(centavos / 100)
 }
 
+// Mesma regra do desconto exibido: promoção só vale se for maior que zero e menor que o preço.
 export function precoEfetivo(base: number, promo: number | null): number {
-  return promo ?? base
+  return promo !== null && promo > 0 && promo < base ? promo : base
 }
 
 export function descontoPercentual(base: number, promo: number | null): number | null {
@@ -18,8 +19,14 @@ export function descontoPercentual(base: number, promo: number | null): number |
   return Math.round((1 - promo / base) * 100)
 }
 
+// Uma escolha única com preço (ex.: Tamanho P/M/G) define o preço do item;
+// uma escolha única sem preço (ex.: Ponto da carne) não mexe nele.
+function definePreco(grupo: GrupoOpcaoPublico): boolean {
+  return grupo.tipo === 'UNICA' && grupo.opcoes.some((o) => o.precoCentavos > 0)
+}
+
 function grupoTamanho(prato: PratoPublico): GrupoOpcaoPublico | undefined {
-  return prato.grupos.find((grupo) => grupo.tipo === 'UNICA' && grupo.obrigatorio)
+  return prato.grupos.find((grupo) => grupo.obrigatorio && definePreco(grupo))
 }
 
 export function precoExibicao(prato: PratoPublico): {
@@ -61,7 +68,7 @@ export function precoUnitario(prato: PratoPublico, selecao: Selecao): number {
     )
     if (precos.length === 0) continue
 
-    if (grupo.tipo === 'UNICA') base = precos[0]
+    if (definePreco(grupo)) base = precos[0]
     // Meio a meio cobra o sabor mais caro (regra "MAIOR" da spec).
     if (grupo.tipo === 'SABORES') maiorSabor = Math.max(...precos)
     if (grupo.tipo === 'MULTIPLA') adicionais += precos.reduce((a, b) => a + b, 0)

@@ -10,7 +10,8 @@ export async function buscarCardapio(token: string): Promise<CardapioPublico> {
   } catch (erro) {
     throw new ErroRede(String(erro))
   }
-  if (resposta.status === 404) throw new ErroMesaNaoEncontrada()
+  // 400 vem do servidor recusando um token malformado: para o cliente é a mesma coisa.
+  if (resposta.status === 404 || resposta.status === 400) throw new ErroMesaNaoEncontrada()
   if (!resposta.ok) throw new ErroRede(`HTTP ${resposta.status}`)
   return (await resposta.json()) as CardapioPublico
 }

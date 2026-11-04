@@ -153,6 +153,22 @@ describe('ListaCardapio', () => {
     expect(screen.getByText('Seu pedido está vazio')).toBeInTheDocument()
   })
 
+  it('descarta do carrinho salvo os pratos que saíram do cardápio', () => {
+    const item = (pratoId: string, id: string) => ({
+      id,
+      pratoId,
+      nome: pratoId,
+      resumoOpcoes: '',
+      selecao: {},
+      observacao: '',
+      quantidade: 1,
+      precoUnitarioCentavos: 1000,
+    })
+    localStorage.setItem('carrinho:t', JSON.stringify([item('mix', 'a'), item('prato-removido', 'b')]))
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    expect(screen.getByRole('button', { name: /Realizar pedido \(1\)/ })).toBeInTheDocument()
+  })
+
   it('mostra Realizar pedido com a quantidade do carrinho', () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
     expect(screen.getByRole('button', { name: /Realizar pedido \(0\)/ })).toBeInTheDocument()
