@@ -56,6 +56,6 @@ describe('seedDemo', () => {
     expect(mix.posterUrl).toBe('/demo/videos/mix-da-casa.jpg');
     expect(
       await prisma.prato.count({ where: { videoUrl: { not: null } } }),
-    ).toBe(6);
+    ).toBe(10);
   });
 });

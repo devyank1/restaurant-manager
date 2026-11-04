@@ -43,11 +43,13 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
       },
       {
         nome: 'Bruschetta Clássica',
+        video: 'bruschetta-classica',
         descricao: 'Pão italiano, tomate, manjericão fresco e azeite.',
         precoCentavos: 3290,
       },
       {
         nome: 'Pastel de Carne Seca',
+        video: 'pastel-de-carne-seca',
         descricao: 'Seis unidades com catupiry.',
         precoCentavos: 3890,
         esgotado: true,
@@ -139,11 +141,13 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
       },
       {
         nome: 'Suco Natural',
+        video: 'suco-natural',
         descricao: 'Laranja, limão ou abacaxi com hortelã.',
         precoCentavos: 990,
       },
       {
         nome: 'Refrigerante Lata',
+        video: 'refrigerante-lata',
         descricao: '350ml.',
         precoCentavos: 690,
       },

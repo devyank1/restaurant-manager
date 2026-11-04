@@ -14,18 +14,26 @@ const pastaSaida = join(raiz, 'public', 'demo', 'videos')
 
 const SLUGS_DEMO = [
   'mix-da-casa',
+  'bruschetta-classica',
+  'pastel-de-carne-seca',
   'pizza-margherita',
   'parmegiana-da-casa',
   'picanha-na-chapa',
   'chopp-500ml',
+  'suco-natural',
+  'refrigerante-lata',
   'petit-gateau',
 ]
-const DURACAO_MAXIMA_S = '12'
+// Story curto e leve: celular no 4G da mesa não pode esperar vídeo.
+const DURACAO_MAXIMA_S = '10'
 const TAMANHO_MAXIMO_BYTES = 3 * 1024 * 1024
 
+// 720x1280 a 30 fps, CRF 30 com teto de ~1,2 Mbit/s: cerca de 1 MB por vídeo de 10 s.
+// Vídeo horizontal é cortado no centro para ficar vertical.
 const VIDEO_STORY = [
-  '-vf', 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280',
-  '-c:v', 'libx264', '-profile:v', 'main', '-crf', '28', '-preset', 'slow',
+  '-vf', 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=30',
+  '-c:v', 'libx264', '-profile:v', 'main', '-crf', '30', '-preset', 'slow',
+  '-maxrate', '1200k', '-bufsize', '2400k',
   '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
 ]
 
@@ -39,7 +47,11 @@ function gerarPoster(video, slug) {
 
 function converter(entrada, slug) {
   const saida = join(pastaSaida, `${slug}.mp4`)
-  ffmpeg(['-i', entrada, '-t', DURACAO_MAXIMA_S, ...VIDEO_STORY, '-c:a', 'aac', '-b:a', '96k', saida])
+  // Só a primeira trilha de vídeo e de áudio (alguns celulares gravam duas).
+  ffmpeg([
+    '-i', entrada, '-t', DURACAO_MAXIMA_S, '-map', '0:v:0', '-map', '0:a:0?',
+    ...VIDEO_STORY, '-c:a', 'aac', '-b:a', '64k', '-ac', '1', saida,
+  ])
   gerarPoster(saida, slug)
   return saida
 }
