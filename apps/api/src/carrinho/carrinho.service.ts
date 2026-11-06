@@ -4,11 +4,15 @@ import { COM_OPCOES, NovoItem } from '../pedidos/pratos';
 import { precoUnitario, resumirOpcoes, Selecao } from '../pedidos/preco';
 import { ITEM_NAO_ENCONTRADO, pratoValidado } from '../pedidos/validar-item';
 import { Participante } from '../sessao-mesa/participante';
+import { TempoRealService } from '../tempo-real/tempo-real.service';
 import { CarrinhoPublico } from './carrinho.types';
 
 @Injectable()
 export class CarrinhoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tempoReal: TempoRealService,
+  ) {}
 
   /** Preço sempre recalculado com os valores atuais do cardápio. */
   async ler(sessaoId: string): Promise<CarrinhoPublico> {
@@ -94,8 +98,10 @@ export class CarrinhoService {
     return count > 0 ? this.depoisDeMudar(p.sessao.id) : this.ler(p.sessao.id);
   }
 
-  /** Ponto de aviso de mudança (ligado ao tempo real na Task 5). */
+  /** Lê o carrinho e manda para todos os celulares da sessão. */
   async depoisDeMudar(sessaoId: string): Promise<CarrinhoPublico> {
-    return this.ler(sessaoId);
+    const carrinho = await this.ler(sessaoId);
+    this.tempoReal.paraSessao(sessaoId, 'carrinho', carrinho);
+    return carrinho;
   }
 }
