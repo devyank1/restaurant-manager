@@ -125,7 +125,7 @@
 
 .cartao-nome {
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .cartao-descricao {
@@ -158,8 +158,8 @@
 }
 
 .preco {
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 800;
+  font-size: 17px;
   color: var(--preco);
 }
 

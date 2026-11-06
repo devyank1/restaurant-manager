@@ -1,13 +1,95 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type RefObject } from 'react'
 import type { PratoPublico } from '../api/tipos'
 import PrecoPrato from '../lista/PrecoPrato'
 import './story.css'
 
 const LIMIAR_DESLIZE = 50
 const LIMIAR_TOQUE = 10
+// Nas pontas (primeiro/último prato) o arrasto anda 1/3 do dedo, como um elástico.
+const RESISTENCIA_PONTA = 3
+const ELEMENTOS_INTERATIVOS = 'button, a, input, textarea, select, label'
+
 // Navegadores antigos devolvem undefined em vez de Promise.
 const tocar = (video: HTMLVideoElement) => Promise.resolve(video.play())
-const ELEMENTOS_INTERATIVOS = 'button, a, input, textarea, select, label'
+
+function Chevron({ para }: { para: 'cima' | 'baixo' }) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path
+        d={para === 'cima' ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+type Posicao = 'anterior' | 'atual' | 'proximo'
+
+/**
+ * Mídia de um prato do trilho. Os vizinhos já ficam montados como <video> pausado
+ * e pré-carregado: ao trocar de prato o mesmo elemento vira o atual e só dá play,
+ * sem recriar (recriar fazia a tela piscar).
+ */
+function MidiaPrato({
+  prato,
+  ativo,
+  falhou,
+  videoRef,
+  onProgresso,
+  onFalha,
+}: {
+  prato: PratoPublico
+  ativo: boolean
+  falhou: boolean
+  videoRef: RefObject<HTMLVideoElement | null>
+  onProgresso: (fracao: number) => void
+  onFalha: () => void
+}) {
+  const proprio = useRef<HTMLVideoElement>(null)
+
+  // Saiu de cena: pausa, volta ao começo e fica mudo para não vazar som.
+  useEffect(() => {
+    const video = proprio.current
+    if (!video || ativo) return
+    video.pause()
+    video.muted = true
+    if (video.currentTime > 0) video.currentTime = 0
+  }, [ativo])
+
+  if (prato.videoUrl && !falhou) {
+    return (
+      <video
+        ref={(el) => {
+          proprio.current = el
+          if (ativo) videoRef.current = el
+        }}
+        className="story-midia"
+        data-testid={ativo ? 'story-video' : undefined}
+        src={prato.videoUrl}
+        poster={prato.posterUrl ?? undefined}
+        preload="auto"
+        autoPlay={ativo}
+        muted
+        loop
+        playsInline
+        onTimeUpdate={(evento) => {
+          if (!ativo) return
+          const { currentTime, duration } = evento.currentTarget
+          if (duration > 0) onProgresso(currentTime / duration)
+        }}
+        onError={onFalha}
+      />
+    )
+  }
+  if (prato.posterUrl) {
+    return <img className="story-midia" src={prato.posterUrl} alt={ativo ? prato.nome : ''} />
+  }
+  return <div className="story-midia story-fundo" data-testid={ativo ? 'story-fundo' : undefined} />
+}
 
 export default function StoryViewer({
   pratos,
@@ -25,25 +107,58 @@ export default function StoryViewer({
   const [progresso, setProgresso] = useState(0)
   const [falharam, setFalharam] = useState<Set<string>>(() => new Set())
   const [descricaoAberta, setDescricaoAberta] = useState(false)
+  const [descricaoCortada, setDescricaoCortada] = useState(false)
+  // Deslocamento vertical do trilho de pratos, em px; acompanha o dedo.
+  const [arrasto, setArrasto] = useState(0)
+  const [animado, setAnimado] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const palcoRef = useRef<HTMLDivElement>(null)
+  const descricaoRef = useRef<HTMLParagraphElement>(null)
   const inicioToque = useRef<number | null>(null)
 
   const prato = pratos[indice]
+  const anterior = pratos[indice - 1]
   const proximo = pratos[indice + 1]
   const mostrarVideo = prato.videoUrl !== null && !falharam.has(prato.id)
+  const noTrilho: [PratoPublico, Posicao][] = [
+    ...(anterior ? [[anterior, 'anterior'] as [PratoPublico, Posicao]] : []),
+    [prato, 'atual'],
+    ...(proximo ? [[proximo, 'proximo'] as [PratoPublico, Posicao]] : []),
+  ]
 
   const irPara = (novo: number) => {
     const limitado = Math.min(Math.max(novo, 0), pratos.length - 1)
-    if (limitado === indice) return
+    if (limitado === indice) return false
     setIndice(limitado)
     setProgresso(0)
     setDescricaoAberta(false)
+    return true
+  }
+
+  // Troca de prato com o novo entrando de onde está na tela e deslizando até o lugar.
+  // `deslocamentoAtual`: quanto o trilho já tinha andado (o dedo, no caso do arrasto).
+  const deslizarPara = (novo: number, deslocamentoAtual = 0) => {
+    const altura = palcoRef.current?.clientHeight || window.innerHeight
+    const direcao = novo > indice ? 1 : -1
+    if (!irPara(novo)) {
+      setAnimado(true)
+      setArrasto(0)
+      return
+    }
+    setAnimado(false)
+    setArrasto(deslocamentoAtual + direcao * altura)
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        setAnimado(true)
+        setArrasto(0)
+      }),
+    )
   }
 
   useEffect(() => {
     const aoTeclar = (evento: KeyboardEvent) => {
-      if (evento.key === 'ArrowDown') irPara(indice + 1)
-      if (evento.key === 'ArrowUp') irPara(indice - 1)
+      if (evento.key === 'ArrowDown') deslizarPara(indice + 1)
+      if (evento.key === 'ArrowUp') deslizarPara(indice - 1)
       if (evento.key === 'Escape') onFechar()
     }
     window.addEventListener('keydown', aoTeclar)
@@ -65,10 +180,32 @@ export default function StoryViewer({
     })
   }, [mudo, indice, mostrarVideo])
 
+  // "ler mais" só quando a descrição realmente passou das 2 linhas.
+  useLayoutEffect(() => {
+    const descricao = descricaoRef.current
+    if (!descricao || descricaoAberta) return
+    const cortada = descricao.scrollHeight > descricao.clientHeight + 1
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- medir o DOM exige o layout pronto
+    setDescricaoCortada(cortada)
+  }, [prato.id, descricaoAberta])
+
   const aoPressionar = (evento: PointerEvent) => {
     const alvo = evento.target as Element
     // Toques em botões e links são deles; o resto da tela vale para deslizar.
-    inicioToque.current = alvo.closest(ELEMENTOS_INTERATIVOS) ? null : evento.clientY
+    if (alvo.closest(ELEMENTOS_INTERATIVOS)) {
+      inicioToque.current = null
+      return
+    }
+    inicioToque.current = evento.clientY
+    setAnimado(false)
+  }
+
+  const aoMover = (evento: PointerEvent) => {
+    if (inicioToque.current === null) return
+    let deslocamento = evento.clientY - inicioToque.current
+    const naPonta = (deslocamento > 0 && !anterior) || (deslocamento < 0 && !proximo)
+    if (naPonta) deslocamento /= RESISTENCIA_PONTA
+    setArrasto(deslocamento)
   }
 
   const aoSoltar = (evento: PointerEvent) => {
@@ -76,9 +213,19 @@ export default function StoryViewer({
     const deslocamento = evento.clientY - inicioToque.current
     inicioToque.current = null
 
-    if (deslocamento <= -LIMIAR_DESLIZE) irPara(indice + 1)
-    else if (deslocamento >= LIMIAR_DESLIZE) irPara(indice - 1)
-    else if (Math.abs(deslocamento) < LIMIAR_TOQUE) alternarPausa()
+    if (deslocamento <= -LIMIAR_DESLIZE && proximo) deslizarPara(indice + 1, deslocamento)
+    else if (deslocamento >= LIMIAR_DESLIZE && anterior) deslizarPara(indice - 1, deslocamento)
+    else {
+      setAnimado(true)
+      setArrasto(0)
+      if (Math.abs(deslocamento) < LIMIAR_TOQUE) alternarPausa()
+    }
+  }
+
+  const aoCancelar = () => {
+    inicioToque.current = null
+    setAnimado(true)
+    setArrasto(0)
   }
 
   const alternarPausa = () => {
@@ -88,8 +235,8 @@ export default function StoryViewer({
     else video.pause()
   }
 
-  const marcarFalha = () => {
-    setFalharam((anteriores) => new Set(anteriores).add(prato.id))
+  const marcarFalha = (id: string) => {
+    setFalharam((anteriores) => new Set(anteriores).add(id))
   }
 
   return (
@@ -99,44 +246,35 @@ export default function StoryViewer({
       aria-modal="true"
       aria-label={prato.nome}
       onPointerDown={aoPressionar}
+      onPointerMove={aoMover}
       onPointerUp={aoSoltar}
+      onPointerCancel={aoCancelar}
     >
-      <div className="story-palco" data-testid="story-palco">
-        {mostrarVideo ? (
-          <video
-            key={prato.id}
-            ref={videoRef}
-            className="story-midia"
-            data-testid="story-video"
-            src={prato.videoUrl ?? undefined}
-            poster={prato.posterUrl ?? undefined}
-            autoPlay
-            muted
-            loop
-            playsInline
-            onTimeUpdate={(evento) => {
-              const { currentTime, duration } = evento.currentTarget
-              if (duration > 0) setProgresso(currentTime / duration)
-            }}
-            onError={marcarFalha}
-          />
-        ) : prato.posterUrl ? (
-          <img className="story-midia" src={prato.posterUrl} alt={prato.nome} />
-        ) : (
-          <div className="story-midia story-fundo" data-testid="story-fundo" />
-        )}
+      <div className="story-palco" data-testid="story-palco" ref={palcoRef}>
+        <div
+          className={`story-trilho${animado ? ' story-trilho--animado' : ''}`}
+          data-testid="story-trilho"
+          style={{ transform: `translateY(${arrasto}px)` }}
+        >
+          {noTrilho.map(([p, posicao]) => (
+            <div
+              key={p.id}
+              className={`story-slide story-slide--${posicao}`}
+              aria-hidden={posicao === 'atual' ? undefined : true}
+              data-testid={posicao === 'proximo' ? 'story-slide-proximo' : undefined}
+            >
+              <MidiaPrato
+                prato={p}
+                ativo={posicao === 'atual'}
+                falhou={falharam.has(p.id)}
+                videoRef={videoRef}
+                onProgresso={setProgresso}
+                onFalha={() => marcarFalha(p.id)}
+              />
+            </div>
+          ))}
+        </div>
       </div>
-
-      {proximo?.videoUrl && (
-        <video
-          key={`pre-${proximo.id}`}
-          data-testid="story-pre-carga"
-          src={proximo.videoUrl}
-          preload="auto"
-          muted
-          hidden
-        />
-      )}
 
       <div className="story-progresso">
         {pratos.map((p, i) => (
@@ -160,30 +298,28 @@ export default function StoryViewer({
       </div>
 
       <div className="story-setas">
-        <button type="button" aria-label="Prato anterior" disabled={indice === 0} onClick={() => irPara(indice - 1)}>
-          ▲
+        <button type="button" aria-label="Prato anterior" disabled={!anterior} onClick={() => deslizarPara(indice - 1)}>
+          <Chevron para="cima" />
         </button>
-        <button
-          type="button"
-          aria-label="Próximo prato"
-          disabled={indice === pratos.length - 1}
-          onClick={() => irPara(indice + 1)}
-        >
-          ▼
+        <button type="button" aria-label="Próximo prato" disabled={!proximo} onClick={() => deslizarPara(indice + 1)}>
+          <Chevron para="baixo" />
         </button>
       </div>
 
-      <div className="story-rodape">
+      <div className="story-rodape" key={prato.id}>
         <div className="story-selos">
           <span className="story-selo story-selo--video">VÍDEO DO PRATO</span>
           {prato.destaque && <span className="story-selo story-selo--destaque">DESTAQUE</span>}
         </div>
         <h2 className="story-nome">{prato.nome}</h2>
         <PrecoPrato prato={prato} grande />
-        <p className={`story-descricao${descricaoAberta ? ' story-descricao--aberta' : ''}`}>
+        <p
+          ref={descricaoRef}
+          className={`story-descricao${descricaoAberta ? ' story-descricao--aberta' : ''}`}
+        >
           {prato.descricao}
         </p>
-        {!descricaoAberta && (
+        {descricaoCortada && !descricaoAberta && (
           <button type="button" className="story-ler-mais" onClick={() => setDescricaoAberta(true)}>
             ler mais
           </button>
