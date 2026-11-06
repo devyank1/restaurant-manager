@@ -109,6 +109,53 @@ describe('carrinho compartilhado', () => {
     });
   });
 
+  it('mesmo prato, mesmas opções e observação soma na mesma linha (até 20)', async () => {
+    const a = await celular();
+    const b = await celular();
+    const sucoIgual = { ...mix, pratoId: mixId };
+    await a.post(`${url()}/itens`).send(sucoIgual).expect(201);
+    await a.post(`${url()}/itens`).send(sucoIgual).expect(201);
+    // Outro celular, mesmo item: também soma.
+    const res = await b.post(`${url()}/itens`).send(sucoIgual).expect(201);
+    expect((res.body as Carrinho).itens).toHaveLength(1);
+    expect((res.body as Carrinho).itens[0].quantidade).toBe(3);
+
+    // Observação diferente vira outra linha.
+    const outra = await a
+      .post(`${url()}/itens`)
+      .send({ ...sucoIgual, observacao: 'sem gelo' })
+      .expect(201);
+    expect((outra.body as Carrinho).itens).toHaveLength(2);
+
+    // Nunca passa de 20.
+    const cheio = await a
+      .post(`${url()}/itens`)
+      .send({ ...sucoIgual, quantidade: 20 })
+      .expect(201);
+    expect((cheio.body as Carrinho).itens[0].quantidade).toBe(20);
+  });
+
+  it('pizza com as mesmas opções em outra ordem soma; opção diferente não', async () => {
+    const a = await celular();
+    const base = { pratoId: pizza.id, observacao: '', quantidade: 1 };
+    await a
+      .post(`${url()}/itens`)
+      .send({
+        ...base,
+        selecao: { [pizza.tam]: [pizza.g], [pizza.sab]: [pizza.marg] },
+      })
+      .expect(201);
+    const res = await a
+      .post(`${url()}/itens`)
+      .send({
+        ...base,
+        selecao: { [pizza.sab]: [pizza.marg], [pizza.tam]: [pizza.g] },
+      })
+      .expect(201);
+    expect((res.body as Carrinho).itens).toHaveLength(1);
+    expect((res.body as Carrinho).itens[0].quantidade).toBe(2);
+  });
+
   it("prato esgotado → 422 'Pastel de Carne Seca está esgotado'", async () => {
     const a = await celular();
     const res = await a
