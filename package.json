@@ -6,6 +6,7 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "dev:api": "pnpm --filter api start:dev",
-    "dev:cliente": "pnpm --filter cliente dev"
+    "dev:cliente": "pnpm --filter cliente dev",
+    "garcom": "node apps/api/scripts/garcom.mjs"
   }
 }
