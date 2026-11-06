@@ -1,0 +1,46 @@
+:root {
+  --fundo: #0f0f10;
+  --superficie: #1f1f22;
+  --texto: #ffffff;
+  --texto-suave: #999999;
+  --texto-apagado: #777777;
+  --destaque: #ff5a1f;
+  --preco: #4ade80;
+  --preco-fundo: #052e12;
+  --selo: #facc15;
+  --selo-video: #ff3d54;
+  --raio: 14px;
+  --raio-grande: 20px;
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.aviso-tela {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.aviso-tela button {
+  background: var(--destaque);
+  border: 0;
+  border-radius: var(--raio);
+  padding: 12px 20px;
+  font-weight: 700;
+}

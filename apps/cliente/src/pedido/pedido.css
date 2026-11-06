@@ -1,0 +1,146 @@
+.grupo {
+  border: 0;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.grupo legend {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-weight: 700;
+  padding: 8px 0;
+}
+
+.grupo-regra {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--texto-suave);
+}
+
+.opcao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--superficie);
+}
+
+.opcao input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--destaque);
+}
+
+.opcao-nome {
+  flex: 1;
+}
+
+.opcao-preco {
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.observacao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.observacao textarea {
+  min-height: 64px;
+  border: 1px solid var(--superficie);
+  border-radius: var(--raio);
+  background: var(--fundo);
+  color: var(--texto);
+  padding: 10px;
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.quantidade {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: center;
+}
+
+.quantidade button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--superficie);
+  font-size: 18px;
+}
+
+.quantidade button:disabled {
+  opacity: 0.4;
+}
+
+.erros {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--selo);
+}
+
+.seletor-acoes {
+  display: flex;
+  gap: 8px;
+}
+
+.carrinho-itens {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carrinho-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--superficie);
+}
+
+.carrinho-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.carrinho-resumo {
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.carrinho-subtotal {
+  font-weight: 700;
+  color: var(--preco);
+}
+
+.carrinho-vazio {
+  color: var(--texto-suave);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.carrinho-total {
+  margin: 8px 0;
+  font-size: 18px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.carrinho-nota {
+  margin: 0;
+  font-size: 12px;
+  color: var(--texto-suave);
+  text-align: center;
+}

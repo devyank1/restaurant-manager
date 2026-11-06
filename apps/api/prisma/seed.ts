@@ -19,11 +19,14 @@ type PratoSeed = {
   precoPromocionalCentavos?: number;
   destaque?: boolean;
   esgotado?: boolean;
+  /** Slug do vídeo em apps/cliente/public/demo/videos (gera .mp4 e .jpg). */
+  video?: string;
   grupos?: GrupoSeed[];
 };
 
 const SLUG_DEMO = 'demo';
 const TOTAL_MESAS = 10;
+const PASTA_VIDEOS = '/demo/videos';
 
 const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
   {
@@ -31,6 +34,7 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
     pratos: [
       {
         nome: 'Mix da Casa',
+        video: 'mix-da-casa',
         descricao:
           'Bolinho de costela, mini coxinha, torresmo, isca de tilápia e mandioca frita.',
         precoCentavos: 6990,
@@ -39,11 +43,13 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
       },
       {
         nome: 'Bruschetta Clássica',
+        video: 'bruschetta-classica',
         descricao: 'Pão italiano, tomate, manjericão fresco e azeite.',
         precoCentavos: 3290,
       },
       {
         nome: 'Pastel de Carne Seca',
+        video: 'pastel-de-carne-seca',
         descricao: 'Seis unidades com catupiry.',
         precoCentavos: 3890,
         esgotado: true,
@@ -55,6 +61,7 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
     pratos: [
       {
         nome: 'Pizza Margherita',
+        video: 'pizza-margherita',
         descricao: 'Molho de tomate, muçarela de búfala e manjericão.',
         // Preço definido pelo tamanho escolhido.
         precoCentavos: 0,
@@ -104,6 +111,7 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
     pratos: [
       {
         nome: 'Parmegiana da Casa',
+        video: 'parmegiana-da-casa',
         descricao: 'Filé empanado, molho de tomate, muçarela, arroz e fritas.',
         precoCentavos: 7490,
       },
@@ -114,6 +122,7 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
       },
       {
         nome: 'Picanha na Chapa',
+        video: 'picanha-na-chapa',
         descricao: 'Picanha fatiada, farofa, vinagrete e arroz.',
         precoCentavos: 9890,
         precoPromocionalCentavos: 8990,
@@ -125,17 +134,20 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
     pratos: [
       {
         nome: 'Chopp 500ml',
+        video: 'chopp-500ml',
         descricao: 'Pilsen gelado.',
         precoCentavos: 1490,
         precoPromocionalCentavos: 1190,
       },
       {
         nome: 'Suco Natural',
+        video: 'suco-natural',
         descricao: 'Laranja, limão ou abacaxi com hortelã.',
         precoCentavos: 990,
       },
       {
         nome: 'Refrigerante Lata',
+        video: 'refrigerante-lata',
         descricao: '350ml.',
         precoCentavos: 690,
       },
@@ -146,6 +158,7 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
     pratos: [
       {
         nome: 'Petit Gâteau',
+        video: 'petit-gateau',
         descricao: 'Bolo quente de chocolate com sorvete de creme.',
         precoCentavos: 2890,
       },
@@ -198,10 +211,12 @@ export async function seedDemo(
         });
 
         for (const [ordemPrato, prato] of secao.pratos.entries()) {
-          const { grupos = [], ...dados } = prato;
+          const { grupos = [], video, ...dados } = prato;
           const criado = await tx.prato.create({
             data: {
               ...dados,
+              videoUrl: video ? `${PASTA_VIDEOS}/${video}.mp4` : null,
+              posterUrl: video ? `${PASTA_VIDEOS}/${video}.jpg` : null,
               restauranteId,
               categoriaId: categoria.id,
               ordem: ordemPrato,
