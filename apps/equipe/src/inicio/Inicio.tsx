@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { buscarChamados, buscarMesas } from '../api/equipe'
 import type { ChamadoEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
 import { lerEtiqueta, suportaNfc } from '../nfc/lerEtiqueta'
+import { ativarNotificacoes, estadoNotificacoes, type EstadoPush } from '../push/ativarNotificacoes'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
 import ListaChamados from './ListaChamados'
@@ -11,6 +12,8 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
   const [mesas, setMesas] = useState<MesaResumo[]>([])
   const [lendo, setLendo] = useState(false)
   const [erroNfc, setErroNfc] = useState('')
+  const [push, setPush] = useState<EstadoPush>(estadoNotificacoes)
+  const [avisoPush, setAvisoPush] = useState('')
 
   // Falha de rede: mantém o que já tinha; a reconexão busca de novo.
   const recarregarChamados = useCallback(() => {
@@ -26,6 +29,22 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
   }, [recarregarChamados, recarregarMesas])
 
   useEquipeAoVivo({ chamados: recarregarChamados, mesas: recarregarMesas })
+
+  // Permissão já dada: reenvia a inscrição (celular trocado, cookie novo, chave nova).
+  useEffect(() => {
+    if (estadoNotificacoes() === 'ativado') ativarNotificacoes().catch(() => undefined)
+  }, [])
+
+  const ligarPush = async () => {
+    setAvisoPush('')
+    try {
+      const resultado = await ativarNotificacoes()
+      if (resultado === 'sem-chave') setAvisoPush('Notificações desligadas no servidor (falta configurar VAPID).')
+      setPush(estadoNotificacoes())
+    } catch {
+      setAvisoPush('Não consegui ativar as notificações. Tente de novo.')
+    }
+  }
 
   // O dono vê as mesas de todos; o garçom, as que são dele.
   const minhas = mesas.filter((m) => m.aberta && (usuario.papel === 'DONO' || m.garcomNome === usuario.nome))
@@ -48,6 +67,16 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
       {!usuario.emTurno && usuario.papel !== 'DONO' && (
         <p className="faixa-aviso">Você está fora do turno: não recebe chamados novos.</p>
       )}
+
+      {push === 'pendente' && (
+        <button type="button" className="botao botao--primario faixa-push" onClick={ligarPush}>
+          Ativar notificações
+        </button>
+      )}
+      {push === 'negado' && (
+        <p className="faixa-aviso">Notificações bloqueadas no navegador</p>
+      )}
+      {avisoPush && <p className="faixa-aviso">{avisoPush}</p>}
 
       <section aria-labelledby="titulo-chamados">
         <h2 id="titulo-chamados">Chamados</h2>

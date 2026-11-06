@@ -116,6 +116,24 @@ describe('Início', () => {
     expect(window.location.pathname).toBe('/mesas')
   })
 
+  it('notificação bloqueada aparece no início', async () => {
+    vi.stubGlobal('PushManager', class {})
+    vi.stubGlobal('Notification', { permission: 'denied', requestPermission: vi.fn() })
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { ready: new Promise(() => {}) } })
+    renderizar()
+    expect(await screen.findByText('Notificações bloqueadas no navegador')).toBeInTheDocument()
+    Reflect.deleteProperty(navigator, 'serviceWorker')
+  })
+
+  it('notificação ainda não pedida mostra Ativar notificações', async () => {
+    vi.stubGlobal('PushManager', class {})
+    vi.stubGlobal('Notification', { permission: 'default', requestPermission: vi.fn() })
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { ready: new Promise(() => {}) } })
+    renderizar()
+    expect(await screen.findByRole('button', { name: 'Ativar notificações' })).toBeInTheDocument()
+    Reflect.deleteProperty(navigator, 'serviceWorker')
+  })
+
   it('sem Web NFC não mostra Ler etiqueta', async () => {
     renderizar()
     await screen.findByText('Nenhum chamado agora')
