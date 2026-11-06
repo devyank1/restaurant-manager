@@ -1,5 +1,5 @@
 import type { AcaoCarrinho, ItemCarrinho } from '../carrinho/carrinho'
-import { formatarReais } from '../preco/preco'
+import { formatarReais } from '@cardapio/opcoes'
 import './pedido.css'
 
 export default function CarrinhoSheet({

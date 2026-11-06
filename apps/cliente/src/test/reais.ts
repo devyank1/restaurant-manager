@@ -1,4 +1,4 @@
-import { formatarReais } from '../preco/preco'
+import { formatarReais } from '@cardapio/opcoes'
 
 // A Testing Library normaliza o espaço sem quebra (U+00A0) do texto renderizado,
 // mas não o do texto esperado; então os testes comparam com espaço comum.

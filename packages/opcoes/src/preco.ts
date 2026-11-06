@@ -1,4 +1,4 @@
-import type { GrupoOpcaoPublico, PratoPublico } from '../api/tipos'
+import type { GrupoOpcaoPublico, PratoPublico } from './tipos'
 
 /** Opções escolhidas: id do grupo → ids das opções. */
 export type Selecao = Record<string, string[]>

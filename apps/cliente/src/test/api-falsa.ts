@@ -2,7 +2,7 @@
 import { vi } from 'vitest'
 import type { CarrinhoPublico, RodadaPublica } from '../api/tipos'
 import type { ItemCarrinho } from '../carrinho/carrinho'
-import { precoUnitario, type Selecao } from '../preco/preco'
+import { precoUnitario, type Selecao } from '@cardapio/opcoes'
 import { cardapioDemo } from './fixtures'
 
 type Resposta = { status: number; corpo?: unknown }

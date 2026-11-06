@@ -1,40 +1,28 @@
 import { useState } from 'react'
-import type { GrupoOpcaoPublico, PratoPublico } from '../api/tipos'
-import type { ItemCarrinho } from '../carrinho/carrinho'
-import { formatarReais, precoEfetivo, precoUnitario, validarSelecao, type Selecao } from '../preco/preco'
-import './pedido.css'
+import { formatarReais, precoEfetivo, precoUnitario, validarSelecao, type Selecao } from './preco'
+import { resumirOpcoes } from './resumo'
+import type { GrupoOpcaoPublico, ItemEscolhido, PratoPublico } from './tipos'
+import './opcoes.css'
 
 const LIMITE_OBSERVACAO = 140
-
-const SEPARADOR_OPCOES: Record<GrupoOpcaoPublico['tipo'], string> = {
-  UNICA: ', ',
-  MULTIPLA: ', ',
-  SABORES: ' / ',
-}
-
-function resumirOpcoes(prato: PratoPublico, selecao: Selecao): string {
-  return prato.grupos
-    .map((grupo) => {
-      const ids = selecao[grupo.id] ?? []
-      const nomes = grupo.opcoes.filter((o) => ids.includes(o.id)).map((o) => o.nome)
-      return nomes.join(SEPARADOR_OPCOES[grupo.tipo])
-    })
-    .filter((parte) => parte.length > 0)
-    .join(' · ')
-}
 
 export default function SeletorOpcoes({
   prato,
   onConfirmar,
   onCancelar,
+  inicial,
+  rotuloConfirmar = 'Adicionar',
 }: {
   prato: PratoPublico
-  onConfirmar: (item: Omit<ItemCarrinho, 'id'>) => void
+  /** Editar um item existente: começa com as escolhas dele. */
+  inicial?: { selecao: Selecao; observacao: string; quantidade: number }
+  rotuloConfirmar?: string
+  onConfirmar: (item: ItemEscolhido) => void
   onCancelar: () => void
 }) {
-  const [selecao, setSelecao] = useState<Selecao>({})
-  const [observacao, setObservacao] = useState('')
-  const [quantidade, setQuantidade] = useState(1)
+  const [selecao, setSelecao] = useState<Selecao>(inicial?.selecao ?? {})
+  const [observacao, setObservacao] = useState(inicial?.observacao ?? '')
+  const [quantidade, setQuantidade] = useState(inicial?.quantidade ?? 1)
 
   const erros = validarSelecao(prato, selecao)
   const unitario = precoUnitario(prato, selecao)
@@ -149,7 +137,7 @@ export default function SeletorOpcoes({
             Cancelar
           </button>
           <button type="button" className="botao botao--primario" disabled={erros.length > 0} onClick={confirmar}>
-            {`Adicionar · ${formatarReais(unitario * quantidade)}`}
+            {`${rotuloConfirmar} · ${formatarReais(unitario * quantidade)}`}
           </button>
         </div>
       </div>

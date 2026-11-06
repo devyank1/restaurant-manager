@@ -1,5 +1,5 @@
 import type { RodadaPublica } from '../api/tipos'
-import { formatarReais } from '../preco/preco'
+import { formatarReais } from '@cardapio/opcoes'
 import './pedido.css'
 
 const STATUS: Record<RodadaPublica['status'], string> = {
