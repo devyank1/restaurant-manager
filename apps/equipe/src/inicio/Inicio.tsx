@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { buscarChamados, buscarMesas } from '../api/equipe'
 import type { ChamadoEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
 import { lerEtiqueta, suportaNfc } from '../nfc/lerEtiqueta'
 import { ativarNotificacoes, estadoNotificacoes, type EstadoPush } from '../push/ativarNotificacoes'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
+import { useMaisRecente } from '../tempo-real/useMaisRecente'
 import ListaChamados from './ListaChamados'
 
 export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
@@ -16,16 +17,12 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
   const [avisoPush, setAvisoPush] = useState('')
 
   // Falha de rede: mantém o que já tinha; a reconexão busca de novo.
-  const recarregarChamados = useCallback(() => {
-    buscarChamados().then(setChamados, () => undefined)
-  }, [])
-  const recarregarMesas = useCallback(() => {
-    buscarMesas().then(setMesas, () => undefined)
-  }, [])
+  const recarregarChamados = useMaisRecente(buscarChamados, setChamados)
+  const recarregarMesas = useMaisRecente(buscarMesas, setMesas)
 
   useEffect(() => {
-    recarregarChamados()
-    recarregarMesas()
+    void recarregarChamados()
+    void recarregarMesas()
   }, [recarregarChamados, recarregarMesas])
 
   useEquipeAoVivo({ chamados: recarregarChamados, mesas: recarregarMesas })
@@ -75,6 +72,11 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
       )}
       {push === 'negado' && (
         <p className="faixa-aviso">Notificações bloqueadas no navegador</p>
+      )}
+      {push === 'sem-suporte' && (
+        <p className="faixa-aviso">
+          Notificações indisponíveis neste navegador: abra pelo endereço HTTPS e, no iPhone, adicione à Tela de Início.
+        </p>
       )}
       {avisoPush && <p className="faixa-aviso">{avisoPush}</p>}
 

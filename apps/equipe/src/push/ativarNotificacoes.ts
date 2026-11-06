@@ -33,10 +33,12 @@ export function chaveParaBytes(chave: string): Uint8Array<ArrayBuffer> {
  */
 export async function ativarNotificacoes(): Promise<ResultadoPush> {
   if (!temSuporte()) return 'sem-suporte'
-  const { chavePublica } = await chavePush()
-  if (!chavePublica) return 'sem-chave'
+  // Primeiro a permissão: o iPhone só mostra o pedido se vier direto do toque,
+  // sem esperar a rede antes.
   const permissao = await Notification.requestPermission()
   if (permissao !== 'granted') return 'negado'
+  const { chavePublica } = await chavePush()
+  if (!chavePublica) return 'sem-chave'
   const registro = await navigator.serviceWorker.ready
   const inscricao =
     (await registro.pushManager.getSubscription()) ??

@@ -134,6 +134,24 @@ describe('Início', () => {
     Reflect.deleteProperty(navigator, 'serviceWorker')
   })
 
+  it('resposta antiga que chega depois não apaga a lista nova', async () => {
+    renderizar()
+    await screen.findByText('Nenhum chamado agora')
+    let soltarAntiga: (r: { status: number; corpo: unknown }) => void = () => {}
+    api.uma('GET', /\/api\/equipe\/chamados$/, () => new Promise((ok) => (soltarAntiga = ok)))
+    api.uma('GET', /\/api\/equipe\/chamados$/, () => ({ status: 200, corpo: [chamado({ id: 'c9' })] }))
+    act(() => ultimoSocket().servidor('chamados-mudaram'))
+    act(() => ultimoSocket().servidor('chamados-mudaram'))
+    expect(await screen.findByText('Chamou o atendente')).toBeInTheDocument()
+    await act(async () => soltarAntiga({ status: 200, corpo: [] }))
+    expect(screen.getByText('Chamou o atendente')).toBeInTheDocument()
+  })
+
+  it('navegador sem push avisa que as notificações não chegam', async () => {
+    renderizar()
+    expect(await screen.findByText(/Notificações indisponíveis neste navegador/)).toBeInTheDocument()
+  })
+
   it('sem Web NFC não mostra Ler etiqueta', async () => {
     renderizar()
     await screen.findByText('Nenhum chamado agora')

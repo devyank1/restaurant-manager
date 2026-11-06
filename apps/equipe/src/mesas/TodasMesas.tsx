@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { buscarMesas } from '../api/equipe'
 import type { MesaResumo } from '../api/tipos'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
+import { useMaisRecente } from '../tempo-real/useMaisRecente'
 
 export default function TodasMesas() {
   const [mesas, setMesas] = useState<MesaResumo[] | null>(null)
 
-  const recarregar = useCallback(() => {
-    buscarMesas().then(setMesas, () => undefined)
-  }, [])
-  useEffect(recarregar, [recarregar])
+  const recarregar = useMaisRecente(buscarMesas, setMesas)
+  useEffect(() => {
+    void recarregar()
+  }, [recarregar])
   useEquipeAoVivo({ mesas: recarregar })
 
   return (

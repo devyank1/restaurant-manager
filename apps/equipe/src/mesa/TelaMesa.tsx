@@ -1,10 +1,11 @@
 import { formatarReais } from '@cardapio/opcoes'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CardapioPublico } from '../api/cardapio'
-import { buscarCardapio, buscarMesa, ErroEquipe, ErroNaoAutenticado } from '../api/equipe'
+import { buscarCardapio, buscarChamados, buscarMesa, ErroEquipe, ErroNaoAutenticado, marcarLido } from '../api/equipe'
 import type { MesaEquipe, RodadaEquipe } from '../api/tipos'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
+import { useMaisRecente } from '../tempo-real/useMaisRecente'
 import RodadaPendente from './RodadaPendente'
 
 const JA_FECHADA = 'Este pedido já foi confirmado ou recusado'
@@ -25,26 +26,54 @@ export default function TelaMesa({ token }: { token: string }) {
   const [aviso, setAviso] = useState<{ texto: string; id: number } | null>(null)
 
   // Falha de rede: mantém o que já tinha; a reconexão busca de novo.
-  const recarregar = useCallback(
-    () =>
-      buscarMesa(token).then(
-        (atual) => {
-          setMesa(atual)
-          setNaoEncontrada(false)
-        },
-        (erro: unknown) => {
-          if (erro instanceof ErroEquipe && erro.status === 404) setNaoEncontrada(true)
-        },
-      ),
-    [token],
+  const recarregar = useMaisRecente(
+    () => buscarMesa(token),
+    (atual) => {
+      setMesa(atual)
+      setNaoEncontrada(false)
+    },
+    (erro) => {
+      if (erro instanceof ErroEquipe && erro.status === 404) setNaoEncontrada(true)
+    },
   )
+
+  // Cardápio (para Editar e Adicionar): se falhou, tenta de novo a cada atualização.
+  const temCardapio = useRef(false)
+  const carregarCardapio = useCallback(() => {
+    if (temCardapio.current) return
+    buscarCardapio(token).then((c) => {
+      temCardapio.current = true
+      setCardapio(c)
+    }, () => undefined)
+  }, [token])
+
+  // Garçom na tela da mesa = chamado visto: marca lido para não ser repassado
+  // (abrir pela notificação, pela etiqueta ou pela lista dá no mesmo).
+  const marcarLidosDaMesa = useCallback(() => {
+    buscarChamados()
+      .then((chamados) =>
+        Promise.all(
+          chamados
+            .filter((c) => c.mesa.token === token && c.status === 'ABERTO')
+            .map((c) => marcarLido(c.id).catch(() => undefined)),
+        ),
+      )
+      .catch(() => undefined)
+  }, [token])
 
   useEffect(() => {
     void recarregar()
-    buscarCardapio(token).then(setCardapio, () => undefined)
-  }, [recarregar, token])
+    carregarCardapio()
+    marcarLidosDaMesa()
+  }, [recarregar, carregarCardapio, marcarLidosDaMesa])
 
-  useEquipeAoVivo({ mesas: () => void recarregar() })
+  useEquipeAoVivo({
+    mesas: () => {
+      void recarregar()
+      carregarCardapio()
+    },
+    chamados: marcarLidosDaMesa,
+  })
 
   useEffect(() => {
     if (!aviso) return

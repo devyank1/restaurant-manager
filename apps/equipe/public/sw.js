@@ -22,15 +22,22 @@ self.addEventListener('push', (evento) => {
   )
 })
 
-// Toque na notificação: reaproveita uma janela aberta do app; senão abre uma.
+// Toque na notificação: foca uma janela aberta do app e pede para ela ir à
+// mesa (sem recarregar: não perde nada aberto). Sem janela, ou se algo falhar
+// (ex.: janela não controlada), abre uma nova.
 self.addEventListener('notificationclick', (evento) => {
   evento.notification.close()
-  const url = new URL(evento.notification.data?.url ?? '/', self.location.origin).href
+  const caminho = (evento.notification.data && evento.notification.data.url) || '/'
+  const url = new URL(caminho, self.location.origin).href
+  const abrirNova = () => self.clients.openWindow(url)
   evento.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((janelas) => {
-      const janela = janelas.find((j) => new URL(j.url).origin === self.location.origin)
-      if (janela) return janela.focus().then((focada) => focada.navigate(url))
-      return self.clients.openWindow(url)
-    }),
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((janelas) => {
+        const janela = janelas.find((j) => new URL(j.url).origin === self.location.origin)
+        if (!janela) return abrirNova()
+        return janela.focus().then((focada) => (focada || janela).postMessage({ tipo: 'abrir', url: caminho }))
+      })
+      .catch(abrirNova),
   )
 })

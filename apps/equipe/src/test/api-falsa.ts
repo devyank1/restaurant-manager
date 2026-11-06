@@ -5,7 +5,7 @@ import type { CardapioPublico } from '../api/cardapio'
 import type { ChamadoEquipe, ItemRodadaEquipe, MesaEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
 
 type Resposta = { status: number; corpo?: unknown }
-type Rota = (corpo: unknown, caminho: string) => Resposta | undefined
+type Rota = (corpo: unknown, caminho: string) => Resposta | undefined | Promise<Resposta>
 
 export const ana: UsuarioEquipe = { id: 'u-ana', nome: 'Ana', papel: 'GARCOM', emTurno: false }
 
@@ -122,8 +122,8 @@ export function criarApiFalsa() {
     const metodo = init?.method ?? 'GET'
     const corpo: unknown = init?.body ? JSON.parse(String(init.body)) : undefined
     const desvio = desvios.find((d) => d.metodo === metodo && d.padrao.test(caminho))
-    const resposta = desvio?.rota(corpo, caminho) ?? padrao(metodo, caminho, corpo)
     if (desvio) desvios.splice(desvios.indexOf(desvio), 1)
+    const resposta = (await desvio?.rota(corpo, caminho)) ?? padrao(metodo, caminho, corpo)
     return new Response(resposta.corpo === undefined ? null : JSON.stringify(resposta.corpo), {
       status: resposta.status,
     })

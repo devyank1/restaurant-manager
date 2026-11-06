@@ -71,6 +71,19 @@ describe('ativarNotificacoes', () => {
     expect(estadoNotificacoes()).toBe('ativado')
   })
 
+  it('pede a permissão antes de qualquer rede (iPhone exige o toque direto)', async () => {
+    const { Notificacao } = instalarNavegador('granted')
+    api.estado.chavePush = CHAVE
+    let fetchAntes = -1
+    Notificacao.requestPermission.mockImplementation(async () => {
+      fetchAntes = api.fetch.mock.calls.length
+      Notificacao.permission = 'granted'
+      return 'granted'
+    })
+    expect(await ativarNotificacoes()).toBe('ativado')
+    expect(fetchAntes).toBe(0)
+  })
+
   it('chaveParaBytes decodifica base64url', () => {
     expect(chaveParaBytes(CHAVE)).toHaveLength(65)
     expect(chaveParaBytes(CHAVE)[0]).toBe(4)
