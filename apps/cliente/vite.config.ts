@@ -7,11 +7,15 @@ export default defineConfig({
   server: {
     // Permite abrir no celular pela rede local.
     host: true,
+    // HTTPS do Tailscale (tailscale serve) chega com host *.ts.net.
+    allowedHosts: ['.ts.net'],
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
         rewrite: (caminho) => caminho.replace(/^\/api/, ''),
       },
+      // Tempo real da mesa (socket.io), com upgrade para WebSocket.
+      '/socket.io': { target: 'http://localhost:3000', ws: true },
     },
   },
   test: {

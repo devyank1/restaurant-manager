@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react'
 import type { CardapioPublico, PratoPublico } from '../api/tipos'
+import { chamarAtendente } from '../api/mesa'
 import type { ItemCarrinho } from '../carrinho/carrinho'
-import { useCarrinho } from '../carrinho/useCarrinho'
+import { useCarrinhoMesa } from '../carrinho/useCarrinhoMesa'
 import CarrinhoSheet from '../pedido/CarrinhoSheet'
+import PedidosSheet from '../pedido/PedidosSheet'
 import SeletorOpcoes from '../pedido/SeletorOpcoes'
+import { useRodadas } from '../pedido/useRodadas'
 import { precoUnitario } from '../preco/preco'
 import StoryViewer from '../story/StoryViewer'
+import { useMesaAoVivo } from '../tempo-real/useMesaAoVivo'
 import CartaoPrato from './CartaoPrato'
 import { DESTAQUES, pratosDoFiltro } from './filtro'
 import WifiSheet from './WifiSheet'
 import './lista.css'
 
-const AVISO_ATENDENTE = 'Em breve: o garçom receberá seu chamado por aqui.'
+const AVISO_ENVIADO = 'Pedido enviado! O garçom vai confirmar na mesa.'
+const AVISO_CHAMADO = 'Garçom chamado! Ele já está a caminho.'
+const SEM_CONEXAO = 'Sem conexão. Tente de novo.'
 const DURACAO_AVISO_MS = 3000
 
 export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioPublico; token: string }) {
@@ -29,8 +35,20 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const [storyAberto, setStoryAberto] = useState<number | null>(null)
   const [pratoComOpcoes, setPratoComOpcoes] = useState<PratoPublico | null>(null)
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
-  const [idsDoCardapio] = useState(() => new Set(categorias.flatMap((c) => c.pratos.map((p) => p.id))))
-  const { itens, despachar, total, quantidade } = useCarrinho(token, idsDoCardapio)
+  const [pedidosAberto, setPedidosAberto] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  // Fica até o garçom marcar "Atendido" (evento chamado-atendido).
+  const [esperandoGarcom, setEsperandoGarcom] = useState(false)
+  const mostrarAviso = (texto: string) => setAviso({ texto, id: Date.now() })
+  const carrinho = useCarrinhoMesa(token, mostrarAviso)
+  const { itens, despachar, total, quantidade } = carrinho
+  const rodadas = useRodadas(token)
+
+  useMesaAoVivo(token, {
+    carrinho: (atual) => (atual ? carrinho.aplicar(atual) : carrinho.recarregar()),
+    rodadas: rodadas.recarregar,
+    atendido: () => setEsperandoGarcom(false),
+  })
 
   const pratos = pratosDoFiltro(cardapio, filtro)
 
@@ -40,11 +58,25 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
     return () => clearTimeout(temporizador)
   }, [aviso])
 
-  const mostrarAviso = (texto: string) => setAviso({ texto, id: Date.now() })
+  const adicionarAoPedido = async (item: Omit<ItemCarrinho, 'id'>) => {
+    if (await despachar({ tipo: 'adicionar', item })) mostrarAviso('Adicionado ao pedido')
+  }
 
-  const adicionarAoPedido = (item: Omit<ItemCarrinho, 'id'>) => {
-    despachar({ tipo: 'adicionar', item })
-    mostrarAviso('Adicionado ao pedido')
+  const enviarPedido = async () => {
+    setEnviando(true)
+    const enviado = await carrinho.enviar()
+    setEnviando(false)
+    rodadas.recarregar()
+    if (enviado) {
+      setCarrinhoAberto(false)
+      mostrarAviso(AVISO_ENVIADO)
+    }
+  }
+
+  const chamarGarcom = () => {
+    chamarAtendente(token)
+      .then(() => setEsperandoGarcom(true))
+      .catch(() => mostrarAviso(SEM_CONEXAO))
   }
 
   const aoAdicionar = (prato: PratoPublico) => {
@@ -52,7 +84,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
       setPratoComOpcoes(prato)
       return
     }
-    adicionarAoPedido({
+    void adicionarAoPedido({
       pratoId: prato.id,
       nome: prato.nome,
       resumoOpcoes: '',
@@ -77,6 +109,11 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
           <h1 className="topo-nome">{restaurante.nome}</h1>
           <p className="topo-mesa">{`Mesa ${mesa.numero}`}</p>
         </div>
+        {rodadas.rodadas.length > 0 && (
+          <button type="button" className="topo-wifi" onClick={() => setPedidosAberto(true)}>
+            Pedidos
+          </button>
+        )}
         {restaurante.wifi && (
           <button type="button" className="topo-wifi" onClick={() => setWifiAberto(true)}>
             📶 Wi-Fi
@@ -110,14 +147,20 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
         )}
       </main>
 
-      {aviso && (
+      {aviso ? (
         <p className="aviso" role="status">
           {aviso.texto}
         </p>
+      ) : (
+        esperandoGarcom && (
+          <p className="aviso" role="status">
+            {AVISO_CHAMADO}
+          </p>
+        )
       )}
 
       <footer className="barra-fundo">
-        <button type="button" className="botao botao--secundario" onClick={() => mostrarAviso(AVISO_ATENDENTE)}>
+        <button type="button" className="botao botao--secundario" onClick={chamarGarcom}>
           🙋 Chamar atendente
         </button>
         <button type="button" className="botao botao--primario" onClick={() => setCarrinhoAberto(true)}>
@@ -139,14 +182,29 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
           prato={pratoComOpcoes}
           onCancelar={() => setPratoComOpcoes(null)}
           onConfirmar={(item) => {
-            adicionarAoPedido(item)
+            void adicionarAoPedido(item)
             setPratoComOpcoes(null)
           }}
         />
       )}
 
       {carrinhoAberto && (
-        <CarrinhoSheet itens={itens} total={total} despachar={despachar} onFechar={() => setCarrinhoAberto(false)} />
+        <CarrinhoSheet
+          itens={itens}
+          total={total}
+          despachar={despachar}
+          onEnviar={() => void enviarPedido()}
+          enviando={enviando}
+          onFechar={() => setCarrinhoAberto(false)}
+        />
+      )}
+
+      {pedidosAberto && (
+        <PedidosSheet
+          rodadas={rodadas.rodadas}
+          totalParcialCentavos={rodadas.totalParcialCentavos}
+          onFechar={() => setPedidosAberto(false)}
+        />
       )}
 
       {wifiAberto && restaurante.wifi && (

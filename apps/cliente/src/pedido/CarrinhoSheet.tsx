@@ -6,11 +6,15 @@ export default function CarrinhoSheet({
   itens,
   total,
   despachar,
+  onEnviar,
+  enviando = false,
   onFechar,
 }: {
   itens: ItemCarrinho[]
   total: number
-  despachar: (acao: AcaoCarrinho) => void
+  despachar: (acao: AcaoCarrinho) => unknown
+  onEnviar: () => void
+  enviando?: boolean
   onFechar: () => void
 }) {
   return (
@@ -60,10 +64,14 @@ export default function CarrinhoSheet({
 
         <p className="carrinho-total">{`Total ${formatarReais(total)}`}</p>
 
-        <button type="button" className="botao botao--primario" disabled>
-          Enviar pedido
+        <button
+          type="button"
+          className="botao botao--primario"
+          disabled={itens.length === 0 || enviando}
+          onClick={onEnviar}
+        >
+          {enviando ? 'Enviando…' : 'Enviar pedido'}
         </button>
-        <p className="carrinho-nota">O envio para o garçom chega na próxima versão.</p>
 
         <button type="button" className="botao botao--secundario" onClick={onFechar}>
           Continuar escolhendo
