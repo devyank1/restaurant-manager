@@ -1,0 +1,183 @@
+/* Base visual do app da equipe: botões grandes, uso com uma mão. */
+.app {
+  min-height: 100dvh;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.carregando,
+.vazio {
+  padding: 24px 16px;
+  color: var(--texto-suave);
+  text-align: center;
+}
+
+.botao {
+  border: 0;
+  border-radius: var(--raio);
+  padding: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.botao--primario {
+  background: var(--destaque);
+}
+
+.botao--secundario {
+  background: var(--superficie);
+}
+
+.botao--perigo {
+  background: #3a1416;
+  color: #ff8a8a;
+}
+
+/* Login */
+.login {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.login h1 {
+  margin: 0 0 24px;
+  font-size: 28px;
+}
+
+.login form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.campo input {
+  border: 1px solid #333;
+  border-radius: var(--raio);
+  background: var(--superficie);
+  color: var(--texto);
+  padding: 14px;
+  font: inherit;
+  font-size: 16px;
+}
+
+.erro {
+  margin: 0;
+  color: #ff8a8a;
+  font-size: 14px;
+}
+
+/* Topo */
+.topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 12px;
+  border-bottom: 1px solid var(--superficie);
+}
+
+.topo-quem {
+  display: flex;
+  flex-direction: column;
+  margin-right: auto;
+}
+
+.topo-papel {
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.turno {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--raio-grande);
+  background: var(--superficie);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.turno-bolinha {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--texto-apagado);
+}
+
+.turno--ligado {
+  background: var(--preco-fundo);
+  color: var(--preco);
+}
+
+.turno--ligado .turno-bolinha {
+  background: var(--preco);
+}
+
+.topo-sair {
+  border: 0;
+  background: none;
+  color: var(--texto-suave);
+  padding: 10px 4px;
+  cursor: pointer;
+}
+
+/* Folha de baixo (usada pelo seletor de opções compartilhado) */
+.sheet-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  z-index: 30;
+}
+
+.sheet {
+  width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: #17171a;
+  border-radius: var(--raio-grande) var(--raio-grande) 0 0;
+  padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sheet h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.aviso {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--raio);
+  background: #2a2a2e;
+  font-size: 14px;
+  text-align: center;
+  z-index: 40;
+}
