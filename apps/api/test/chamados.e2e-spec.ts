@@ -180,6 +180,80 @@ describe('chamados', () => {
     expect(await chamadosDe(ana)).toEqual([]);
   });
 
+  it('lido depois de resolvido continua resolvido e o cliente pode chamar de novo', async () => {
+    await turno(ana, true);
+    const cookie = await clienteChama();
+    const [chamado] = await chamadosDe(ana);
+    await http()
+      .post(`/equipe/chamados/${chamado.id}/resolver`)
+      .set('Cookie', ana)
+      .expect(200);
+    await http()
+      .post(`/equipe/chamados/${chamado.id}/lido`)
+      .set('Cookie', ana)
+      .expect(200);
+    const depois = await t.prisma.chamado.findUniqueOrThrow({
+      where: { id: chamado.id },
+    });
+    expect(depois.status).toBe('RESOLVIDO');
+    await http()
+      .post(`/publico/mesas/${token7}/chamados`)
+      .set('Cookie', cookie)
+      .expect(201);
+  });
+
+  it('cliente sabe se o chamado ainda está aberto', async () => {
+    await turno(ana, true);
+    const cookie = await clienteChama();
+    const aberto = await http()
+      .get(`/publico/mesas/${token7}/rodadas`)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(aberto.body).toMatchObject({ chamadoAberto: true });
+    const [chamado] = await chamadosDe(ana);
+    await http()
+      .post(`/equipe/chamados/${chamado.id}/resolver`)
+      .set('Cookie', ana)
+      .expect(200);
+    const fechado = await http()
+      .get(`/publico/mesas/${token7}/rodadas`)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(fechado.body).toMatchObject({ chamadoAberto: false });
+  });
+
+  it('outro garçom não marca como lido chamado alheio; cozinha não mexe em chamados', async () => {
+    await turno(ana, true);
+    await clienteChama();
+    const [chamado] = await chamadosDe(ana);
+    await http()
+      .post(`/equipe/chamados/${chamado.id}/lido`)
+      .set('Cookie', bruno)
+      .expect(403);
+
+    await t.prisma.usuario.deleteMany({ where: { email: 'cozinha@demo.com' } });
+    await t.prisma.usuario.create({
+      data: {
+        restauranteId: t.restauranteId,
+        nome: 'Cozinha',
+        email: 'cozinha@demo.com',
+        senhaHash: await hashSenha('demo1234'),
+        papel: 'COZINHA',
+      },
+    });
+    const cozinha = await loginComo(t.app, 'cozinha@demo.com');
+    await http().get('/equipe/chamados').set('Cookie', cozinha).expect(403);
+    await http()
+      .post(`/equipe/chamados/${chamado.id}/lido`)
+      .set('Cookie', cozinha)
+      .expect(403);
+    await t.prisma.usuario.deleteMany({ where: { email: 'cozinha@demo.com' } });
+    const atual = await t.prisma.chamado.findUniqueOrThrow({
+      where: { id: chamado.id },
+    });
+    expect(atual.status).toBe('ABERTO');
+  });
+
   it('garçom de outro restaurante recebe 404', async () => {
     await turno(ana, true);
     await clienteChama();

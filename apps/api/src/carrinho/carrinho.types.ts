@@ -15,4 +15,6 @@ export type ItemCarrinhoPublico = {
 export type CarrinhoPublico = {
   itens: ItemCarrinhoPublico[];
   totalCentavos: number;
+  /** Cresce a cada leitura: o cliente descarta foto mais velha que a que tem. */
+  versao: number;
 };

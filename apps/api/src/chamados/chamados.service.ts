@@ -1,10 +1,13 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
+import type { UsuarioToken } from '../equipe/equipe.types';
+import { exigirSalao } from '../equipe/papel';
 import { EventosService } from '../eventos/eventos.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { travarMesa } from '../sessao-mesa/trava';
@@ -173,10 +176,8 @@ export class ChamadosService {
   }
 
   /** Não resolvidos meus ou para todos, mais antigos primeiro. */
-  async listar(usuario: {
-    id: string;
-    restauranteId: string;
-  }): Promise<ChamadoEquipe[]> {
+  async listar(usuario: UsuarioToken): Promise<ChamadoEquipe[]> {
+    exigirSalao(usuario);
     const chamados = await this.prisma.chamado.findMany({
       where: {
         restauranteId: usuario.restauranteId,
@@ -198,41 +199,60 @@ export class ChamadosService {
   }
 
   /** Lido para o repasse. */
-  async marcarLido(
-    id: string,
-    usuario: { restauranteId: string },
-  ): Promise<ChamadoEquipe> {
-    await this.doRestaurante(id, usuario.restauranteId);
-    const chamado = await this.prisma.chamado.update({
-      where: { id },
+  /**
+   * Só ABERTO → LIDO: lido depois de resolvido não reabre. Ler para o
+   * repasse, então só quem recebeu (ou chamado para todos, ou o dono).
+   */
+  async marcarLido(id: string, usuario: UsuarioToken): Promise<ChamadoEquipe> {
+    exigirSalao(usuario);
+    const atual = await this.doRestaurante(id, usuario.restauranteId);
+    if (
+      usuario.papel !== 'DONO' &&
+      !atual.paraTodos &&
+      atual.garcomId !== usuario.id
+    ) {
+      throw new ForbiddenException({
+        mensagem: 'Este chamado é de outro garçom',
+      });
+    }
+    const { count } = await this.prisma.chamado.updateMany({
+      where: { id, status: 'ABERTO' },
       data: { status: 'LIDO', lidoEm: new Date() },
-      include: COM_MESA,
     });
-    this.avisarEquipe(usuario.restauranteId);
-    return paraEquipe(chamado);
+    if (count > 0) this.avisarEquipe(usuario.restauranteId);
+    return this.paraEquipePorId(id);
+  }
+
+  private async paraEquipePorId(id: string): Promise<ChamadoEquipe> {
+    return paraEquipe(
+      await this.prisma.chamado.findUniqueOrThrow({
+        where: { id },
+        include: COM_MESA,
+      }),
+    );
   }
 
   /** "Atendido". Só ATENDENTE: confirmar rodada se resolve confirmando. */
-  async resolver(
-    id: string,
-    usuario: { restauranteId: string },
-  ): Promise<ChamadoEquipe> {
+  async resolver(id: string, usuario: UsuarioToken): Promise<ChamadoEquipe> {
+    exigirSalao(usuario);
     const atual = await this.doRestaurante(id, usuario.restauranteId);
     if (atual.tipo !== 'ATENDENTE') {
       throw new UnprocessableEntityException({
         mensagem: 'Confirme ou recuse a rodada na tela da mesa',
       });
     }
-    const chamado = await this.prisma.chamado.update({
-      where: { id },
+    // Repetir "Atendido" não reemite o aviso.
+    const { count } = await this.prisma.chamado.updateMany({
+      where: { id, status: { not: 'RESOLVIDO' } },
       data: { status: 'RESOLVIDO', resolvidoEm: new Date() },
-      include: COM_MESA,
     });
-    this.avisarEquipe(usuario.restauranteId);
-    this.tempoReal.paraSessao(chamado.sessaoId, 'chamado-atendido', {
-      chamadoId: chamado.id,
-    });
-    return paraEquipe(chamado);
+    if (count > 0) {
+      this.avisarEquipe(usuario.restauranteId);
+      this.tempoReal.paraSessao(atual.sessaoId, 'chamado-atendido', {
+        chamadoId: id,
+      });
+    }
+    return this.paraEquipePorId(id);
   }
 
   /**

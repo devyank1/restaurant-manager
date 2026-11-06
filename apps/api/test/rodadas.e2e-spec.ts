@@ -162,6 +162,25 @@ describe('rodadas', () => {
     }
   });
 
+  it('item adicionado durante o envio não some', async () => {
+    const a = await celular();
+    const b = await celular();
+    for (let i = 0; i < 8; i++) {
+      await adicionar(a, mix());
+      await Promise.all([
+        a.post(`/publico/mesas/${token7}/rodadas`),
+        adicionar(b, pizzaM()),
+      ]);
+    }
+    const nasRodadas = await t.prisma.itemRodada.count({
+      where: { pratoId: pizza.id },
+    });
+    const noCarrinho = await t.prisma.itemCarrinho.count({
+      where: { pratoId: pizza.id },
+    });
+    expect(nasRodadas + noCarrinho).toBe(8);
+  });
+
   it('envio duplo simultâneo gera uma rodada só', async () => {
     const a = await celular();
     await adicionar(a, mix());

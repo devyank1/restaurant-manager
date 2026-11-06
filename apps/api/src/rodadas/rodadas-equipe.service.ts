@@ -1,12 +1,12 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { UsuarioToken } from '../equipe/equipe.types';
+import { exigirSalao } from '../equipe/papel';
 import { EventosService } from '../eventos/eventos.service';
 import { COM_OPCOES, NovoItem } from '../pedidos/pratos';
 import {
@@ -53,13 +53,6 @@ export class RodadasEquipeService {
     private readonly tempoReal: TempoRealService,
   ) {}
 
-  /** Garçom e dono atendem mesas; cozinha não. */
-  exigirAtendimento(usuario: UsuarioToken): void {
-    if (usuario.papel !== 'GARCOM' && usuario.papel !== 'DONO') {
-      throw new ForbiddenException({ mensagem: 'Acesso só para o salão' });
-    }
-  }
-
   private async nomes(ids: (string | null)[]): Promise<Map<string, string>> {
     const validos = ids.filter((id): id is string => id !== null);
     const usuarios = await this.prisma.usuario.findMany({
@@ -70,7 +63,7 @@ export class RodadasEquipeService {
   }
 
   async mesas(usuario: UsuarioToken): Promise<MesaResumo[]> {
-    this.exigirAtendimento(usuario);
+    exigirSalao(usuario);
     const mesas = await this.prisma.mesa.findMany({
       where: { restauranteId: usuario.restauranteId },
       orderBy: { numero: 'asc' },
@@ -102,7 +95,7 @@ export class RodadasEquipeService {
   }
 
   async mesa(token: string, usuario: UsuarioToken): Promise<MesaEquipe> {
-    this.exigirAtendimento(usuario);
+    exigirSalao(usuario);
     const mesa = await this.prisma.mesa.findFirst({
       where: { token, restauranteId: usuario.restauranteId },
     });
@@ -145,7 +138,7 @@ export class RodadasEquipeService {
       rodada: Prisma.RodadaGetPayload<{ include: { sessao: true } }>,
     ) => Promise<T>,
   ): Promise<T> {
-    this.exigirAtendimento(usuario);
+    exigirSalao(usuario);
     const achada = await this.prisma.rodada.findFirst({
       where: { id: rodadaId, restauranteId: usuario.restauranteId },
       include: { sessao: true },

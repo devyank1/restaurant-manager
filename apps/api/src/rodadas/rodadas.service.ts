@@ -32,9 +32,13 @@ export class RodadasService {
       orderBy: { criadoEm: 'asc' },
       include: COM_ITENS,
     });
+    const chamados = await this.prisma.chamado.count({
+      where: { sessaoId, tipo: 'ATENDENTE', status: { not: 'RESOLVIDO' } },
+    });
     return {
       rodadas: rodadas.map(paraPublica),
       totalParcialCentavos: somarConfirmadas(rodadas),
+      chamadoAberto: chamados > 0,
     };
   }
 
@@ -108,7 +112,10 @@ export class RodadasService {
         },
         include: COM_ITENS,
       });
-      await tx.itemCarrinho.deleteMany({ where: { sessaoId: p.sessao.id } });
+      // Só os itens lidos: algo adicionado agora fica para a próxima rodada.
+      await tx.itemCarrinho.deleteMany({
+        where: { id: { in: itens.map((i) => i.id) } },
+      });
 
       const chamado = precisaConfirmar
         ? await this.chamados.criar(tx, {
@@ -127,7 +134,7 @@ export class RodadasService {
       };
     });
 
-    await this.carrinho.depoisDeMudar(p.sessao.id);
+    await this.carrinho.avisar(p);
     if (resultado.tipo === 'esgotou') {
       const { nomes, pratoIds } = resultado;
       throw new ConflictException({

@@ -20,6 +20,8 @@ export type RodadasDaMesa = {
   rodadas: RodadaPublica[];
   /** Soma só das rodadas CONFIRMADA. */
   totalParcialCentavos: number;
+  /** Há chamado de atendente não resolvido (aviso "Garçom chamado!"). */
+  chamadoAberto: boolean;
 };
 
 export type ItemRodadaEquipe = ItemRodadaPublico & {

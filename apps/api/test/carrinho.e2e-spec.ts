@@ -145,6 +145,38 @@ describe('carrinho compartilhado', () => {
       .expect(422);
   });
 
+  it('PATCH 0 de item que o outro celular já removeu devolve o carrinho atual', async () => {
+    const a = await celular();
+    const b = await celular();
+    const criado = await a
+      .post(`${url()}/itens`)
+      .send({ ...mix, pratoId: mixId })
+      .expect(201);
+    const id = (criado.body as Carrinho).itens[0].id;
+    await a.patch(`${url()}/itens/${id}`).send({ quantidade: 0 }).expect(200);
+    const res = await b
+      .patch(`${url()}/itens/${id}`)
+      .send({ quantidade: 0 })
+      .expect(200);
+    expect((res.body as Carrinho).itens).toEqual([]);
+  });
+
+  it('carrinho traz versão que cresce a cada mudança', async () => {
+    const a = await celular();
+    const r1 = await a
+      .post(`${url()}/itens`)
+      .send({ ...mix, pratoId: mixId })
+      .expect(201);
+    const r2 = await a
+      .post(`${url()}/itens`)
+      .send({ ...mix, pratoId: mixId })
+      .expect(201);
+    const v1 = (r1.body as { versao: number }).versao;
+    const v2 = (r2.body as { versao: number }).versao;
+    expect(typeof v1).toBe('number');
+    expect(v2).toBeGreaterThan(v1);
+  });
+
   it('PATCH quantidade 0 remove', async () => {
     const a = await celular();
     const criado = await a
