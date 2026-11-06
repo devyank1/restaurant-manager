@@ -85,6 +85,66 @@ describe('StoryViewer', () => {
     }
   })
 
+  it('arrastar mostra o próximo prato antes de soltar', () => {
+    renderizar(1)
+    const palco = screen.getByTestId('story-palco')
+    fireEvent.pointerDown(palco, { clientY: 500 })
+    fireEvent.pointerMove(palco, { clientY: 450 })
+    expect(screen.getByTestId('story-trilho').style.transform).toBe('translateY(-50px)')
+    expect(screen.getByTestId('story-slide-proximo').querySelector('img')).toHaveAttribute(
+      'src',
+      '/demo/videos/chopp.jpg',
+    )
+    expect(screen.getByText('2 de 5')).toBeInTheDocument()
+  })
+
+  it('arrastar pouco e soltar volta para o mesmo prato', () => {
+    renderizar(1)
+    const palco = screen.getByTestId('story-palco')
+    fireEvent.pointerDown(palco, { clientY: 500 })
+    fireEvent.pointerMove(palco, { clientY: 470 })
+    fireEvent.pointerUp(palco, { clientY: 470 })
+    expect(screen.getByText('2 de 5')).toBeInTheDocument()
+    expect(screen.getByTestId('story-trilho').style.transform).toBe('translateY(0px)')
+  })
+
+  describe('ler mais', () => {
+    const medidas = (scroll: number, visivel: number) => {
+      const altura = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight')
+      const cliente = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
+      Object.defineProperty(HTMLElement.prototype, 'scrollHeight', { configurable: true, get: () => scroll })
+      Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get: () => visivel })
+      const devolver = (nome: string, original?: PropertyDescriptor) => {
+        if (original) Object.defineProperty(HTMLElement.prototype, nome, original)
+        else delete (HTMLElement.prototype as unknown as Record<string, unknown>)[nome]
+      }
+      return () => {
+        devolver('scrollHeight', altura)
+        devolver('clientHeight', cliente)
+      }
+    }
+
+    it('não aparece quando a descrição cabe inteira', () => {
+      const restaurar = medidas(40, 40)
+      try {
+        renderizar(0)
+        expect(screen.queryByRole('button', { name: 'ler mais' })).not.toBeInTheDocument()
+      } finally {
+        restaurar()
+      }
+    })
+
+    it('aparece quando a descrição está cortada', () => {
+      const restaurar = medidas(90, 40)
+      try {
+        renderizar(0)
+        expect(screen.getByRole('button', { name: 'ler mais' })).toBeInTheDocument()
+      } finally {
+        restaurar()
+      }
+    })
+  })
+
   it('não passa do último prato', () => {
     renderizar(4)
     fireEvent.keyDown(window, { key: 'ArrowDown' })
