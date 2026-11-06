@@ -5,6 +5,7 @@ import { EquipeModule } from './equipe/equipe.module';
 import { validarEnv } from './config/env';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SessaoMesaModule } from './sessao-mesa/sessao-mesa.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { PrismaModule } from './prisma/prisma.module';
     HealthModule,
     CardapioPublicoModule,
     EquipeModule,
+    SessaoMesaModule,
   ],
 })
 export class AppModule {}
