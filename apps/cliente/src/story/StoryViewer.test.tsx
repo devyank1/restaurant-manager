@@ -91,8 +91,8 @@ describe('StoryViewer', () => {
     fireEvent.pointerDown(palco, { clientY: 500 })
     fireEvent.pointerMove(palco, { clientY: 450 })
     expect(screen.getByTestId('story-trilho').style.transform).toBe('translateY(-50px)')
-    expect(screen.getByTestId('story-slide-proximo').querySelector('img')).toHaveAttribute(
-      'src',
+    expect(screen.getByTestId('story-slide-proximo').querySelector('video')).toHaveAttribute(
+      'poster',
       '/demo/videos/chopp.jpg',
     )
     expect(screen.getByText('2 de 5')).toBeInTheDocument()
@@ -178,9 +178,16 @@ describe('StoryViewer', () => {
 
   it('pré-carrega o vídeo do próximo prato', () => {
     renderizar(0)
-    const preCarga = screen.getByTestId('story-pre-carga') as HTMLVideoElement
+    const preCarga = screen.getByTestId('story-slide-proximo').querySelector('video')!
     expect(preCarga.getAttribute('preload')).toBe('auto')
     expect(preCarga.getAttribute('src')).toBe('/demo/videos/pizza.mp4')
+  })
+
+  it('trocar de prato reaproveita o vídeo já carregado, sem piscar', () => {
+    renderizar(0)
+    const jaCarregado = screen.getByTestId('story-slide-proximo').querySelector('video')
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    expect(screen.getByTestId('story-video')).toBe(jaCarregado)
   })
 
   it('vídeo com erro cai para o poster', () => {

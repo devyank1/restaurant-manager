@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type RefObject } from 'react'
 import type { PratoPublico } from '../api/tipos'
 import PrecoPrato from '../lista/PrecoPrato'
 import './story.css'
@@ -27,13 +27,68 @@ function Chevron({ para }: { para: 'cima' | 'baixo' }) {
   )
 }
 
-/** Prato vizinho durante o arrasto: só o poster (ou o fundo), aparece na hora. */
-function MidiaVizinha({ prato }: { prato: PratoPublico }) {
-  return prato.posterUrl ? (
-    <img className="story-midia" src={prato.posterUrl} alt="" />
-  ) : (
-    <div className="story-midia story-fundo" />
-  )
+type Posicao = 'anterior' | 'atual' | 'proximo'
+
+/**
+ * Mídia de um prato do trilho. Os vizinhos já ficam montados como <video> pausado
+ * e pré-carregado: ao trocar de prato o mesmo elemento vira o atual e só dá play,
+ * sem recriar (recriar fazia a tela piscar).
+ */
+function MidiaPrato({
+  prato,
+  ativo,
+  falhou,
+  videoRef,
+  onProgresso,
+  onFalha,
+}: {
+  prato: PratoPublico
+  ativo: boolean
+  falhou: boolean
+  videoRef: RefObject<HTMLVideoElement | null>
+  onProgresso: (fracao: number) => void
+  onFalha: () => void
+}) {
+  const proprio = useRef<HTMLVideoElement>(null)
+
+  // Saiu de cena: pausa, volta ao começo e fica mudo para não vazar som.
+  useEffect(() => {
+    const video = proprio.current
+    if (!video || ativo) return
+    video.pause()
+    video.muted = true
+    if (video.currentTime > 0) video.currentTime = 0
+  }, [ativo])
+
+  if (prato.videoUrl && !falhou) {
+    return (
+      <video
+        ref={(el) => {
+          proprio.current = el
+          if (ativo) videoRef.current = el
+        }}
+        className="story-midia"
+        data-testid={ativo ? 'story-video' : undefined}
+        src={prato.videoUrl}
+        poster={prato.posterUrl ?? undefined}
+        preload="auto"
+        autoPlay={ativo}
+        muted
+        loop
+        playsInline
+        onTimeUpdate={(evento) => {
+          if (!ativo) return
+          const { currentTime, duration } = evento.currentTarget
+          if (duration > 0) onProgresso(currentTime / duration)
+        }}
+        onError={onFalha}
+      />
+    )
+  }
+  if (prato.posterUrl) {
+    return <img className="story-midia" src={prato.posterUrl} alt={ativo ? prato.nome : ''} />
+  }
+  return <div className="story-midia story-fundo" data-testid={ativo ? 'story-fundo' : undefined} />
 }
 
 export default function StoryViewer({
@@ -65,6 +120,11 @@ export default function StoryViewer({
   const anterior = pratos[indice - 1]
   const proximo = pratos[indice + 1]
   const mostrarVideo = prato.videoUrl !== null && !falharam.has(prato.id)
+  const noTrilho: [PratoPublico, Posicao][] = [
+    ...(anterior ? [[anterior, 'anterior'] as [PratoPublico, Posicao]] : []),
+    [prato, 'atual'],
+    ...(proximo ? [[proximo, 'proximo'] as [PratoPublico, Posicao]] : []),
+  ]
 
   const irPara = (novo: number) => {
     const limitado = Math.min(Math.max(novo, 0), pratos.length - 1)
@@ -175,8 +235,8 @@ export default function StoryViewer({
     else video.pause()
   }
 
-  const marcarFalha = () => {
-    setFalharam((anteriores) => new Set(anteriores).add(prato.id))
+  const marcarFalha = (id: string) => {
+    setFalharam((anteriores) => new Set(anteriores).add(id))
   }
 
   return (
@@ -196,54 +256,25 @@ export default function StoryViewer({
           data-testid="story-trilho"
           style={{ transform: `translateY(${arrasto}px)` }}
         >
-          {anterior && (
-            <div className="story-slide story-slide--anterior" aria-hidden="true">
-              <MidiaVizinha prato={anterior} />
-            </div>
-          )}
-          <div className="story-slide">
-            {mostrarVideo ? (
-              <video
-                key={prato.id}
-                ref={videoRef}
-                className="story-midia"
-                data-testid="story-video"
-                src={prato.videoUrl ?? undefined}
-                poster={prato.posterUrl ?? undefined}
-                autoPlay
-                muted
-                loop
-                playsInline
-                onTimeUpdate={(evento) => {
-                  const { currentTime, duration } = evento.currentTarget
-                  if (duration > 0) setProgresso(currentTime / duration)
-                }}
-                onError={marcarFalha}
+          {noTrilho.map(([p, posicao]) => (
+            <div
+              key={p.id}
+              className={`story-slide story-slide--${posicao}`}
+              aria-hidden={posicao === 'atual' ? undefined : true}
+              data-testid={posicao === 'proximo' ? 'story-slide-proximo' : undefined}
+            >
+              <MidiaPrato
+                prato={p}
+                ativo={posicao === 'atual'}
+                falhou={falharam.has(p.id)}
+                videoRef={videoRef}
+                onProgresso={setProgresso}
+                onFalha={() => marcarFalha(p.id)}
               />
-            ) : prato.posterUrl ? (
-              <img className="story-midia" src={prato.posterUrl} alt={prato.nome} />
-            ) : (
-              <div className="story-midia story-fundo" data-testid="story-fundo" />
-            )}
-          </div>
-          {proximo && (
-            <div className="story-slide story-slide--proximo" aria-hidden="true" data-testid="story-slide-proximo">
-              <MidiaVizinha prato={proximo} />
             </div>
-          )}
+          ))}
         </div>
       </div>
-
-      {proximo?.videoUrl && (
-        <video
-          key={`pre-${proximo.id}`}
-          data-testid="story-pre-carga"
-          src={proximo.videoUrl}
-          preload="auto"
-          muted
-          hidden
-        />
-      )}
 
       <div className="story-progresso">
         {pratos.map((p, i) => (
