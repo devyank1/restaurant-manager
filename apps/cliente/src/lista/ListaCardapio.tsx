@@ -20,6 +20,7 @@ const AVISO_CONFIRMADO = 'Pedido enviado e confirmado!'
 const AVISO_CHAMADO = 'Garçom chamado! Ele já está a caminho.'
 const SEM_CONEXAO = 'Sem conexão. Tente de novo.'
 const DURACAO_AVISO_MS = 3000
+const DURACAO_AVISO_CHAMADO_MS = 5000
 
 export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioPublico; token: string }) {
   const { restaurante, mesa, categorias } = cardapio
@@ -32,13 +33,13 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const [filtro, setFiltro] = useState(chips[0]?.id ?? '')
   const [wifiAberto, setWifiAberto] = useState(false)
   // `id` muda a cada aviso, para reiniciar o tempo mesmo com o mesmo texto.
-  const [aviso, setAviso] = useState<{ texto: string; id: number } | null>(null)
+  const [aviso, setAviso] = useState<{ texto: string; id: number; duracao: number } | null>(null)
   const [storyAberto, setStoryAberto] = useState<number | null>(null)
   const [pratoComOpcoes, setPratoComOpcoes] = useState<PratoPublico | null>(null)
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
   const [pedidosAberto, setPedidosAberto] = useState(false)
   const [enviando, setEnviando] = useState(false)
-  const mostrarAviso = (texto: string) => setAviso({ texto, id: Date.now() })
+  const mostrarAviso = (texto: string, duracao = DURACAO_AVISO_MS) => setAviso({ texto, id: Date.now(), duracao })
   const carrinho = useCarrinhoMesa(token, mostrarAviso)
   const { itens, despachar, total, quantidade } = carrinho
   const rodadas = useRodadas(token)
@@ -46,14 +47,15 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   useMesaAoVivo(token, {
     carrinho: (atual) => (atual ? carrinho.aplicar(atual) : carrinho.recarregar()),
     rodadas: rodadas.recarregar,
-    atendido: rodadas.recarregar,
+    // Garçom atendeu antes dos 5 s: o aviso do chamado sai na hora.
+    atendido: () => setAviso((atual) => (atual?.texto === AVISO_CHAMADO ? null : atual)),
   })
 
   const pratos = pratosDoFiltro(cardapio, filtro)
 
   useEffect(() => {
     if (!aviso) return
-    const temporizador = setTimeout(() => setAviso(null), DURACAO_AVISO_MS)
+    const temporizador = setTimeout(() => setAviso(null), aviso.duracao)
     return () => clearTimeout(temporizador)
   }, [aviso])
 
@@ -74,7 +76,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
 
   const chamarGarcom = () => {
     chamarAtendente(token)
-      .then(rodadas.recarregar)
+      .then(() => mostrarAviso(AVISO_CHAMADO, DURACAO_AVISO_CHAMADO_MS))
       .catch(() => mostrarAviso(SEM_CONEXAO))
   }
 
@@ -146,17 +148,10 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
         )}
       </main>
 
-      {aviso ? (
+      {aviso && (
         <p className="aviso" role="status">
           {aviso.texto}
         </p>
-      ) : (
-        // Fica enquanto o servidor disser que o chamado está aberto.
-        rodadas.chamadoAberto && (
-          <p className="aviso" role="status">
-            {AVISO_CHAMADO}
-          </p>
-        )
       )}
 
       <footer className="barra-fundo">

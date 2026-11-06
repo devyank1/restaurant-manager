@@ -128,18 +128,19 @@ describe('ListaCardapio', () => {
     expect(api.chamadas('POST', /\/api\/publico\/mesas\/t\/chamados$/)).toHaveLength(1)
   })
 
-  it('voltar a aba some com o aviso se o garçom atendeu com o celular dormindo', async () => {
-    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
-    await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
-    await screen.findByText('Garçom chamado! Ele já está a caminho.')
-    api.estado.chamadoAberto = false
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
-    act(() => {
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
-    await waitFor(() =>
-      expect(screen.queryByText('Garçom chamado! Ele já está a caminho.')).not.toBeInTheDocument(),
-    )
+  it('aviso do chamado some sozinho depois de 5 s', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+      await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
+      await screen.findByText('Garçom chamado! Ele já está a caminho.')
+      act(() => vi.advanceTimersByTime(4900))
+      expect(screen.getByText('Garçom chamado! Ele já está a caminho.')).toBeInTheDocument()
+      act(() => vi.advanceTimersByTime(100))
+      expect(screen.queryByText('Garçom chamado! Ele já está a caminho.')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('pedido que entra confirmado avisa sem prometer confirmação', async () => {
