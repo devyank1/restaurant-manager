@@ -30,4 +30,10 @@ describe('validarEnv', () => {
       validarEnv({ ...BASE, CHAMADOS_VERIFICAR_MS: '0' }).CHAMADOS_VERIFICAR_MS,
     ).toBe(0);
   });
+
+  it('VAPID vazio (como no .env.example) conta como ausente', () => {
+    const env = validarEnv({ ...BASE, VAPID_PUBLICA: '', VAPID_PRIVADA: '' });
+    expect(env.VAPID_PUBLICA).toBeUndefined();
+    expect(env.VAPID_PRIVADA).toBeUndefined();
+  });
 });
