@@ -25,6 +25,15 @@ export class SocketFalso {
     return this
   }
 
+  /** Quantas vezes o app pediu para (re)conectar. */
+  reconexoes = 0
+
+  connect() {
+    this.desconectado = false
+    this.reconexoes++
+    return this
+  }
+
   /** Simula um evento vindo do servidor (inclui `connect`). */
   servidor(evento: string, dados?: unknown) {
     for (const ouvinte of this.ouvintes.get(evento) ?? []) ouvinte(dados)

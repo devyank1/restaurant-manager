@@ -198,6 +198,36 @@ describe('ListaCardapio', () => {
     expect(ultimoSocket().emitidos).toContainEqual({ evento: 'entrar-mesa', dados: { token: 't' } })
   })
 
+  it('toda conexão, inclusive a primeira, busca carrinho e pedidos', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await screen.findByRole('button', { name: /Realizar pedido \(0\)/ })
+    api.estado.itens = [mixNoCarrinho(2)]
+    act(() => ultimoSocket().servidor('connect'))
+    expect(await screen.findByRole('button', { name: /Realizar pedido \(2\)/ })).toBeInTheDocument()
+  })
+
+  it('desbloquear o celular refaz a conexão ao vivo na hora', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    const socket = ultimoSocket()
+    act(() => socket.servidor('connect'))
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    // Conexão "zumbi" do bloqueio é trocada por uma nova (que reentra na mesa).
+    expect(socket.reconexoes).toBe(1)
+    expect(socket.desconectado).toBe(false)
+  })
+
+  it('voltar a ter rede também refaz a conexão', () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    const socket = ultimoSocket()
+    act(() => {
+      window.dispatchEvent(new Event('online'))
+    })
+    expect(socket.reconexoes).toBe(1)
+  })
+
   it('voltar a aba recarrega carrinho e pedidos', async () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
     await screen.findByRole('button', { name: /Realizar pedido \(0\)/ })
