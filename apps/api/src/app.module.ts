@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CardapioPublicoModule } from './cardapio-publico/cardapio-publico.module';
 import { CarrinhoModule } from './carrinho/carrinho.module';
+import { ChamadosModule } from './chamados/chamados.module';
 import { validarEnv } from './config/env';
 import { EquipeModule } from './equipe/equipe.module';
 import { EventosModule } from './eventos/eventos.module';
@@ -23,6 +24,7 @@ import { TempoRealModule } from './tempo-real/tempo-real.module';
     EquipeModule,
     SessaoMesaModule,
     CarrinhoModule,
+    ChamadosModule,
   ],
 })
 export class AppModule {}
