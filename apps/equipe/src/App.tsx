@@ -4,6 +4,7 @@ import type { UsuarioEquipe } from './api/tipos'
 import Inicio from './inicio/Inicio'
 import Topo from './inicio/Topo'
 import Login from './login/Login'
+import TelaMesa from './mesa/TelaMesa'
 import TodasMesas from './mesas/TodasMesas'
 import { caminhoAtual, navegar, useRota } from './rotas'
 import './estilo/app.css'
@@ -45,7 +46,7 @@ export default function App() {
       <Topo usuario={usuario} onMudou={setUsuario} onSair={sair} />
       {rota.nome === 'inicio' && <Inicio usuario={usuario} />}
       {rota.nome === 'mesas' && <TodasMesas />}
-      {rota.nome === 'mesa' && <p className="vazio">{`Mesa ${rota.token}`}</p>}
+      {rota.nome === 'mesa' && <TelaMesa key={rota.token} token={rota.token} />}
     </div>
   )
 }

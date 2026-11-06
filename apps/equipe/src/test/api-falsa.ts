@@ -1,6 +1,8 @@
 // API da equipe em memória para os testes. `uma(...)` desvia a próxima chamada.
 import { vi } from 'vitest'
-import type { ChamadoEquipe, MesaEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
+import { precoUnitario, resumirOpcoes } from '@cardapio/opcoes'
+import type { CardapioPublico } from '../api/cardapio'
+import type { ChamadoEquipe, ItemRodadaEquipe, MesaEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
 
 type Resposta = { status: number; corpo?: unknown }
 type Rota = (corpo: unknown, caminho: string) => Resposta | undefined
@@ -59,6 +61,41 @@ export function criarApiFalsa() {
     if (mesa) {
       const detalhe = estado.mesa[decodeURIComponent(mesa)]
       return detalhe ? { status: 200, corpo: detalhe } : { status: 404, corpo: { mensagem: 'Mesa não encontrada' } }
+    }
+    const itemRodada = /^\/api\/equipe\/rodadas\/([^/]+)\/itens(?:\/([^/]+))?$/.exec(caminho)
+    if (itemRodada) {
+      const [, rodadaId, itemId] = itemRodada
+      const r = Object.values(estado.mesa)
+        .flatMap((m) => m.rodadas)
+        .find((x) => x.id === rodadaId)
+      if (!r) return { status: 404, corpo: { mensagem: 'Rodada não encontrada' } }
+      if (r.status !== 'AGUARDANDO_GARCOM') {
+        return { status: 409, corpo: { mensagem: 'Esta rodada já foi confirmada ou recusada' } }
+      }
+      const pratos = ((estado.cardapio as CardapioPublico | null)?.categorias ?? []).flatMap((c) => c.pratos)
+      const montar = (base: ItemRodadaEquipe, mudanca: Partial<ItemRodadaEquipe>): ItemRodadaEquipe => {
+        const novo = { ...base, ...mudanca }
+        const prato = pratos.find((p) => p.id === novo.pratoId)
+        if (!prato) return novo
+        return {
+          ...novo,
+          nome: prato.nome,
+          resumoOpcoes: resumirOpcoes(prato, novo.selecao),
+          precoUnitarioCentavos: precoUnitario(prato, novo.selecao),
+        }
+      }
+      if (metodo === 'POST') {
+        const novo = corpo as Omit<ItemRodadaEquipe, 'id' | 'nome' | 'resumoOpcoes' | 'precoUnitarioCentavos'>
+        const vazio = { id: `i-${r.itens.length + 100}`, nome: '', resumoOpcoes: '', precoUnitarioCentavos: 0 }
+        r.itens = [...r.itens, montar({ ...vazio, ...novo }, {})]
+      } else {
+        const edicao = corpo as Partial<ItemRodadaEquipe>
+        r.itens = r.itens
+          .map((i) => (i.id === itemId ? montar(i, edicao) : i))
+          .filter((i) => i.quantidade > 0)
+      }
+      r.totalCentavos = r.itens.reduce((s, i) => s + i.precoUnitarioCentavos * i.quantidade, 0)
+      return { status: metodo === 'POST' ? 201 : 200, corpo: r }
     }
     const rodada = /^\/api\/equipe\/rodadas\/([^/]+)\/(confirmar|recusar)$/.exec(caminho)
     if (rodada) {
