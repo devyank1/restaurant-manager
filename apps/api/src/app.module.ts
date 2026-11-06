@@ -9,6 +9,7 @@ import { EquipeModule } from './equipe/equipe.module';
 import { EventosModule } from './eventos/eventos.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RodadasModule } from './rodadas/rodadas.module';
 import { SessaoMesaModule } from './sessao-mesa/sessao-mesa.module';
 import { TempoRealModule } from './tempo-real/tempo-real.module';
 
@@ -25,6 +26,7 @@ import { TempoRealModule } from './tempo-real/tempo-real.module';
     SessaoMesaModule,
     CarrinhoModule,
     ChamadosModule,
+    RodadasModule,
   ],
 })
 export class AppModule {}
