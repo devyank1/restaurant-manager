@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { eu, logout } from './api/equipe'
 import type { UsuarioEquipe } from './api/tipos'
+import Inicio from './inicio/Inicio'
 import Topo from './inicio/Topo'
 import Login from './login/Login'
+import TodasMesas from './mesas/TodasMesas'
 import { caminhoAtual, navegar, useRota } from './rotas'
 import './estilo/app.css'
 
@@ -41,8 +43,8 @@ export default function App() {
   return (
     <div className="app">
       <Topo usuario={usuario} onMudou={setUsuario} onSair={sair} />
-      {rota.nome === 'inicio' && <p className="vazio">Sem chamados.</p>}
-      {rota.nome === 'mesas' && <p className="vazio">Mesas</p>}
+      {rota.nome === 'inicio' && <Inicio usuario={usuario} />}
+      {rota.nome === 'mesas' && <TodasMesas />}
       {rota.nome === 'mesa' && <p className="vazio">{`Mesa ${rota.token}`}</p>}
     </div>
   )
