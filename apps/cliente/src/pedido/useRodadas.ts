@@ -4,7 +4,11 @@ import type { RodadasDaMesa } from '../api/tipos'
 
 /** Rodadas já enviadas pela mesa, com o total parcial (só confirmadas). */
 export function useRodadas(token: string): RodadasDaMesa & { recarregar: () => void } {
-  const [dados, setDados] = useState<RodadasDaMesa>({ rodadas: [], totalParcialCentavos: 0 })
+  const [dados, setDados] = useState<RodadasDaMesa>({
+    rodadas: [],
+    totalParcialCentavos: 0,
+    chamadoAberto: false,
+  })
 
   const recarregar = useCallback(() => {
     buscarRodadas(token)

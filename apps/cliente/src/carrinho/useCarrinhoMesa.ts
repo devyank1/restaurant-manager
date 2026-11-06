@@ -8,11 +8,11 @@ import {
   ErroPedido,
   removerDoCarrinho,
 } from '../api/mesa'
-import type { CarrinhoPublico } from '../api/tipos'
+import type { CarrinhoPublico, RodadaPublica } from '../api/tipos'
 import { contarItens, type AcaoCarrinho, type ItemCarrinho } from './carrinho'
 
 const SEM_CONEXAO = 'Sem conexão. Tente de novo.'
-const VAZIO: CarrinhoPublico = { itens: [], totalCentavos: 0 }
+const VAZIO: CarrinhoPublico = { itens: [], totalCentavos: 0, versao: 0 }
 
 function mensagemDe(erro: unknown): string {
   return erro instanceof ErroPedido ? erro.message : SEM_CONEXAO
@@ -31,12 +31,16 @@ export function useCarrinhoMesa(
   total: number
   quantidade: number
   despachar: (acao: AcaoCarrinho) => Promise<boolean>
-  enviar: () => Promise<boolean>
+  enviar: () => Promise<RodadaPublica | null>
   aplicar: (carrinho: CarrinhoPublico) => void
   recarregar: () => void
   erro: string | null
 } {
-  const [carrinho, setCarrinho] = useState<CarrinhoPublico>(VAZIO)
+  const [carrinho, setCarrinhoBruto] = useState<CarrinhoPublico>(VAZIO)
+  // Resposta HTTP e evento do socket podem chegar fora de ordem: fica a mais nova.
+  const setCarrinho = useCallback((novo: CarrinhoPublico) => {
+    setCarrinhoBruto((atual) => (novo.versao >= atual.versao ? novo : atual))
+  }, [])
   const [erro, setErroEstado] = useState<string | null>(null)
   const avisar = useRef(aoErro)
   useEffect(() => {
@@ -53,7 +57,7 @@ export function useCarrinhoMesa(
       .catch(() => {
         // Sem rede: fica o último carrinho conhecido.
       })
-  }, [token])
+  }, [setCarrinho, token])
 
   useEffect(recarregar, [recarregar])
 
@@ -70,7 +74,7 @@ export function useCarrinhoMesa(
         return false
       }
     },
-    [recarregar, setErro],
+    [recarregar, setCarrinho, setErro],
   )
 
   const despachar = useCallback(
@@ -89,16 +93,17 @@ export function useCarrinhoMesa(
     [executar, token],
   )
 
+  // Depois do envio busca o carrinho: outro celular pode ter adicionado algo.
   const enviar = useCallback(async () => {
     try {
-      await enviarPedido(token)
-      setCarrinho(VAZIO)
+      const rodada = await enviarPedido(token)
       setErro(null)
-      return true
+      return rodada
     } catch (e) {
       setErro(mensagemDe(e))
+      return null
+    } finally {
       recarregar()
-      return false
     }
   }, [recarregar, setErro, token])
 

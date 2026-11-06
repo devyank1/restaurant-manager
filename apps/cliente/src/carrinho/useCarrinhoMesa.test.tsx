@@ -48,9 +48,30 @@ describe('useCarrinhoMesa', () => {
 
   it('aplicar usa o carrinho que veio do tempo real', async () => {
     const { result } = renderHook(() => useCarrinhoMesa('tok'))
-    act(() => result.current.aplicar({ itens: [{ ...mix, id: 'y', quantidade: 3 }], totalCentavos: 3 }))
+    act(() =>
+      result.current.aplicar({ itens: [{ ...mix, id: 'y', quantidade: 3 }], totalCentavos: 3, versao: 1000 }),
+    )
     expect(result.current.quantidade).toBe(3)
     expect(result.current.total).toBe(3)
+  })
+
+  it('foto mais velha que a atual é ignorada', async () => {
+    const { result } = renderHook(() => useCarrinhoMesa('tok'))
+    act(() => result.current.aplicar({ itens: [{ ...mix, id: 'n', quantidade: 2 }], totalCentavos: 2, versao: 50 }))
+    act(() => result.current.aplicar({ itens: [], totalCentavos: 0, versao: 40 }))
+    expect(result.current.quantidade).toBe(2)
+  })
+
+  it('envio não apaga item que outro celular adicionou logo depois', async () => {
+    api.estado.itens = [{ ...mix, id: 'x' }]
+    api.uma('POST', /rodadas$/, () => {
+      api.estado.itens = [{ ...mix, id: 'outro', quantidade: 1 }]
+      return { status: 201, corpo: { id: 'r', status: 'AGUARDANDO_GARCOM', criadoEm: '', totalCentavos: 1, itens: [] } }
+    })
+    const { result } = renderHook(() => useCarrinhoMesa('tok'))
+    await waitFor(() => expect(result.current.quantidade).toBe(1))
+    await act(() => result.current.enviar())
+    await waitFor(() => expect(result.current.itens.map((i) => i.id)).toEqual(['outro']))
   })
 
   it('erro do servidor vira mensagem e recarrega', async () => {

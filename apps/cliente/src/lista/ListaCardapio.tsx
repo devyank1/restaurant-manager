@@ -16,6 +16,7 @@ import WifiSheet from './WifiSheet'
 import './lista.css'
 
 const AVISO_ENVIADO = 'Pedido enviado! O garçom vai confirmar na mesa.'
+const AVISO_CONFIRMADO = 'Pedido enviado e confirmado!'
 const AVISO_CHAMADO = 'Garçom chamado! Ele já está a caminho.'
 const SEM_CONEXAO = 'Sem conexão. Tente de novo.'
 const DURACAO_AVISO_MS = 3000
@@ -37,8 +38,6 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
   const [pedidosAberto, setPedidosAberto] = useState(false)
   const [enviando, setEnviando] = useState(false)
-  // Fica até o garçom marcar "Atendido" (evento chamado-atendido).
-  const [esperandoGarcom, setEsperandoGarcom] = useState(false)
   const mostrarAviso = (texto: string) => setAviso({ texto, id: Date.now() })
   const carrinho = useCarrinhoMesa(token, mostrarAviso)
   const { itens, despachar, total, quantidade } = carrinho
@@ -47,7 +46,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   useMesaAoVivo(token, {
     carrinho: (atual) => (atual ? carrinho.aplicar(atual) : carrinho.recarregar()),
     rodadas: rodadas.recarregar,
-    atendido: () => setEsperandoGarcom(false),
+    atendido: rodadas.recarregar,
   })
 
   const pratos = pratosDoFiltro(cardapio, filtro)
@@ -64,18 +63,18 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
 
   const enviarPedido = async () => {
     setEnviando(true)
-    const enviado = await carrinho.enviar()
+    const rodada = await carrinho.enviar()
     setEnviando(false)
     rodadas.recarregar()
-    if (enviado) {
+    if (rodada) {
       setCarrinhoAberto(false)
-      mostrarAviso(AVISO_ENVIADO)
+      mostrarAviso(rodada.status === 'CONFIRMADA' ? AVISO_CONFIRMADO : AVISO_ENVIADO)
     }
   }
 
   const chamarGarcom = () => {
     chamarAtendente(token)
-      .then(() => setEsperandoGarcom(true))
+      .then(rodadas.recarregar)
       .catch(() => mostrarAviso(SEM_CONEXAO))
   }
 
@@ -152,7 +151,8 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
           {aviso.texto}
         </p>
       ) : (
-        esperandoGarcom && (
+        // Fica enquanto o servidor disser que o chamado está aberto.
+        rodadas.chamadoAberto && (
           <p className="aviso" role="status">
             {AVISO_CHAMADO}
           </p>

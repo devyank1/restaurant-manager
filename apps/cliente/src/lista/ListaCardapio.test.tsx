@@ -128,12 +128,44 @@ describe('ListaCardapio', () => {
     expect(api.chamadas('POST', /\/api\/publico\/mesas\/t\/chamados$/)).toHaveLength(1)
   })
 
+  it('voltar a aba some com o aviso se o garçom atendeu com o celular dormindo', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
+    await screen.findByText('Garçom chamado! Ele já está a caminho.')
+    api.estado.chamadoAberto = false
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    await waitFor(() =>
+      expect(screen.queryByText('Garçom chamado! Ele já está a caminho.')).not.toBeInTheDocument(),
+    )
+  })
+
+  it('pedido que entra confirmado avisa sem prometer confirmação', async () => {
+    api.estado.itens = [mixNoCarrinho(1)]
+    api.uma('POST', /\/rodadas$/, () => {
+      api.estado.itens = []
+      return {
+        status: 201,
+        corpo: { id: 'r', status: 'CONFIRMADA', criadoEm: '2026-11-06T20:00:00.000Z', totalCentavos: 5990, itens: [] },
+      }
+    })
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(await screen.findByRole('button', { name: /Realizar pedido \(1\)/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar pedido' }))
+    expect(await screen.findByText('Pedido enviado e confirmado!')).toBeInTheDocument()
+  })
+
   it('evento chamado-atendido some com o aviso de espera', async () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
     await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
     await screen.findByText('Garçom chamado! Ele já está a caminho.')
+    api.estado.chamadoAberto = false
     act(() => ultimoSocket().servidor('chamado-atendido', { chamadoId: 'c1' }))
-    expect(screen.queryByText('Garçom chamado! Ele já está a caminho.')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByText('Garçom chamado! Ele já está a caminho.')).not.toBeInTheDocument(),
+    )
   })
 
   it('tocar no cartão abre o story no prato tocado', async () => {
@@ -155,7 +187,7 @@ describe('ListaCardapio', () => {
   it('evento carrinho de outro celular atualiza a contagem de Realizar pedido', async () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
     await screen.findByRole('button', { name: /Realizar pedido \(0\)/ })
-    act(() => ultimoSocket().servidor('carrinho', { itens: [mixNoCarrinho(2)], totalCentavos: 11980 }))
+    act(() => ultimoSocket().servidor('carrinho', { itens: [mixNoCarrinho(2)], totalCentavos: 11980, versao: 1e12 }))
     expect(screen.getByRole('button', { name: /Realizar pedido \(2\)/ })).toBeInTheDocument()
   })
 

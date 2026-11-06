@@ -54,6 +54,8 @@ export type CardapioPublico = {
 export type CarrinhoPublico = {
   itens: ItemCarrinho[]
   totalCentavos: number
+  // Cresce a cada leitura no servidor; foto com versão menor é mais velha.
+  versao: number
 }
 
 export type RodadaPublica = {
@@ -74,4 +76,6 @@ export type RodadasDaMesa = {
   rodadas: RodadaPublica[]
   // Soma só das rodadas confirmadas.
   totalParcialCentavos: number
+  // Chamado de atendente ainda não resolvido (aviso "Garçom chamado!").
+  chamadoAberto: boolean
 }

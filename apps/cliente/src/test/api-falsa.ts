@@ -16,6 +16,8 @@ export function criarApiFalsa() {
     itens: [] as ItemCarrinho[],
     rodadas: [] as RodadaPublica[],
     totalParcialCentavos: 0,
+    chamadoAberto: false,
+    versao: 0,
   }
   const desvios: { metodo: string; padrao: RegExp; rota: Rota }[] = []
   let proximoId = 1
@@ -23,6 +25,7 @@ export function criarApiFalsa() {
   const carrinho = (): CarrinhoPublico => ({
     itens: estado.itens,
     totalCentavos: estado.itens.reduce((s, i) => s + i.precoUnitarioCentavos * i.quantidade, 0),
+    versao: ++estado.versao,
   })
 
   const padrao = (metodo: string, caminho: string, corpo: unknown): Resposta => {
@@ -78,9 +81,19 @@ export function criarApiFalsa() {
       return { status: 201, corpo: rodada }
     }
     if (mesa === 'rodadas') {
-      return { status: 200, corpo: { rodadas: estado.rodadas, totalParcialCentavos: estado.totalParcialCentavos } }
+      return {
+        status: 200,
+        corpo: {
+          rodadas: estado.rodadas,
+          totalParcialCentavos: estado.totalParcialCentavos,
+          chamadoAberto: estado.chamadoAberto,
+        },
+      }
     }
-    if (mesa === 'chamados') return { status: 201, corpo: { ok: true } }
+    if (mesa === 'chamados') {
+      estado.chamadoAberto = true
+      return { status: 201, corpo: { ok: true } }
+    }
     return { status: 404, corpo: { mensagem: `rota falsa ausente: ${metodo} ${caminho}` } }
   }
 
