@@ -264,10 +264,10 @@ describe('ListaCardapio', () => {
     expect(await screen.findByText('Seu pedido está vazio')).toBeInTheDocument()
   })
 
-  it('botão Pedidos aparece com rodadas e abre Seus pedidos', async () => {
+  it('faixa Seus pedidos aparece com rodadas, mostra status e total, e abre a lista', async () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
     await screen.findByRole('button', { name: /Realizar pedido/ })
-    expect(screen.queryByRole('button', { name: 'Pedidos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Seus pedidos/ })).not.toBeInTheDocument()
     api.estado.rodadas = [
       {
         id: 'r1',
@@ -279,9 +279,16 @@ describe('ListaCardapio', () => {
     ]
     api.estado.totalParcialCentavos = 5990
     act(() => ultimoSocket().servidor('rodadas-mudaram'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Pedidos' }))
+    const faixa = await screen.findByRole('button', { name: /Seus pedidos/ })
+    expect(within(faixa).getByText('Confirmado')).toBeInTheDocument()
+    expect(within(faixa).getByText(reais(5990))).toBeInTheDocument()
+
+    api.estado.rodadas = [...api.estado.rodadas, { ...api.estado.rodadas[0], id: 'r2', status: 'AGUARDANDO_GARCOM' }]
+    act(() => ultimoSocket().servidor('rodadas-mudaram'))
+    expect(await within(faixa).findByText('Aguardando garçom')).toBeInTheDocument()
+
+    await userEvent.click(faixa)
     expect(screen.getByRole('dialog', { name: 'Seus pedidos' })).toBeInTheDocument()
-    expect(screen.getByText('Confirmado')).toBeInTheDocument()
   })
 
   it('o aviso some depois de alguns segundos', async () => {

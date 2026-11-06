@@ -7,7 +7,7 @@ import CarrinhoSheet from '../pedido/CarrinhoSheet'
 import PedidosSheet from '../pedido/PedidosSheet'
 import SeletorOpcoes from '../pedido/SeletorOpcoes'
 import { useRodadas } from '../pedido/useRodadas'
-import { precoUnitario } from '../preco/preco'
+import { formatarReais, precoUnitario } from '../preco/preco'
 import StoryViewer from '../story/StoryViewer'
 import { useMesaAoVivo } from '../tempo-real/useMesaAoVivo'
 import CartaoPrato from './CartaoPrato'
@@ -53,6 +53,11 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
 
   const pratos = pratosDoFiltro(cardapio, filtro)
 
+  // Faixa "Seus pedidos": o que importa é se ainda tem algo esperando o garçom.
+  const algumAguardando = rodadas.rodadas.some((r) => r.status === 'AGUARDANDO_GARCOM')
+  const algumConfirmado = rodadas.rodadas.some((r) => r.status === 'CONFIRMADA')
+  const statusPedidos = algumAguardando ? 'Aguardando garçom' : algumConfirmado ? 'Confirmado' : 'Cancelado'
+
   useEffect(() => {
     if (!aviso) return
     const temporizador = setTimeout(() => setAviso(null), aviso.duracao)
@@ -97,7 +102,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   }
 
   return (
-    <div className="lista-tela">
+    <div className={`lista-tela${rodadas.rodadas.length > 0 ? ' lista-tela--com-pedidos' : ''}`}>
       <header className="topo">
         {restaurante.logoUrl ? (
           <img className="logo" src={restaurante.logoUrl} alt="" />
@@ -110,11 +115,6 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
           <h1 className="topo-nome">{restaurante.nome}</h1>
           <p className="topo-mesa">{`Mesa ${mesa.numero}`}</p>
         </div>
-        {rodadas.rodadas.length > 0 && (
-          <button type="button" className="topo-wifi" onClick={() => setPedidosAberto(true)}>
-            Pedidos
-          </button>
-        )}
         {restaurante.wifi && (
           <button type="button" className="topo-wifi" onClick={() => setWifiAberto(true)}>
             📶 Wi-Fi
@@ -155,6 +155,16 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
       )}
 
       <footer className="barra-fundo">
+        {rodadas.rodadas.length > 0 && (
+          <button type="button" className="faixa-pedidos" onClick={() => setPedidosAberto(true)}>
+            <span className="faixa-pedidos-titulo">🧾 Seus pedidos</span>
+            <span className={`faixa-pedidos-status${algumAguardando ? ' faixa-pedidos-status--espera' : ''}`}>
+              {statusPedidos}
+            </span>
+            <span className="faixa-pedidos-total">{formatarReais(rodadas.totalParcialCentavos)}</span>
+            <span aria-hidden="true">›</span>
+          </button>
+        )}
         <button type="button" className="botao botao--secundario" onClick={chamarGarcom}>
           🙋 Chamar atendente
         </button>
