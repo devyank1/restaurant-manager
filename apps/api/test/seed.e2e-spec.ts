@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { seedDemo } from '../prisma/seed';
+import { conferirSenha } from '../src/equipe/senha';
 
 describe('seedDemo', () => {
   const prisma = new PrismaClient();
@@ -57,5 +58,18 @@ describe('seedDemo', () => {
     expect(
       await prisma.prato.count({ where: { videoUrl: { not: null } } }),
     ).toBe(10);
+  });
+
+  it('cria a equipe da demo com senha', async () => {
+    const usuarios = await prisma.usuario.findMany({
+      orderBy: { email: 'asc' },
+    });
+    expect(usuarios.map((u) => [u.email, u.papel])).toEqual([
+      ['ana@demo.com', 'GARCOM'],
+      ['bruno@demo.com', 'GARCOM'],
+      ['dono@demo.com', 'DONO'],
+    ]);
+    const ana = usuarios[0];
+    expect(await conferirSenha('demo1234', ana.senhaHash)).toBe(true);
   });
 });

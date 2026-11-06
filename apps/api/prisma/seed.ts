@@ -1,4 +1,5 @@
-import { PrismaClient, TipoGrupoOpcao } from '@prisma/client';
+import { PapelUsuario, PrismaClient, TipoGrupoOpcao } from '@prisma/client';
+import { hashSenha } from '../src/equipe/senha';
 import { gerarTokenMesa } from '../src/mesas/token';
 
 type OpcaoSeed = { nome: string; precoCentavos: number };
@@ -27,6 +28,13 @@ type PratoSeed = {
 const SLUG_DEMO = 'demo';
 const TOTAL_MESAS = 10;
 const PASTA_VIDEOS = '/demo/videos';
+const SENHA_DEMO = 'demo1234';
+
+const EQUIPE: { nome: string; email: string; papel: PapelUsuario }[] = [
+  { nome: 'Ana', email: 'ana@demo.com', papel: 'GARCOM' },
+  { nome: 'Bruno', email: 'bruno@demo.com', papel: 'GARCOM' },
+  { nome: 'Carla', email: 'dono@demo.com', papel: 'DONO' },
+];
 
 const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
   {
@@ -243,6 +251,12 @@ export async function seedDemo(
           }
         }
       }
+
+      // Apagar o restaurante já levou a equipe junto (cascade).
+      const senhaHash = await hashSenha(SENHA_DEMO);
+      await tx.usuario.createMany({
+        data: EQUIPE.map((pessoa) => ({ ...pessoa, restauranteId, senhaHash })),
+      });
 
       return { restauranteId };
     },
