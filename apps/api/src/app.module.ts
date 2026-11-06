@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CardapioPublicoModule } from './cardapio-publico/cardapio-publico.module';
+import { CarrinhoModule } from './carrinho/carrinho.module';
 import { EquipeModule } from './equipe/equipe.module';
 import { validarEnv } from './config/env';
 import { HealthModule } from './health/health.module';
@@ -15,6 +16,7 @@ import { SessaoMesaModule } from './sessao-mesa/sessao-mesa.module';
     CardapioPublicoModule,
     EquipeModule,
     SessaoMesaModule,
+    CarrinhoModule,
   ],
 })
 export class AppModule {}
