@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { buscarCardapio, ErroMesaNaoEncontrada } from './api/cardapio'
+import { entrarNaMesa, souEquipe } from './api/mesa'
 import type { CardapioPublico } from './api/tipos'
 import ListaCardapio from './lista/ListaCardapio'
+import { urlEquipe } from './equipe-url'
+import { irPara } from './navegacao'
 import { extrairToken } from './rota'
 
 type Estado =
@@ -18,8 +21,17 @@ export default function App() {
 
   const buscar = useCallback(() => {
     if (!token) return
-    buscarCardapio(token)
-      .then((cardapio) => setEstado({ tipo: 'pronto', cardapio }))
+    const carregar = async () => {
+      // Garçom logado tocando a etiqueta: abre a mesa no app da equipe.
+      if (await souEquipe()) {
+        irPara(`${urlEquipe(window.location)}/mesa/${encodeURIComponent(token)}`)
+        return null
+      }
+      await entrarNaMesa(token)
+      return buscarCardapio(token)
+    }
+    carregar()
+      .then((cardapio) => cardapio && setEstado({ tipo: 'pronto', cardapio }))
       .catch((erro: unknown) =>
         setEstado(erro instanceof ErroMesaNaoEncontrada ? { tipo: 'nao-encontrada' } : { tipo: 'erro' }),
       )

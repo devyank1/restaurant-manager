@@ -1,3 +1,5 @@
+import type { ItemCarrinho } from '../carrinho/carrinho'
+
 // Espelho de apps/api/src/cardapio-publico/cardapio-publico.types.ts — manter em sincronia.
 export type OpcaoPublica = {
   id: string
@@ -46,4 +48,34 @@ export type CardapioPublico = {
   mesa: { numero: number }
   // Ordenadas por `ordem`; categorias sem pratos ficam de fora.
   categorias: CategoriaPublica[]
+}
+
+// Espelho de apps/api/src/carrinho/carrinho.types.ts e rodadas.types.ts.
+export type CarrinhoPublico = {
+  itens: ItemCarrinho[]
+  totalCentavos: number
+  // Cresce a cada leitura no servidor; foto com versão menor é mais velha.
+  versao: number
+}
+
+export type RodadaPublica = {
+  id: string
+  status: 'AGUARDANDO_GARCOM' | 'CONFIRMADA' | 'CANCELADA'
+  criadoEm: string
+  totalCentavos: number
+  itens: {
+    nome: string
+    resumoOpcoes: string
+    observacao: string
+    quantidade: number
+    precoUnitarioCentavos: number
+  }[]
+}
+
+export type RodadasDaMesa = {
+  rodadas: RodadaPublica[]
+  // Soma só das rodadas confirmadas.
+  totalParcialCentavos: number
+  // Chamado de atendente ainda não resolvido (aviso "Garçom chamado!").
+  chamadoAberto: boolean
 }

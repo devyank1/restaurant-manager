@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { tokenValido } from '../mesas/token';
 import { PrismaService } from '../prisma/prisma.service';
 import { CardapioPublico } from './cardapio-publico.types';
-
-// Tokens reais são base64url de 22 caracteres. Qualquer outra coisa nem vai ao
-// banco (o Postgres recusa byte nulo em texto e a consulta estouraria 500).
-const FORMATO_TOKEN = /^[A-Za-z0-9_-]{1,64}$/;
 
 const porOrdem = { orderBy: { ordem: 'asc' as const } };
 
@@ -13,7 +10,7 @@ export class CardapioPublicoService {
   constructor(private readonly prisma: PrismaService) {}
 
   async buscarPorToken(token: string): Promise<CardapioPublico | null> {
-    if (!FORMATO_TOKEN.test(token)) return null;
+    if (!tokenValido(token)) return null;
 
     const mesa = await this.prisma.mesa.findUnique({
       where: { token },

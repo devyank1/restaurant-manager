@@ -138,9 +138,40 @@
   text-align: right;
 }
 
-.carrinho-nota {
+.pedidos-rodadas {
   margin: 0;
-  font-size: 12px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.pedidos-rodada-topo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
   color: var(--texto-suave);
-  text-align: center;
+}
+
+.pedidos-status {
+  font-weight: 700;
+}
+
+.pedidos-rodada--confirmada .pedidos-status {
+  color: var(--sucesso, #2e9e5b);
+}
+
+.pedidos-rodada--cancelada {
+  opacity: 0.55;
+}
+
+.pedidos-linha {
+  display: flex;
+  gap: 6px;
+}
+
+.pedidos-qtd {
+  color: var(--texto-suave);
 }

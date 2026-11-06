@@ -1,18 +1,26 @@
 import { useEffect, useState } from 'react'
 import type { CardapioPublico, PratoPublico } from '../api/tipos'
+import { chamarAtendente } from '../api/mesa'
 import type { ItemCarrinho } from '../carrinho/carrinho'
-import { useCarrinho } from '../carrinho/useCarrinho'
+import { useCarrinhoMesa } from '../carrinho/useCarrinhoMesa'
 import CarrinhoSheet from '../pedido/CarrinhoSheet'
+import PedidosSheet from '../pedido/PedidosSheet'
 import SeletorOpcoes from '../pedido/SeletorOpcoes'
-import { precoUnitario } from '../preco/preco'
+import { useRodadas } from '../pedido/useRodadas'
+import { formatarReais, precoUnitario } from '../preco/preco'
 import StoryViewer from '../story/StoryViewer'
+import { useMesaAoVivo } from '../tempo-real/useMesaAoVivo'
 import CartaoPrato from './CartaoPrato'
 import { DESTAQUES, pratosDoFiltro } from './filtro'
 import WifiSheet from './WifiSheet'
 import './lista.css'
 
-const AVISO_ATENDENTE = 'Em breve: o garçom receberá seu chamado por aqui.'
+const AVISO_ENVIADO = 'Pedido enviado! O garçom vai confirmar na mesa.'
+const AVISO_CONFIRMADO = 'Pedido enviado e confirmado!'
+const AVISO_CHAMADO = 'Garçom chamado! Ele já está a caminho.'
+const SEM_CONEXAO = 'Sem conexão. Tente de novo.'
 const DURACAO_AVISO_MS = 3000
+const DURACAO_AVISO_CHAMADO_MS = 5000
 
 export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioPublico; token: string }) {
   const { restaurante, mesa, categorias } = cardapio
@@ -25,26 +33,56 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const [filtro, setFiltro] = useState(chips[0]?.id ?? '')
   const [wifiAberto, setWifiAberto] = useState(false)
   // `id` muda a cada aviso, para reiniciar o tempo mesmo com o mesmo texto.
-  const [aviso, setAviso] = useState<{ texto: string; id: number } | null>(null)
+  const [aviso, setAviso] = useState<{ texto: string; id: number; duracao: number } | null>(null)
   const [storyAberto, setStoryAberto] = useState<number | null>(null)
   const [pratoComOpcoes, setPratoComOpcoes] = useState<PratoPublico | null>(null)
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
-  const [idsDoCardapio] = useState(() => new Set(categorias.flatMap((c) => c.pratos.map((p) => p.id))))
-  const { itens, despachar, total, quantidade } = useCarrinho(token, idsDoCardapio)
+  const [pedidosAberto, setPedidosAberto] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const mostrarAviso = (texto: string, duracao = DURACAO_AVISO_MS) => setAviso({ texto, id: Date.now(), duracao })
+  const carrinho = useCarrinhoMesa(token, mostrarAviso)
+  const { itens, despachar, total, quantidade } = carrinho
+  const rodadas = useRodadas(token)
+
+  useMesaAoVivo(token, {
+    carrinho: (atual) => (atual ? carrinho.aplicar(atual) : carrinho.recarregar()),
+    rodadas: rodadas.recarregar,
+    // Garçom atendeu antes dos 5 s: o aviso do chamado sai na hora.
+    atendido: () => setAviso((atual) => (atual?.texto === AVISO_CHAMADO ? null : atual)),
+  })
 
   const pratos = pratosDoFiltro(cardapio, filtro)
 
+  // Faixa "Seus pedidos": o que importa é se ainda tem algo esperando o garçom.
+  const algumAguardando = rodadas.rodadas.some((r) => r.status === 'AGUARDANDO_GARCOM')
+  const algumConfirmado = rodadas.rodadas.some((r) => r.status === 'CONFIRMADA')
+  const statusPedidos = algumAguardando ? 'Aguardando garçom' : algumConfirmado ? 'Confirmado' : 'Cancelado'
+
   useEffect(() => {
     if (!aviso) return
-    const temporizador = setTimeout(() => setAviso(null), DURACAO_AVISO_MS)
+    const temporizador = setTimeout(() => setAviso(null), aviso.duracao)
     return () => clearTimeout(temporizador)
   }, [aviso])
 
-  const mostrarAviso = (texto: string) => setAviso({ texto, id: Date.now() })
+  const adicionarAoPedido = async (item: Omit<ItemCarrinho, 'id'>) => {
+    if (await despachar({ tipo: 'adicionar', item })) mostrarAviso('Adicionado ao pedido')
+  }
 
-  const adicionarAoPedido = (item: Omit<ItemCarrinho, 'id'>) => {
-    despachar({ tipo: 'adicionar', item })
-    mostrarAviso('Adicionado ao pedido')
+  const enviarPedido = async () => {
+    setEnviando(true)
+    const rodada = await carrinho.enviar()
+    setEnviando(false)
+    rodadas.recarregar()
+    if (rodada) {
+      setCarrinhoAberto(false)
+      mostrarAviso(rodada.status === 'CONFIRMADA' ? AVISO_CONFIRMADO : AVISO_ENVIADO)
+    }
+  }
+
+  const chamarGarcom = () => {
+    chamarAtendente(token)
+      .then(() => mostrarAviso(AVISO_CHAMADO, DURACAO_AVISO_CHAMADO_MS))
+      .catch(() => mostrarAviso(SEM_CONEXAO))
   }
 
   const aoAdicionar = (prato: PratoPublico) => {
@@ -52,7 +90,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
       setPratoComOpcoes(prato)
       return
     }
-    adicionarAoPedido({
+    void adicionarAoPedido({
       pratoId: prato.id,
       nome: prato.nome,
       resumoOpcoes: '',
@@ -64,7 +102,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   }
 
   return (
-    <div className="lista-tela">
+    <div className={`lista-tela${rodadas.rodadas.length > 0 ? ' lista-tela--com-pedidos' : ''}`}>
       <header className="topo">
         {restaurante.logoUrl ? (
           <img className="logo" src={restaurante.logoUrl} alt="" />
@@ -117,7 +155,17 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
       )}
 
       <footer className="barra-fundo">
-        <button type="button" className="botao botao--secundario" onClick={() => mostrarAviso(AVISO_ATENDENTE)}>
+        {rodadas.rodadas.length > 0 && (
+          <button type="button" className="faixa-pedidos" onClick={() => setPedidosAberto(true)}>
+            <span className="faixa-pedidos-titulo">🧾 Seus pedidos</span>
+            <span className={`faixa-pedidos-status${algumAguardando ? ' faixa-pedidos-status--espera' : ''}`}>
+              {statusPedidos}
+            </span>
+            <span className="faixa-pedidos-total">{formatarReais(rodadas.totalParcialCentavos)}</span>
+            <span aria-hidden="true">›</span>
+          </button>
+        )}
+        <button type="button" className="botao botao--secundario" onClick={chamarGarcom}>
           🙋 Chamar atendente
         </button>
         <button type="button" className="botao botao--primario" onClick={() => setCarrinhoAberto(true)}>
@@ -139,14 +187,29 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
           prato={pratoComOpcoes}
           onCancelar={() => setPratoComOpcoes(null)}
           onConfirmar={(item) => {
-            adicionarAoPedido(item)
+            void adicionarAoPedido(item)
             setPratoComOpcoes(null)
           }}
         />
       )}
 
       {carrinhoAberto && (
-        <CarrinhoSheet itens={itens} total={total} despachar={despachar} onFechar={() => setCarrinhoAberto(false)} />
+        <CarrinhoSheet
+          itens={itens}
+          total={total}
+          despachar={despachar}
+          onEnviar={() => void enviarPedido()}
+          enviando={enviando}
+          onFechar={() => setCarrinhoAberto(false)}
+        />
+      )}
+
+      {pedidosAberto && (
+        <PedidosSheet
+          rodadas={rodadas.rodadas}
+          totalParcialCentavos={rodadas.totalParcialCentavos}
+          onFechar={() => setPedidosAberto(false)}
+        />
       )}
 
       {wifiAberto && restaurante.wifi && (

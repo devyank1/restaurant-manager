@@ -30,7 +30,7 @@ const itens: ItemCarrinho[] = [
 
 describe('CarrinhoSheet', () => {
   it('lista itens com resumo, observação, subtotal e total', () => {
-    render(<CarrinhoSheet itens={itens} total={21970} despachar={vi.fn()} onFechar={vi.fn()} />)
+    render(<CarrinhoSheet itens={itens} total={21970} despachar={vi.fn()} onEnviar={vi.fn()} onFechar={vi.fn()} />)
     const pizza = screen.getByRole('listitem', { name: 'Pizza Margherita' })
     expect(within(pizza).getByText('M · Margherita / Quatro Queijos')).toBeInTheDocument()
     expect(within(pizza).getByText('Obs.: sem cebola')).toBeInTheDocument()
@@ -40,7 +40,7 @@ describe('CarrinhoSheet', () => {
 
   it('diminuir com quantidade 1 remove o item', async () => {
     const despachar = vi.fn()
-    render(<CarrinhoSheet itens={itens} total={21970} despachar={despachar} onFechar={vi.fn()} />)
+    render(<CarrinhoSheet itens={itens} total={21970} despachar={despachar} onEnviar={vi.fn()} onFechar={vi.fn()} />)
     const mix = screen.getByRole('listitem', { name: 'Mix da Casa' })
     await userEvent.click(within(mix).getByRole('button', { name: 'Diminuir quantidade' }))
     expect(despachar).toHaveBeenCalledWith({ tipo: 'quantidade', id: 'i2', quantidade: 0 })
@@ -48,20 +48,30 @@ describe('CarrinhoSheet', () => {
 
   it('aumentar soma um', async () => {
     const despachar = vi.fn()
-    render(<CarrinhoSheet itens={itens} total={21970} despachar={despachar} onFechar={vi.fn()} />)
+    render(<CarrinhoSheet itens={itens} total={21970} despachar={despachar} onEnviar={vi.fn()} onFechar={vi.fn()} />)
     const pizza = screen.getByRole('listitem', { name: 'Pizza Margherita' })
     await userEvent.click(within(pizza).getByRole('button', { name: 'Aumentar quantidade' }))
     expect(despachar).toHaveBeenCalledWith({ tipo: 'quantidade', id: 'i1', quantidade: 3 })
   })
 
   it('carrinho vazio avisa', () => {
-    render(<CarrinhoSheet itens={[]} total={0} despachar={vi.fn()} onFechar={vi.fn()} />)
+    render(<CarrinhoSheet itens={[]} total={0} despachar={vi.fn()} onEnviar={vi.fn()} onFechar={vi.fn()} />)
     expect(screen.getByText('Seu pedido está vazio')).toBeInTheDocument()
   })
 
-  it('envio ainda desabilitado nesta versão', () => {
-    render(<CarrinhoSheet itens={itens} total={21970} despachar={vi.fn()} onFechar={vi.fn()} />)
+  it('Enviar pedido chama onEnviar', async () => {
+    const onEnviar = vi.fn()
+    render(<CarrinhoSheet itens={itens} total={21970} despachar={vi.fn()} onEnviar={onEnviar} onFechar={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar pedido' }))
+    expect(onEnviar).toHaveBeenCalled()
+  })
+
+  it('carrinho vazio ou enviando não deixa enviar', () => {
+    const { rerender } = render(
+      <CarrinhoSheet itens={[]} total={0} despachar={vi.fn()} onEnviar={vi.fn()} onFechar={vi.fn()} />,
+    )
     expect(screen.getByRole('button', { name: 'Enviar pedido' })).toBeDisabled()
-    expect(screen.getByText('O envio para o garçom chega na próxima versão.')).toBeInTheDocument()
+    rerender(<CarrinhoSheet itens={itens} total={21970} despachar={vi.fn()} onEnviar={vi.fn()} enviando onFechar={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Enviando…' })).toBeDisabled()
   })
 })

@@ -1,9 +1,11 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CardapioPublico } from '../api/tipos'
 import { reais } from '../test/reais'
+import { criarApiFalsa, type ApiFalsa } from '../test/api-falsa'
 import { cardapioDemo } from '../test/fixtures'
+import { ultimoSocket } from '../test/socket-falso'
 import ListaCardapio from './ListaCardapio'
 import { pratosDoFiltro } from './filtro'
 
@@ -17,10 +19,26 @@ const semDestaques = (): CardapioPublico => ({
   })),
 })
 
+const mixNoCarrinho = (quantidade: number) => ({
+  id: 'x',
+  pratoId: 'mix',
+  nome: 'Mix da Casa',
+  resumoOpcoes: '',
+  selecao: {},
+  observacao: '',
+  quantidade,
+  precoUnitarioCentavos: 5990,
+})
+
 describe('ListaCardapio', () => {
+  let api: ApiFalsa
+
   beforeEach(() => {
-    localStorage.clear()
+    api = criarApiFalsa()
+    vi.stubGlobal('fetch', api.fetch)
   })
+
+  afterEach(() => vi.unstubAllGlobals())
 
   it('começa no chip Destaques com os pratos em destaque', () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
@@ -103,12 +121,52 @@ describe('ListaCardapio', () => {
     expect(screen.queryByRole('link', { name: /Avalie no Google/ })).not.toBeInTheDocument()
   })
 
-  it('Chamar atendente avisa que chega em breve', async () => {
+  it("Chamar atendente mostra 'Garçom chamado! Ele já está a caminho.'", async () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
     await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
-    expect(
-      screen.getByText('Em breve: o garçom receberá seu chamado por aqui.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Garçom chamado! Ele já está a caminho.')).toBeInTheDocument()
+    expect(api.chamadas('POST', /\/api\/publico\/mesas\/t\/chamados$/)).toHaveLength(1)
+  })
+
+  it('aviso do chamado some sozinho depois de 5 s', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+      await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
+      await screen.findByText('Garçom chamado! Ele já está a caminho.')
+      act(() => vi.advanceTimersByTime(4900))
+      expect(screen.getByText('Garçom chamado! Ele já está a caminho.')).toBeInTheDocument()
+      act(() => vi.advanceTimersByTime(100))
+      expect(screen.queryByText('Garçom chamado! Ele já está a caminho.')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('pedido que entra confirmado avisa sem prometer confirmação', async () => {
+    api.estado.itens = [mixNoCarrinho(1)]
+    api.uma('POST', /\/rodadas$/, () => {
+      api.estado.itens = []
+      return {
+        status: 201,
+        corpo: { id: 'r', status: 'CONFIRMADA', criadoEm: '2026-11-06T20:00:00.000Z', totalCentavos: 5990, itens: [] },
+      }
+    })
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(await screen.findByRole('button', { name: /Realizar pedido \(1\)/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar pedido' }))
+    expect(await screen.findByText('Pedido enviado e confirmado!')).toBeInTheDocument()
+  })
+
+  it('evento chamado-atendido some com o aviso de espera', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
+    await screen.findByText('Garçom chamado! Ele já está a caminho.')
+    api.estado.chamadoAberto = false
+    act(() => ultimoSocket().servidor('chamado-atendido', { chamadoId: 'c1' }))
+    await waitFor(() =>
+      expect(screen.queryByText('Garçom chamado! Ele já está a caminho.')).not.toBeInTheDocument(),
+    )
   })
 
   it('tocar no cartão abre o story no prato tocado', async () => {
@@ -118,22 +176,130 @@ describe('ListaCardapio', () => {
     expect(screen.getByText('2 de 2')).toBeInTheDocument()
   })
 
-  it('adicionar prato sem opções pelo story soma no pedido', async () => {
+  it('adicionar chama a API e mostra o carrinho devolvido', async () => {
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
     await userEvent.click(cartao('Mix da Casa'))
     await userEvent.click(screen.getByRole('button', { name: '+ Adicionar ao pedido' }))
-    expect(screen.getByText('Adicionado ao pedido')).toBeInTheDocument()
+    expect(await screen.findByText('Adicionado ao pedido')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Realizar pedido \(1\)/ })).toBeInTheDocument()
+    expect(api.chamadas('POST', /\/carrinho\/itens$/)).toHaveLength(1)
+  })
+
+  it('evento carrinho de outro celular atualiza a contagem de Realizar pedido', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await screen.findByRole('button', { name: /Realizar pedido \(0\)/ })
+    act(() => ultimoSocket().servidor('carrinho', { itens: [mixNoCarrinho(2)], totalCentavos: 11980, versao: 1e12 }))
+    expect(screen.getByRole('button', { name: /Realizar pedido \(2\)/ })).toBeInTheDocument()
+  })
+
+  it('conecta o tempo real e pede para entrar na mesa', () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    act(() => ultimoSocket().servidor('connect'))
+    expect(ultimoSocket().emitidos).toContainEqual({ evento: 'entrar-mesa', dados: { token: 't' } })
+  })
+
+  it('toda conexão, inclusive a primeira, busca carrinho e pedidos', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await screen.findByRole('button', { name: /Realizar pedido \(0\)/ })
+    api.estado.itens = [mixNoCarrinho(2)]
+    act(() => ultimoSocket().servidor('connect'))
+    expect(await screen.findByRole('button', { name: /Realizar pedido \(2\)/ })).toBeInTheDocument()
+  })
+
+  it('desbloquear o celular refaz a conexão ao vivo na hora', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    const socket = ultimoSocket()
+    act(() => socket.servidor('connect'))
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    // Conexão "zumbi" do bloqueio é trocada por uma nova (que reentra na mesa).
+    expect(socket.reconexoes).toBe(1)
+    expect(socket.desconectado).toBe(false)
+  })
+
+  it('voltar a ter rede também refaz a conexão', () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    const socket = ultimoSocket()
+    act(() => {
+      window.dispatchEvent(new Event('online'))
+    })
+    expect(socket.reconexoes).toBe(1)
+  })
+
+  it('voltar a aba recarrega carrinho e pedidos', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await screen.findByRole('button', { name: /Realizar pedido \(0\)/ })
+    api.estado.itens = [mixNoCarrinho(4)]
+    const antes = api.chamadas('GET', /\/rodadas$/).length
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(await screen.findByRole('button', { name: /Realizar pedido \(4\)/ })).toBeInTheDocument()
+    await waitFor(() => expect(api.chamadas('GET', /\/rodadas$/).length).toBeGreaterThan(antes))
+  })
+
+  it('Enviar pedido esvazia o carrinho e mostra o aviso', async () => {
+    api.estado.itens = [mixNoCarrinho(1)]
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(await screen.findByRole('button', { name: /Realizar pedido \(1\)/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar pedido' }))
+    expect(await screen.findByText('Pedido enviado! O garçom vai confirmar na mesa.')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Seu pedido' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Realizar pedido \(0\)/ })).toBeInTheDocument()
+  })
+
+  it('409 de esgotado mostra a mensagem e recarrega o carrinho', async () => {
+    api.estado.itens = [mixNoCarrinho(1)]
+    api.uma('POST', /\/rodadas$/, () => {
+      api.estado.itens = []
+      return { status: 409, corpo: { mensagem: 'Mix da Casa esgotou', pratoIds: ['mix'] } }
+    })
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await userEvent.click(await screen.findByRole('button', { name: /Realizar pedido \(1\)/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar pedido' }))
+    expect(await screen.findByText('Mix da Casa esgotou')).toBeInTheDocument()
+    expect(await screen.findByText('Seu pedido está vazio')).toBeInTheDocument()
+  })
+
+  it('faixa Seus pedidos aparece com rodadas, mostra status e total, e abre a lista', async () => {
+    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
+    await screen.findByRole('button', { name: /Realizar pedido/ })
+    expect(screen.queryByRole('button', { name: /Seus pedidos/ })).not.toBeInTheDocument()
+    api.estado.rodadas = [
+      {
+        id: 'r1',
+        status: 'CONFIRMADA',
+        criadoEm: '2026-11-06T20:00:00.000Z',
+        totalCentavos: 5990,
+        itens: [{ nome: 'Mix da Casa', resumoOpcoes: '', observacao: '', quantidade: 1, precoUnitarioCentavos: 5990 }],
+      },
+    ]
+    api.estado.totalParcialCentavos = 5990
+    act(() => ultimoSocket().servidor('rodadas-mudaram'))
+    const faixa = await screen.findByRole('button', { name: /Seus pedidos/ })
+    expect(within(faixa).getByText('Confirmado')).toBeInTheDocument()
+    expect(within(faixa).getByText(reais(5990))).toBeInTheDocument()
+
+    api.estado.rodadas = [...api.estado.rodadas, { ...api.estado.rodadas[0], id: 'r2', status: 'AGUARDANDO_GARCOM' }]
+    act(() => ultimoSocket().servidor('rodadas-mudaram'))
+    expect(await within(faixa).findByText('Aguardando garçom')).toBeInTheDocument()
+
+    await userEvent.click(faixa)
+    expect(screen.getByRole('dialog', { name: 'Seus pedidos' })).toBeInTheDocument()
   })
 
   it('o aviso some depois de alguns segundos', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     try {
       render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
-      await userEvent.click(screen.getByRole('button', { name: /Chamar atendente/ }))
-      expect(screen.getByRole('status')).toBeInTheDocument()
+      await userEvent.click(cartao('Mix da Casa'))
+      await userEvent.click(screen.getByRole('button', { name: '+ Adicionar ao pedido' }))
+      expect(await screen.findByText('Adicionado ao pedido')).toBeInTheDocument()
       act(() => vi.advanceTimersByTime(3000))
-      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      expect(screen.queryByText('Adicionado ao pedido')).not.toBeInTheDocument()
     } finally {
       vi.useRealTimers()
     }
@@ -153,25 +319,10 @@ describe('ListaCardapio', () => {
     expect(screen.getByText('Seu pedido está vazio')).toBeInTheDocument()
   })
 
-  it('descarta do carrinho salvo os pratos que saíram do cardápio', () => {
-    const item = (pratoId: string, id: string) => ({
-      id,
-      pratoId,
-      nome: pratoId,
-      resumoOpcoes: '',
-      selecao: {},
-      observacao: '',
-      quantidade: 1,
-      precoUnitarioCentavos: 1000,
-    })
-    localStorage.setItem('carrinho:t', JSON.stringify([item('mix', 'a'), item('prato-removido', 'b')]))
+  it('mostra Realizar pedido com a quantidade do carrinho da mesa', async () => {
+    api.estado.itens = [mixNoCarrinho(3)]
     render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
-    expect(screen.getByRole('button', { name: /Realizar pedido \(1\)/ })).toBeInTheDocument()
-  })
-
-  it('mostra Realizar pedido com a quantidade do carrinho', () => {
-    render(<ListaCardapio cardapio={cardapioDemo} token="t" />)
-    expect(screen.getByRole('button', { name: /Realizar pedido \(0\)/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Realizar pedido \(3\)/ })).toBeInTheDocument()
   })
 })
 
