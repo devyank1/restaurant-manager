@@ -1,8 +1,10 @@
-# Etapa 2 — Pedido chega ao garçom: Implementation Plan
+# Etapa 2A — Pedido e chamado na API e no cliente: Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** O cliente monta um carrinho compartilhado da mesa, envia o pedido e chama o atendente. O garçom certo recebe na hora (com app aberto ou por Push), vai à mesa, confirma ou edita a rodada, e o cliente vê o status.
+**Goal:** O cliente monta um carrinho compartilhado da mesa, envia o pedido e chama o atendente. A API escolhe o garçom, repassa chamados sem resposta, avisa em tempo real e por Push, e expõe as rotas da equipe que o app do garçom (Etapa 2B) vai usar.
+
+**Parte de:** Etapa 2 dividida em duas [dono, 06/11]. 2B: `docs/superpowers/plans/2026-11-06-etapa-2b-app-garcom.md`.
 
 **Architecture:**
 - A API NestJS ganha os módulos `equipe`, `sessao-mesa`, `carrinho`, `rodadas`, `chamados`, `tempo-real`, `eventos` e `push`. Os serviços publicam eventos de domínio pelo `@nestjs/event-emitter`. Um listener persiste esses eventos e outro manda pelo socket.io e pelo Web Push.
@@ -21,7 +23,7 @@
 - **O garçom não perde chamado**: sem leitura em `janelaChamadoSegundos` (padrão **60**) o chamado vai para o próximo garçom. Depois da 2ª tentativa vai para todos os garçons em turno e o dono. Chamado nunca some até ser resolvido (§8.1).
 - Escolha do garçom (§5.2), nesta ordem: responsável da mesa → em turno e livre → quem atendeu menos mesas no turno → empate: mais tempo sem receber chamado.
 - Confirmação presencial: a 1ª rodada da mesa **e** a 1ª rodada de cada dispositivo novo (§8.1). As demais rodadas ficam `CONFIRMADA` direto. A cozinha recebe na Etapa 3.
-- O garçom não altera preço de item: só quantidade, remove ou adiciona.
+- O garçom não digita preço. Ele pode mudar quantidade, opções (inclusive tamanho) e observação, remover e adicionar qualquer prato; o preço é sempre recalculado pelas regras de `precoUnitario` [dono, 06/11].
 - Cliente sem login: identificado pelo token da mesa e pelo cookie `dispositivo` (§7). Equipe: JWT em cookie httpOnly `equipe`.
 - Estilo do código: o padrão atual de cada app (api: prettier + eslint; fronts: oxlint, sem ponto e vírgula, aspas simples). Textos da interface em pt-BR.
 - Fora desta etapa: cozinha/estações, conta e fechamento, janela de cancelamento (Etapa 3); exceções por valor ou prato "exige confirmação" e leitor de QR no app (Etapa 4).
@@ -277,8 +279,8 @@
   - `GET /equipe/mesas/:token` → `MesaEquipe = { mesa:{numero, token}; garcomNome: string|null; rodadas: RodadaEquipe[]; totalConfirmadoCentavos }`
     - `RodadaEquipe = RodadaPublica & { dispositivoNovo: boolean; itens: (… & {id, pratoId})[] }`
     - Sem sessão aberta → `rodadas: []`.
-  - `PATCH /equipe/rodadas/:id/itens/:itemId {quantidade}`: 0 remove, recalcula o total. Só em `AGUARDANDO_GARCOM`, senão 409.
-  - `POST /equipe/rodadas/:id/itens {pratoId, selecao, observacao, quantidade}` adiciona, com o preço calculado agora.
+  - `PATCH /equipe/rodadas/:id/itens/:itemId {quantidade?, selecao?, observacao?}`: quantidade 0 remove. `selecao` nova é validada com `validarSelecao` (422) e o preço do item é recalculado. Recalcula o total. Só em `AGUARDANDO_GARCOM`, senão 409.
+  - `POST /equipe/rodadas/:id/itens {pratoId, selecao, observacao, quantidade}` adiciona qualquer prato não esgotado, com as mesmas validações do carrinho e o preço calculado agora.
   - `POST /equipe/rodadas/:id/confirmar`:
     - `CONFIRMADA`, `confirmadaPorId`;
     - na sessão, `garcomId ??= eu` com `garcomDesde`;
@@ -298,7 +300,9 @@
   - `celular novo na mesa aberta: 1ª rodada aguarda confirmação`.
   - `confirmar duas vezes → 409 e só um Evento PedidoConfirmado`.
   - `garçom remove item e o total é recalculado`.
-  - `garçom não altera preço`: o PATCH com `precoUnitarioCentavos` é ignorado.
+  - `garçom troca o tamanho da pizza e o preço é recalculado`: M → G, 6990 → 8990.
+  - `garçom não digita preço`: o PATCH com `precoUnitarioCentavos` é ignorado.
+  - `seleção inválida do garçom → 422`.
   - `recusar cancela e o cliente vê CANCELADA`.
   - `totalParcial soma só confirmadas`.
   - `garçom de outro restaurante → 404 em /equipe/mesas/:token e nas rodadas`.
@@ -393,137 +397,3 @@
 - [ ] **Step 3:** Implementar. Adicionar `socket.io-client`.
 - [ ] **Step 4:** Expected: PASS, mais `tsc -b`, `lint` e `build` limpos.
 - [ ] **Step 5:** Commit `feat(cliente): shared table cart, send order, call waiter, order status`.
-
-### Task 10: App da equipe — base, login e turno
-
-**Files:**
-- Create: `apps/equipe/` (mesmo setup do `apps/cliente`: Vite, React, TS, Vitest, oxlint, `vite.config.ts` com porta **5174**, `host:true`, proxy `/api` e `/socket.io`, `allowedHosts:['.ts.net']`), `src/rotas.ts` + teste, `src/api/equipe.ts`, `src/login/Login.tsx` + teste, `src/inicio/Topo.tsx` + teste, `src/estilo/tokens.css` (copiado do cliente)
-- Modify: `package.json` da raiz (`dev:equipe`)
-
-**Interfaces:**
-- Produces:
-  - `rotas.ts`: `useRota(): Rota` e `navegar(caminho)` com `history.pushState` + `popstate`.
-    - `type Rota = {nome:'login'} | {nome:'inicio'} | {nome:'mesas'} | {nome:'mesa', token: string}`
-    - caminhos: `/login`, `/`, `/mesas`, `/mesa/:token`.
-  - `api/equipe.ts`:
-    - `login`, `logout`, `eu`, `mudarTurno`;
-    - `buscarChamados`, `marcarLido`, `resolverChamado`;
-    - `buscarMesas`, `buscarMesa`;
-    - `alterarItem`, `adicionarItem`, `confirmarRodada`, `recusarRodada`;
-    - `chavePush`, `inscreverPush`.
-    - 401 → `ErroNaoAutenticado`, que manda para `/login`.
-  - `Topo`: nome do usuário, interruptor `Em turno` (aria `switch`) e `Sair`.
-
-- [ ] **Step 1: Testes que falham**
-  - `rotas reconhece /mesa/abc`.
-  - `login certo vai para o início`.
-  - `login errado mostra 'E-mail ou senha inválidos'`.
-  - `sem sessão abre o login`.
-  - `interruptor Em turno chama a API e reflete o estado`.
-- [ ] **Step 2:** Expected: FAIL.
-- [ ] **Step 3:** Implementar. Visual escuro, no mesmo tema do cliente.
-- [ ] **Step 4:** Expected: PASS, mais `tsc`, `lint` e `build`.
-- [ ] **Step 5:** Commit `feat(equipe): staff app shell with login and shift toggle`.
-
-### Task 11: App da equipe — chamados e mesas ao vivo
-
-**Files:**
-- Create: `apps/equipe/src/inicio/{Inicio,ListaChamados,MinhasMesas}.tsx` + testes, `apps/equipe/src/mesas/TodasMesas.tsx` + teste, `apps/equipe/src/tempo-real/useEquipeAoVivo.ts`, `apps/equipe/src/nfc/lerEtiqueta.ts` + teste
-
-**Interfaces:**
-- Produces:
-  - `ListaChamados`:
-    - cada cartão mostra `Mesa <n>`, `Chamou o atendente` ou `Novo pedido para confirmar`, tempo desde a criação e o selo `Para todos` quando houver;
-    - tocar marca lido;
-    - `CONFIRMAR_RODADA` → `navegar('/mesa/'+token)`;
-    - `ATENDENTE` tem o botão `Atendido`.
-  - `MinhasMesas` / `TodasMesas`: a partir de `GET /equipe/mesas`, com o selo de `pendentes`.
-  - `useEquipeAoVivo(aoMudar)`: socket, eventos `chamados-mudaram` e `mesa-mudou`, e refetch ao reconectar ou ao voltar a aba.
-  - `lerEtiqueta(): Promise<string>`:
-    - usa `NDEFReader` (Web NFC) e devolve o token extraído da URL `/m/<token>`;
-    - sem suporte → `null`, e o botão `Ler etiqueta` some. No iPhone fica a lista `Todas as mesas`.
-
-- [ ] **Step 1: Testes que falham**
-  - `mostra os chamados do garçom com o tipo certo`.
-  - `tocar no chamado marca lido`.
-  - `chamado de pedido abre a mesa`.
-  - `Atendido resolve`.
-  - `evento chamados-mudaram recarrega a lista`.
-  - `sem Web NFC não mostra Ler etiqueta`.
-  - `lerEtiqueta extrai o token da URL lida` (`NDEFReader` falso).
-  - `TodasMesas abre a mesa tocada`.
-- [ ] **Step 2:** Expected: FAIL.
-- [ ] **Step 3:** Implementar.
-- [ ] **Step 4:** Expected: PASS.
-- [ ] **Step 5:** Commit `feat(equipe): live calls list, tables and NFC tag reading`.
-
-### Task 12: App da equipe — tela da mesa
-
-**Files:**
-- Create: `apps/equipe/src/mesa/{TelaMesa,RodadaPendente,AdicionarItem}.tsx` + testes, `apps/equipe/src/preco.ts` (só `formatarReais`)
-
-**Interfaces:**
-- Consumes: `GET /equipe/mesas/:token`, os endpoints de rodada da Task 7 e `GET /api/publico/mesas/:token/cardapio` para listar pratos.
-- Produces:
-  - `TelaMesa`:
-    - cabeçalho `Mesa <n>` e o responsável;
-    - rodadas pendentes primeiro, com o selo `Celular novo` se `dispositivoNovo`;
-    - depois as confirmadas e o `Total parcial`.
-  - `RodadaPendente`:
-    - cada item com nome, opções, observação em destaque, `−`/`+` e `Remover`;
-    - botões `Confirmar pedido` (primário) e `Recusar`, este com confirmação `Recusar este pedido?`.
-  - `AdicionarItem`:
-    - lista de pratos não esgotados **sem grupo obrigatório**, com quantidade e observação;
-    - Ruling: pratos com opções obrigatórias ficam fora nesta etapa (o cliente escolhe no próprio celular). Custo: o garçom não troca o tamanho da pizza.
-
-- [ ] **Step 1: Testes que falham**
-  - `mostra a rodada pendente com observação`.
-  - `menos até zero remove o item`.
-  - `Confirmar pedido chama a API e a rodada vai para confirmadas`.
-  - `Recusar pede confirmação`.
-  - `409 de rodada já confirmada recarrega a mesa sem erro feio`.
-  - `AdicionarItem não lista a pizza nem o pastel esgotado`.
-  - `mesa sem sessão mostra 'Mesa livre'`.
-- [ ] **Step 2:** Expected: FAIL.
-- [ ] **Step 3:** Implementar.
-- [ ] **Step 4:** Expected: PASS.
-- [ ] **Step 5:** Commit `feat(equipe): table screen to confirm, edit or refuse a round`.
-
-### Task 13: PWA, Push no celular e demo de ponta a ponta
-
-**Files:**
-- Create: `apps/equipe/public/{manifest.webmanifest,sw.js,icone-192.png,icone-512.png}`, `apps/equipe/src/push/ativarNotificacoes.ts` + teste
-- Modify: `apps/equipe/index.html` (manifest, `theme-color`, `viewport-fit=cover`), `apps/cliente/index.html` (`viewport-fit=cover`, minor adiado da Etapa 1), `README.md`
-
-**Interfaces:**
-- Produces:
-  - `sw.js`:
-    - `push` → `showNotification(titulo, {body, data:{url}})`;
-    - `notificationclick` → foca uma janela aberta ou abre `url`.
-  - `ativarNotificacoes(): Promise<'ativado'|'negado'|'sem-suporte'|'sem-chave'>`: pede permissão no clique, assina com a `chavePublica` e envia a inscrição. Botão `Ativar notificações` no início enquanto não estiver ativado.
-  - Ícones: PNG sólido com a letra, gerados por FFmpeg (comando no README).
-  - README, seção "Celular com HTTPS (Tailscale)":
-    - **ação do dono:** ativar HTTPS Certificates no admin do Tailscale;
-    - `tailscale serve --bg --https=443 http://localhost:5173` e `tailscale serve --bg --https=8443 http://localhost:5174`;
-    - abrir `https://<máquina>.<tailnet>.ts.net/m/<token>` e `https://…:8443`;
-    - `pnpm --filter api vapid` e copiar as chaves para o `.env`.
-  - Motivo: Push, service worker e Web NFC só funcionam em HTTPS.
-
-- [ ] **Step 1: Testes que falham**
-  - `sem PushManager → sem-suporte`.
-  - `permissão negada → negado`.
-  - `assina com a chave e envia a inscrição`.
-- [ ] **Step 2:** Expected: FAIL.
-- [ ] **Step 3:** Implementar.
-- [ ] **Step 4:** Expected: PASS. Rodar também todas as suítes: api unit + e2e, cliente e equipe (`test`, `tsc`, `lint`, `build`).
-- [ ] **Step 5: Verificação manual (registrar o resultado no ledger)**
-  1. Subir api, cliente e equipe.
-  2. Ana loga e liga o turno.
-  3. Dois navegadores na mesa 7 veem o mesmo carrinho.
-  4. Enviar → Ana recebe o chamado ao vivo → confirma → o cliente vê `Confirmado`.
-  5. Segunda rodada → entra `Confirmado` direto.
-  6. Chamar atendente → `Atendido`.
-  7. Sem resposta por 60 s → Bruno recebe.
-
-  O Push e o NFC no celular de verdade ficam para o dono testar, porque precisam do HTTPS do Tailscale.
-- [ ] **Step 6:** Commit `feat(equipe): installable PWA with push notifications; phone HTTPS docs`.
