@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { COM_OPCOES, NovoItem } from '../pedidos/pratos';
+import { COM_OPCOES, NovoItem, QUANTIDADE_MAXIMA } from '../pedidos/pratos';
 import { precoUnitario, resumirOpcoes, Selecao } from '../pedidos/preco';
 import { ITEM_NAO_ENCONTRADO, pratoValidado } from '../pedidos/validar-item';
 import { Participante } from '../sessao-mesa/participante';
@@ -16,6 +16,16 @@ let ultimaVersao = 0;
 function novaVersao(): number {
   ultimaVersao = Math.max(Date.now(), ultimaVersao + 1);
   return ultimaVersao;
+}
+
+/** Seleção comparável: ordem de grupos e opções não importa; grupo vazio some. */
+function chaveSelecao(selecao: Selecao): string {
+  return JSON.stringify(
+    Object.entries(selecao)
+      .filter(([, ids]) => ids.length > 0)
+      .map(([grupo, ids]) => [grupo, [...ids].sort()])
+      .sort(([a], [b]) => (a < b ? -1 : 1)),
+  );
 }
 
 /**
@@ -90,6 +100,30 @@ export class CarrinhoService {
   async adicionar(p: Participante, item: NovoItem): Promise<CarrinhoPublico> {
     await pratoValidado(this.prisma, p.restauranteId, item);
     return this.mudar(p, async (tx) => {
+      // Mesmo prato, mesmas opções e observação: soma na linha existente.
+      const candidatos = await tx.itemCarrinho.findMany({
+        where: {
+          sessaoId: p.sessao.id,
+          pratoId: item.pratoId,
+          observacao: item.observacao,
+        },
+      });
+      const chave = chaveSelecao(item.selecao);
+      const igual = candidatos.find(
+        (c) => chaveSelecao(c.selecao as Selecao) === chave,
+      );
+      if (igual) {
+        await tx.itemCarrinho.update({
+          where: { id: igual.id },
+          data: {
+            quantidade: Math.min(
+              igual.quantidade + item.quantidade,
+              QUANTIDADE_MAXIMA,
+            ),
+          },
+        });
+        return true;
+      }
       await tx.itemCarrinho.create({
         data: {
           restauranteId: p.restauranteId,

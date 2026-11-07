@@ -1,35 +1,9 @@
+import type { PratoPublico } from '@cardapio/opcoes'
 import type { ItemCarrinho } from '../carrinho/carrinho'
 
 // Espelho de apps/api/src/cardapio-publico/cardapio-publico.types.ts — manter em sincronia.
-export type OpcaoPublica = {
-  id: string
-  nome: string
-  precoCentavos: number
-  precoPromocionalCentavos: number | null
-}
-
-export type GrupoOpcaoPublico = {
-  id: string
-  nome: string
-  tipo: 'UNICA' | 'MULTIPLA' | 'SABORES'
-  obrigatorio: boolean
-  min: number
-  max: number
-  opcoes: OpcaoPublica[]
-}
-
-export type PratoPublico = {
-  id: string
-  nome: string
-  descricao: string
-  precoCentavos: number
-  precoPromocionalCentavos: number | null
-  destaque: boolean
-  esgotado: boolean
-  videoUrl: string | null
-  posterUrl: string | null
-  grupos: GrupoOpcaoPublico[]
-}
+// Os tipos de prato moram em @cardapio/opcoes (compartilhado com o app da equipe).
+export type { GrupoOpcaoPublico, OpcaoPublica, PratoPublico } from '@cardapio/opcoes'
 
 export type CategoriaPublica = {
   id: string

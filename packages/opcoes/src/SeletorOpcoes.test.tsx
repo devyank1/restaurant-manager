@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { pizza } from '../test/fixtures'
-import { formatarReais } from '../preco/preco'
+import { pizza } from './test/fixtures'
+import { formatarReais } from './preco'
 import SeletorOpcoes from './SeletorOpcoes'
 
 // toHaveAccessibleName compara o nome sem normalizar o espaço sem quebra do R$.
@@ -70,5 +70,35 @@ describe('SeletorOpcoes', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(onCancelar).toHaveBeenCalled()
     expect(onConfirmar).not.toHaveBeenCalled()
+  })
+
+  it('abre com a seleção inicial marcada', () => {
+    render(
+      <SeletorOpcoes
+        prato={pizza}
+        inicial={{ selecao: { tam: ['g'], sab: ['margherita'], adic: ['bacon'] }, observacao: 'sem cebola', quantidade: 2 }}
+        onConfirmar={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('radio', { name: /^G/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /Bacon/ })).toBeChecked()
+    expect(screen.getByRole('textbox')).toHaveValue('sem cebola')
+    // (8990 + 800) × 2
+    expect(botaoAdicionar()).toHaveTextContent(formatarReais(19580).replace(String.fromCharCode(0xa0), ' '))
+  })
+
+  it('rotuloConfirmar troca o texto do botão', () => {
+    render(
+      <SeletorOpcoes
+        prato={pizza}
+        inicial={{ selecao: { tam: ['g'], sab: ['margherita'] }, observacao: '', quantidade: 1 }}
+        rotuloConfirmar="Salvar"
+        onConfirmar={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: /^Salvar/ })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /^Adicionar/ })).not.toBeInTheDocument()
   })
 })

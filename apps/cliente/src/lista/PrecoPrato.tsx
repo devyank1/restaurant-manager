@@ -1,5 +1,5 @@
 import type { PratoPublico } from '../api/tipos'
-import { formatarReais, precoExibicao } from '../preco/preco'
+import { formatarReais, precoExibicao } from '@cardapio/opcoes'
 
 export default function PrecoPrato({ prato, grande = false }: { prato: PratoPublico; grande?: boolean }) {
   const preco = precoExibicao(prato)

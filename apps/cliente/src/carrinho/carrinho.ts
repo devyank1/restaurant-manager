@@ -1,4 +1,4 @@
-import type { Selecao } from '../preco/preco'
+import type { Selecao } from '@cardapio/opcoes'
 
 /** Item do carrinho da mesa como o servidor devolve (preço calculado lá). */
 export type ItemCarrinho = {

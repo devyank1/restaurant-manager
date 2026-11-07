@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mix, pizza } from '../test/fixtures'
+import { mix, pizza } from './test/fixtures'
 import {
   descontoPercentual,
   precoEfetivo,
