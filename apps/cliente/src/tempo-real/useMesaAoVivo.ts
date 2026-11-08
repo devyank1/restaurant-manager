@@ -7,6 +7,8 @@ export type AoMudarMesa = {
   carrinho: (carrinho?: CarrinhoPublico) => void
   rodadas: () => void
   atendido: () => void
+  /** O garçom fechou a conta. */
+  contaFechada: () => void
 }
 
 /**
@@ -36,6 +38,7 @@ export function useMesaAoVivo(token: string, aoMudar: AoMudarMesa): void {
     socket.on('carrinho', (carrinho: CarrinhoPublico) => atual.current.carrinho(carrinho))
     socket.on('rodadas-mudaram', () => atual.current.rodadas())
     socket.on('chamado-atendido', () => atual.current.atendido())
+    socket.on('conta-fechada', () => atual.current.contaFechada())
 
     const reconectar = () => {
       socket.disconnect()

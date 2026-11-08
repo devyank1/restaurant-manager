@@ -330,3 +330,48 @@
   font-size: 18px;
   font-weight: 700;
 }
+
+/* Depois de fechar a conta: o pedido de avaliação ganha destaque. */
+.avaliar--destaque {
+  background: var(--destaque, #ff5a1f);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.conta-fechada {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 16px;
+  background: var(--fundo);
+  text-align: center;
+}
+
+.conta-fechada h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.conta-fechada p {
+  margin: 0 0 8px;
+  color: var(--texto-suave);
+}
+
+.conta-fechada .avaliar {
+  margin: 8px 0;
+}
+
+.conta-fechada-voltar {
+  min-height: 48px;
+  border: 1px solid var(--borda, rgba(255, 255, 255, 0.15));
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--texto);
+  font-weight: 600;
+  cursor: pointer;
+}

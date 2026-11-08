@@ -7,6 +7,9 @@ import type { CarrinhoPublico, RodadaPublica, RodadasDaMesa } from './tipos'
 /** O celular não está na sessão aberta da mesa (cookie perdido ou mesa fechada). */
 export class ErroForaDaSessao extends Error {}
 
+/** O garçom fechou a conta da sessão deste celular: mostra o agradecimento. */
+export class ErroContaFechada extends Error {}
+
 /** Recusa do servidor com mensagem para mostrar (409/422/404). */
 export class ErroPedido extends Error {
   readonly pratoIds: string[]
@@ -41,6 +44,9 @@ async function chamar<T>(url: string, init?: RequestInit): Promise<T> {
   const resposta = await requisitar(url, init)
   if (resposta.ok) return (await lerJson(resposta)) as T
   const corpo = ((await lerJson(resposta)) ?? {}) as CorpoErro
+  if (resposta.status === 403 && corpo.codigo === 'CONTA_FECHADA') {
+    throw new ErroContaFechada(corpo.mensagem)
+  }
   if (resposta.status === 403 && corpo.codigo === 'FORA_DA_SESSAO') {
     throw new ErroForaDaSessao(corpo.mensagem)
   }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { CardapioPublico, PratoPublico } from '../api/tipos'
-import { chamarAtendente } from '../api/mesa'
+import { chamarAtendente, entrarNaMesa } from '../api/mesa'
 import type { ItemCarrinho } from '../carrinho/carrinho'
 import { useCarrinhoMesa } from '../carrinho/useCarrinhoMesa'
 import CarrinhoSheet from '../pedido/CarrinhoSheet'
+import ContaFechada from '../pedido/ContaFechada'
 import PedidosSheet from '../pedido/PedidosSheet'
 import { SeletorOpcoes } from '@cardapio/opcoes'
 import { useRodadas } from '../pedido/useRodadas'
@@ -42,14 +43,34 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const mostrarAviso = (texto: string, duracao = DURACAO_AVISO_MS) => setAviso({ texto, id: Date.now(), duracao })
   const carrinho = useCarrinhoMesa(token, mostrarAviso)
   const { itens, despachar, total, quantidade } = carrinho
-  const rodadas = useRodadas(token)
+  // Conta fechada pelo garçom: agradecimento; depois o "Avalie" fica em destaque.
+  const [contaFechada, setContaFechada] = useState(false)
+  const [avaliarEmDestaque, setAvaliarEmDestaque] = useState(false)
+  const fecharConta = () => {
+    setContaFechada(true)
+    setAvaliarEmDestaque(true)
+    setCarrinhoAberto(false)
+    setPedidosAberto(false)
+  }
+  const rodadas = useRodadas(token, fecharConta)
 
   useMesaAoVivo(token, {
     carrinho: (atual) => (atual ? carrinho.aplicar(atual) : carrinho.recarregar()),
     rodadas: rodadas.recarregar,
     // Garçom atendeu antes dos 5 s: o aviso do chamado sai na hora.
     atendido: () => setAviso((atual) => (atual?.texto === AVISO_CHAMADO ? null : atual)),
+    contaFechada: fecharConta,
   })
+
+  const voltarAoCardapio = () => {
+    entrarNaMesa(token)
+      .then(() => {
+        setContaFechada(false)
+        carrinho.recarregar()
+        rodadas.recarregar()
+      })
+      .catch(() => mostrarAviso('Sem conexão. Tente de novo.'))
+  }
 
   const pratos = pratosDoFiltro(cardapio, filtro)
 
@@ -151,11 +172,20 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
         ))}
 
         {restaurante.googleAvaliacaoUrl && (
-          <a className="avaliar" href={restaurante.googleAvaliacaoUrl} target="_blank" rel="noopener noreferrer">
+          <a
+            className={`avaliar${avaliarEmDestaque ? ' avaliar--destaque' : ''}`}
+            href={restaurante.googleAvaliacaoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             ⭐ Avalie no Google
           </a>
         )}
       </main>
+
+      {contaFechada && (
+        <ContaFechada avaliacaoUrl={restaurante.googleAvaliacaoUrl} onVoltar={voltarAoCardapio} />
+      )}
 
       {aviso && (
         <p className="aviso" role="status">
