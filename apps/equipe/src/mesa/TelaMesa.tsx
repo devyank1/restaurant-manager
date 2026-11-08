@@ -74,6 +74,12 @@ export default function TelaMesa({ token }: { token: string }) {
     chamados: marcarLidosDaMesa,
   })
 
+  // Outro garçom fechou: sai da conta (e não reabre sozinha para o próximo grupo).
+  const aberta = mesa?.aberta
+  useEffect(() => {
+    if (aberta === false) setNaConta(false)
+  }, [aberta])
+
   useEffect(() => {
     if (!aviso) return
     const relogio = setTimeout(() => setAviso(null), DURACAO_AVISO_MS)

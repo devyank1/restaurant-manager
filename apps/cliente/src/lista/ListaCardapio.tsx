@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CardapioPublico, PratoPublico } from '../api/tipos'
-import { chamarAtendente, entrarNaMesa } from '../api/mesa'
+import { chamarAtendente, entrarNaMesa, ErroContaFechada } from '../api/mesa'
 import type { ItemCarrinho } from '../carrinho/carrinho'
 import { useCarrinhoMesa } from '../carrinho/useCarrinhoMesa'
 import CarrinhoSheet from '../pedido/CarrinhoSheet'
@@ -41,8 +41,6 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const [pedidosAberto, setPedidosAberto] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const mostrarAviso = (texto: string, duracao = DURACAO_AVISO_MS) => setAviso({ texto, id: Date.now(), duracao })
-  const carrinho = useCarrinhoMesa(token, mostrarAviso)
-  const { itens, despachar, total, quantidade } = carrinho
   // Conta fechada pelo garçom: agradecimento; depois o "Avalie" fica em destaque.
   const [contaFechada, setContaFechada] = useState(false)
   const [avaliarEmDestaque, setAvaliarEmDestaque] = useState(false)
@@ -52,9 +50,11 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
     setCarrinhoAberto(false)
     setPedidosAberto(false)
   }
+  const carrinho = useCarrinhoMesa(token, mostrarAviso, fecharConta)
+  const { itens, despachar, total, quantidade } = carrinho
   const rodadas = useRodadas(token, fecharConta)
 
-  useMesaAoVivo(token, {
+  const aoVivo = useMesaAoVivo(token, {
     carrinho: (atual) => (atual ? carrinho.aplicar(atual) : carrinho.recarregar()),
     rodadas: rodadas.recarregar,
     // Garçom atendeu antes dos 5 s: o aviso do chamado sai na hora.
@@ -66,6 +66,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
     entrarNaMesa(token)
       .then(() => {
         setContaFechada(false)
+        aoVivo.reentrar()
         carrinho.recarregar()
         rodadas.recarregar()
       })
@@ -112,7 +113,7 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
   const chamarGarcom = () => {
     chamarAtendente(token)
       .then(() => mostrarAviso(AVISO_CHAMADO, DURACAO_AVISO_CHAMADO_MS))
-      .catch(() => mostrarAviso(SEM_CONEXAO))
+      .catch((erro: unknown) => (erro instanceof ErroContaFechada ? fecharConta() : mostrarAviso(SEM_CONEXAO)))
   }
 
   const aoAdicionar = (prato: PratoPublico) => {

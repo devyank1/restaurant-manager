@@ -1,9 +1,10 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ana, criarApiFalsa, type ApiFalsa } from '../test/api-falsa'
 import { cardapioDemo, mesa7 } from '../test/fixtures'
 import { reais } from '../test/reais'
+import { ultimoSocket } from '../test/socket-falso'
 import TelaMesa from './TelaMesa'
 
 describe('Conta da mesa', () => {
@@ -121,5 +122,16 @@ describe('Conta da mesa', () => {
     render(<TelaMesa token="tok7" />)
     await screen.findByRole('heading', { name: 'Mesa 7' })
     expect(screen.queryByRole('button', { name: 'Fechar conta' })).not.toBeInTheDocument()
+  })
+
+  it('conta fechada por outro garçom sai da tela da conta e não reabre para o próximo grupo', async () => {
+    await abrirConta()
+    api.estado.mesa.tok7 = { ...api.estado.mesa.tok7, aberta: false, rodadas: [] }
+    act(() => ultimoSocket().servidor('mesa-mudou'))
+    await vi.waitFor(() => expect(screen.queryByRole('region', { name: 'Conta da mesa' })).not.toBeInTheDocument())
+    api.estado.mesa.tok7 = { ...api.estado.mesa.tok7, aberta: true }
+    act(() => ultimoSocket().servidor('mesa-mudou'))
+    expect(await screen.findByRole('button', { name: 'Fechar conta' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Conta da mesa' })).not.toBeInTheDocument()
   })
 })

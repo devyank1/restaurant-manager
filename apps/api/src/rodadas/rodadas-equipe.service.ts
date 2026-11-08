@@ -417,6 +417,9 @@ export class RodadasEquipeService {
             mensagem: 'Esta mesa é de outro garçom',
           });
         }
+        if (r.sessao.status === 'FECHADA') {
+          throw new ConflictException({ mensagem: 'Esta mesa já foi fechada' });
+        }
         const janela = r.sessao.restaurante.janelaCancelamentoSegundos;
         if (!cancelavelAte(r, janela, agora)) {
           throw new ConflictException({

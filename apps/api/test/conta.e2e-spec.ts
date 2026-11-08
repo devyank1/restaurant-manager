@@ -383,4 +383,32 @@ describe('conta', () => {
     ).body as { pedidos: { rodadaId: string }[] };
     expect(fila.pedidos.some((p) => p.rodadaId === rodadaId)).toBe(true);
   });
+
+  it('cancelar rodada depois de fechar a conta → 409', async () => {
+    await t.prisma.restaurante.update({
+      where: { id: t.restauranteId },
+      data: { janelaCancelamentoSegundos: 600 },
+    });
+    try {
+      const { cliente } = await mesaComPedido();
+      const direta = await enviar(cliente);
+      expect(direta.status).toBe('CONFIRMADA');
+      await fechar({
+        servico: false,
+        couvert: false,
+        formaPagamento: 'PIX',
+        totalCentavos: mixPreco * 2,
+      }).expect(200);
+      const res = await http()
+        .post(`/equipe/rodadas/${direta.id}/cancelar`)
+        .set('Cookie', ana)
+        .expect(409);
+      expect(res.body).toEqual({ mensagem: 'Esta mesa já foi fechada' });
+    } finally {
+      await t.prisma.restaurante.update({
+        where: { id: t.restauranteId },
+        data: { janelaCancelamentoSegundos: 120 },
+      });
+    }
+  });
 });
