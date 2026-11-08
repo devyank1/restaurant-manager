@@ -55,7 +55,7 @@ export default function ListaChamados({
             </span>
           </button>
           {c.tipo === 'ATENDENTE' && (
-            <button type="button" className="botao botao--primario" onClick={() => void agir(() => resolverChamado(c.id))}>
+            <button type="button" className="botao botao--sucesso" onClick={() => void agir(() => resolverChamado(c.id))}>
               Atendido
             </button>
           )}

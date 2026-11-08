@@ -62,7 +62,7 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
   return (
     <main className="inicio">
       {!usuario.emTurno && usuario.papel !== 'DONO' && (
-        <p className="faixa-aviso">Você está fora do turno: não recebe chamados novos.</p>
+        <p className="faixa-aviso faixa-aviso--alerta">Você está fora do turno: não recebe chamados novos.</p>
       )}
 
       {push === 'pendente' && (
@@ -71,14 +71,14 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
         </button>
       )}
       {push === 'negado' && (
-        <p className="faixa-aviso">Notificações bloqueadas no navegador</p>
+        <p className="faixa-aviso faixa-aviso--perigo">Notificações bloqueadas no navegador</p>
       )}
       {push === 'sem-suporte' && (
-        <p className="faixa-aviso">
+        <p className="faixa-aviso faixa-aviso--info">
           Notificações indisponíveis neste navegador: abra pelo endereço HTTPS e, no iPhone, adicione à Tela de Início.
         </p>
       )}
-      {avisoPush && <p className="faixa-aviso">{avisoPush}</p>}
+      {avisoPush && <p className="faixa-aviso faixa-aviso--perigo">{avisoPush}</p>}
 
       <section aria-labelledby="titulo-chamados">
         <h2 id="titulo-chamados">Chamados</h2>
