@@ -80,7 +80,9 @@ export class RodadasService {
       const dispositivo = await tx.dispositivoSessao.findUniqueOrThrow({
         where: { id: p.dispositivo.id },
       });
-      const precisaConfirmar = !sessao.garcomId || !dispositivo.confirmado;
+      const restaurante = await tx.restaurante.findUniqueOrThrow({
+        where: { id: p.restauranteId },
+      });
       const agora = new Date();
 
       const congelados = itens.map((item) => {
@@ -95,8 +97,20 @@ export class RodadasService {
           observacao: item.observacao,
           quantidade: item.quantidade,
           precoUnitarioCentavos: precoUnitario(prato, selecao),
+          estacao: prato.categoria.estacao,
         };
       });
+      const total = congelados.reduce(
+        (soma, i) => soma + i.precoUnitarioCentavos * i.quantidade,
+        0,
+      );
+      const limite = restaurante.limiteConfirmacaoCentavos;
+      // Exceções [spec §5.5]: acima do limite ou prato que exige confirmação.
+      const precisaConfirmar =
+        !sessao.garcomId ||
+        !dispositivo.confirmado ||
+        (limite !== null && total > limite) ||
+        pratos.some((prato) => prato.exigeConfirmacao);
       const rodada = await tx.rodada.create({
         data: {
           restauranteId: p.restauranteId,
@@ -104,10 +118,8 @@ export class RodadasService {
           dispositivoId: p.dispositivo.dispositivoId,
           status: precisaConfirmar ? 'AGUARDANDO_GARCOM' : 'CONFIRMADA',
           confirmadaEm: precisaConfirmar ? null : agora,
-          totalCentavos: congelados.reduce(
-            (soma, i) => soma + i.precoUnitarioCentavos * i.quantidade,
-            0,
-          ),
+          direta: !precisaConfirmar,
+          totalCentavos: total,
           itens: { create: congelados },
         },
         include: COM_ITENS,
@@ -161,9 +173,11 @@ export class RodadasService {
       await this.eventos.publicar({
         restauranteId: p.restauranteId,
         tipo: 'PedidoConfirmado',
-        dados,
+        dados: { ...dados, direto: true, garcomId },
       });
       if (garcomId) this.tempoReal.paraGarcom(garcomId, 'chamados-mudaram', {});
+      // Foi direto: a tela da produção precisa buscar já (e tocar o bipe).
+      this.tempoReal.paraEquipe(p.restauranteId, 'producao-mudou', {});
     }
     this.tempoReal.paraSessao(p.sessao.id, 'rodadas-mudaram', {});
     this.tempoReal.paraEquipe(p.restauranteId, 'mesa-mudou', {

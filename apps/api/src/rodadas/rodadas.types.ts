@@ -1,4 +1,5 @@
-import { Prisma, StatusRodada } from '@prisma/client';
+import { Prisma, StatusItem, StatusRodada } from '@prisma/client';
+import type { FaseRodada } from './fase';
 
 export type ItemRodadaPublico = {
   nome: string;
@@ -6,11 +7,13 @@ export type ItemRodadaPublico = {
   observacao: string;
   quantidade: number;
   precoUnitarioCentavos: number;
+  status: StatusItem;
 };
 
 export type RodadaPublica = {
   id: string;
   status: StatusRodada;
+  fase: FaseRodada;
   criadoEm: Date;
   totalCentavos: number;
   itens: ItemRodadaPublico[];
@@ -28,11 +31,14 @@ export type ItemRodadaEquipe = ItemRodadaPublico & {
   id: string;
   pratoId: string;
   selecao: Record<string, string[]>;
+  estacao: string;
 };
 
 export type RodadaEquipe = Omit<RodadaPublica, 'itens'> & {
   /** Celular que ainda não teve rodada confirmada nesta sessão. */
   dispositivoNovo: boolean;
+  /** Rodada que foi direto para a produção: o garçom cancela até esta hora (ISO). */
+  cancelavelAte: string | null;
   itens: ItemRodadaEquipe[];
 };
 
@@ -50,6 +56,8 @@ export type MesaResumo = {
   garcomNome: string | null;
   /** Rodadas aguardando garçom. */
   pendentes: number;
+  /** Itens prontos esperando o garçom entregar. */
+  prontos: number;
 };
 
 export const COM_ITENS = {

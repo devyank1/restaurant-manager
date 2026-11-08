@@ -66,6 +66,7 @@ export function criarApiFalsa() {
       const rodada: RodadaPublica = {
         id: `rodada-${proximoId++}`,
         status: 'AGUARDANDO_GARCOM',
+        fase: 'AGUARDANDO_GARCOM',
         criadoEm: new Date().toISOString(),
         totalCentavos: carrinho().totalCentavos,
         itens: estado.itens.map(({ nome, resumoOpcoes, observacao, quantidade, precoUnitarioCentavos }) => ({

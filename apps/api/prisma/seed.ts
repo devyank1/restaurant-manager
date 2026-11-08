@@ -34,9 +34,10 @@ const EQUIPE: { nome: string; email: string; papel: PapelUsuario }[] = [
   { nome: 'Ana', email: 'ana@demo.com', papel: 'GARCOM' },
   { nome: 'Bruno', email: 'bruno@demo.com', papel: 'GARCOM' },
   { nome: 'Carla', email: 'dono@demo.com', papel: 'DONO' },
+  { nome: 'Dani', email: 'cozinha@demo.com', papel: 'COZINHA' },
 ];
 
-const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
+const CARDAPIO: { categoria: string; estacao?: string; pratos: PratoSeed[] }[] = [
   {
     categoria: 'Entradas',
     pratos: [
@@ -139,6 +140,7 @@ const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
   },
   {
     categoria: 'Bebidas',
+    estacao: 'Bar',
     pratos: [
       {
         nome: 'Chopp 500ml',
@@ -215,7 +217,12 @@ export async function seedDemo(
 
       for (const [ordemCategoria, secao] of CARDAPIO.entries()) {
         const categoria = await tx.categoria.create({
-          data: { restauranteId, nome: secao.categoria, ordem: ordemCategoria },
+          data: {
+            restauranteId,
+            nome: secao.categoria,
+            ordem: ordemCategoria,
+            estacao: secao.estacao ?? 'Cozinha',
+          },
         });
 
         for (const [ordemPrato, prato] of secao.pratos.entries()) {

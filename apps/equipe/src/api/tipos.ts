@@ -27,6 +27,8 @@ export type MesaResumo = {
   garcomNome: string | null
   /** Rodadas aguardando garçom. */
   pendentes: number
+  /** Itens prontos esperando o garçom entregar. */
+  prontos: number
 }
 
 export type StatusRodada = 'AGUARDANDO_GARCOM' | 'CONFIRMADA' | 'CANCELADA'
@@ -40,11 +42,18 @@ export type ItemRodadaEquipe = {
   observacao: string
   quantidade: number
   precoUnitarioCentavos: number
+  status: StatusItem
+  estacao: string
 }
+
+export type FaseRodada = 'AGUARDANDO_GARCOM' | 'NA_COZINHA' | 'PRONTO' | 'ENTREGUE' | 'CANCELADA'
 
 export type RodadaEquipe = {
   id: string
   status: StatusRodada
+  fase: FaseRodada
+  /** Foi direto para a produção: o garçom cancela até esta hora (ISO). */
+  cancelavelAte: string | null
   criadoEm: string
   totalCentavos: number
   /** Celular que ainda não teve rodada confirmada nesta sessão. */
@@ -58,3 +67,27 @@ export type MesaEquipe = {
   rodadas: RodadaEquipe[]
   totalConfirmadoCentavos: number
 }
+
+// Produção (cozinha, bar)
+export type StatusItem = 'NA_FILA' | 'EM_PREPARO' | 'PRONTO' | 'ENTREGUE'
+export type StatusProducao = Exclude<StatusItem, 'ENTREGUE'>
+
+export type ItemProducao = {
+  id: string
+  nome: string
+  resumoOpcoes: string
+  observacao: string
+  quantidade: number
+  status: StatusItem
+}
+
+export type PedidoProducao = {
+  rodadaId: string
+  mesa: { numero: number }
+  garcomNome: string | null
+  confirmadaEm: string | null
+  cancelada: boolean
+  itens: ItemProducao[]
+}
+
+export type FilaProducao = { estacoes: string[]; pedidos: PedidoProducao[] }

@@ -14,16 +14,20 @@ enum TipoGrupoOpcao {
 }
 
 model Restaurante {
-  id                    String   @id @default(uuid())
-  nome                  String
-  slug                  String   @unique
-  logoUrl               String?
-  wifiSsid              String?
-  wifiSenha             String?
-  googleAvaliacaoUrl    String?
+  id                         String   @id @default(uuid())
+  nome                       String
+  slug                       String   @unique
+  logoUrl                    String?
+  wifiSsid                   String?
+  wifiSenha                  String?
+  googleAvaliacaoUrl         String?
   /// Segundos sem leitura até o chamado passar para o próximo garçom.
-  janelaChamadoSegundos Int      @default(60)
-  criadoEm              DateTime @default(now())
+  janelaChamadoSegundos      Int      @default(60)
+  /// Rodada que vai direto para a produção: o garçom cancela dentro deste prazo.
+  janelaCancelamentoSegundos Int      @default(120)
+  /// Rodada acima deste total sempre pede confirmação na mesa (nulo = sem limite).
+  limiteConfirmacaoCentavos  Int?
+  criadoEm                   DateTime @default(now())
 
   mesas       Mesa[]
   categorias  Categoria[]
@@ -56,6 +60,8 @@ model Categoria {
   restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
   nome          String
   ordem         Int
+  /// Tela de produção que prepara os pratos desta categoria (ex.: Cozinha, Bar).
+  estacao       String      @default("Cozinha")
   criadoEm      DateTime    @default(now())
 
   pratos Prato[]
@@ -73,6 +79,7 @@ model Prato {
   precoPromocionalCentavos Int?
   destaque                 Boolean     @default(false)
   esgotado                 Boolean     @default(false)
+  exigeConfirmacao         Boolean     @default(false)
   videoUrl                 String?
   posterUrl                String?
   ordem                    Int
@@ -202,15 +209,18 @@ model Rodada {
   criadoEm        DateTime     @default(now())
   confirmadaEm    DateTime?
   confirmadaPorId String?
+  /// Nasceu confirmada, sem o garçom na mesa: só ela tem janela de cancelamento.
+  direta          Boolean      @default(false)
+  canceladaEm     DateTime?
 
   itens ItemRodada[]
 }
 
 model ItemRodada {
-  id                    String @id @default(uuid())
+  id                    String     @id @default(uuid())
   restauranteId         String
   rodadaId              String
-  rodada                Rodada @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+  rodada                Rodada     @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
   pratoId               String
   nome                  String
   resumoOpcoes          String
@@ -218,6 +228,21 @@ model ItemRodada {
   observacao            String
   quantidade            Int
   precoUnitarioCentavos Int
+  /// Estação congelada na criação, como o preço.
+  estacao               String     @default("Cozinha")
+  status                StatusItem @default(NA_FILA)
+  emPreparoEm           DateTime?
+  prontoEm              DateTime?
+  entregueEm            DateTime?
+
+  @@index([restauranteId, estacao, status])
+}
+
+enum StatusItem {
+  NA_FILA
+  EM_PREPARO
+  PRONTO
+  ENTREGUE
 }
 
 enum TipoChamado {

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { mudarTurno } from '../api/equipe'
 import type { UsuarioEquipe } from '../api/tipos'
 
+const PAPEL: Record<UsuarioEquipe['papel'], string> = { DONO: 'Dono', GARCOM: 'Garçom', COZINHA: 'Produção' }
+
 export default function Topo({
   usuario,
   onMudou,
@@ -28,8 +30,9 @@ export default function Topo({
     <header className="topo">
       <div className="topo-quem">
         <strong>{usuario.nome}</strong>
-        <span className="topo-papel">{usuario.papel === 'DONO' ? 'Dono' : 'Garçom'}</span>
+        <span className="topo-papel">{PAPEL[usuario.papel]}</span>
       </div>
+      {usuario.papel !== 'COZINHA' && (
       <button
         type="button"
         role="switch"
@@ -42,6 +45,7 @@ export default function Topo({
         <span className="turno-bolinha" aria-hidden="true" />
         {usuario.emTurno ? 'Em turno' : 'Fora do turno'}
       </button>
+      )}
       <button type="button" className="topo-sair" onClick={onSair}>
         Sair
       </button>

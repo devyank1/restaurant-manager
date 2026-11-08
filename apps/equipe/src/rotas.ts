@@ -4,6 +4,7 @@ export type Rota =
   | { nome: 'login'; volta?: string }
   | { nome: 'inicio' }
   | { nome: 'mesas' }
+  | { nome: 'producao' }
   | { nome: 'mesa'; token: string }
 
 /** Só caminho interno (evita mandar para outro site depois do login). */
@@ -17,6 +18,7 @@ export function lerRota(caminho: string, busca: string): Rota {
     return volta ? { nome: 'login', volta } : { nome: 'login' }
   }
   if (caminho === '/mesas') return { nome: 'mesas' }
+  if (caminho === '/producao') return { nome: 'producao' }
   const mesa = /^\/mesa\/([^/]+)$/.exec(caminho)?.[1]
   if (mesa) return { nome: 'mesa', token: decodeURIComponent(mesa) }
   return { nome: 'inicio' }

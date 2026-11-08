@@ -407,4 +407,286 @@ describe('rodadas', () => {
       .set('Cookie', xavier)
       .expect(404);
   });
+
+  describe('produção: estação, exceções e fase', () => {
+    let sucoId: string;
+
+    beforeAll(async () => {
+      sucoId = (
+        await t.prisma.prato.findFirstOrThrow({
+          where: { nome: 'Suco Natural' },
+        })
+      ).id;
+    });
+
+    afterEach(async () => {
+      await t.prisma.restaurante.update({
+        where: { id: t.restauranteId },
+        data: { limiteConfirmacaoCentavos: null },
+      });
+      await t.prisma.prato.updateMany({
+        data: { exigeConfirmacao: false },
+      });
+    });
+
+    const suco = () => ({
+      pratoId: sucoId,
+      selecao: {},
+      observacao: '',
+      quantidade: 1,
+    });
+
+    /** Celular com a mesa já aberta pela Ana (próximas rodadas vão direto). */
+    const mesaAberta = async () => {
+      const a = await celular();
+      const primeira = await enviar(a, mix());
+      await confirmar(primeira.id).expect(200);
+      return a;
+    };
+
+    it('item congela a estação da categoria (Bebidas → Bar, Pizzas → Cozinha)', async () => {
+      const a = await celular();
+      const rodada = await enviar(a, pizzaM(), suco());
+      const itens = await t.prisma.itemRodada.findMany({
+        where: { rodadaId: rodada.id },
+      });
+      const estacao = (pratoId: string) =>
+        itens.find((i) => i.pratoId === pratoId)!.estacao;
+      expect(estacao(pizza.id)).toBe('Cozinha');
+      expect(estacao(sucoId)).toBe('Bar');
+    });
+
+    it('rodada seguinte acima do limite pede confirmação', async () => {
+      const a = await mesaAberta();
+      await t.prisma.restaurante.update({
+        where: { id: t.restauranteId },
+        data: { limiteConfirmacaoCentavos: 5989 },
+      });
+      const segunda = await enviar(a, mix());
+      expect(segunda.status).toBe('AGUARDANDO_GARCOM');
+    });
+
+    it('rodada igual ao limite vai direto', async () => {
+      const a = await mesaAberta();
+      await t.prisma.restaurante.update({
+        where: { id: t.restauranteId },
+        data: { limiteConfirmacaoCentavos: 5990 },
+      });
+      const segunda = await enviar(a, mix());
+      expect(segunda.status).toBe('CONFIRMADA');
+    });
+
+    it('prato que exige confirmação pede confirmação mesmo com mesa aberta', async () => {
+      const a = await mesaAberta();
+      await t.prisma.prato.update({
+        where: { id: sucoId },
+        data: { exigeConfirmacao: true },
+      });
+      const segunda = await enviar(a, mix(), suco());
+      expect(segunda.status).toBe('AGUARDANDO_GARCOM');
+    });
+
+    it('rodada direta publica PedidoConfirmado com direto: true', async () => {
+      const a = await mesaAberta();
+      const segunda = await enviar(a, mix());
+      const evento = await t.prisma.evento.findFirstOrThrow({
+        where: {
+          tipo: 'PedidoConfirmado',
+          dados: { path: ['rodadaId'], equals: segunda.id },
+        },
+      });
+      expect(evento.dados).toMatchObject({ direto: true });
+      const gravada = await t.prisma.rodada.findUniqueOrThrow({
+        where: { id: segunda.id },
+      });
+      expect(gravada.direta).toBe(true);
+    });
+
+    it('cliente recebe fase e status dos itens', async () => {
+      const a = await celular();
+      const rodada = await enviar(a, mix());
+      expect(rodada).toMatchObject({
+        fase: 'AGUARDANDO_GARCOM',
+        itens: [{ status: 'NA_FILA' }],
+      });
+      await confirmar(rodada.id).expect(200);
+      const lista = await doCliente(a);
+      expect(lista.rodadas[0]).toMatchObject({
+        fase: 'NA_COZINHA',
+        itens: [{ status: 'NA_FILA' }],
+      });
+    });
+
+    it('garçom adiciona item: estação do prato', async () => {
+      const a = await celular();
+      const rodada = await enviar(a, mix());
+      const res = await http()
+        .post(`/equipe/rodadas/${rodada.id}/itens`)
+        .set('Cookie', ana)
+        .send(suco())
+        .expect(201);
+      const itens = (res.body as { itens: { estacao: string }[] }).itens;
+      expect(itens.map((i) => i.estacao).sort()).toEqual(['Bar', 'Cozinha']);
+    });
+  });
+
+  describe('garçom: janela de cancelamento e entrega', () => {
+    let bruno: string;
+    let dono: string;
+
+    beforeAll(async () => {
+      bruno = await loginComo(t.app, 'bruno@demo.com');
+      dono = await loginComo(t.app, 'dono@demo.com');
+    });
+
+    afterEach(async () => {
+      await t.prisma.restaurante.update({
+        where: { id: t.restauranteId },
+        data: { janelaCancelamentoSegundos: 120 },
+      });
+    });
+
+    type RodadaJanela = Rodada & {
+      fase: string;
+      cancelavelAte: string | null;
+    };
+
+    /** Mesa aberta pela Ana e uma rodada que foi direto para a produção. */
+    const rodadaDireta = async () => {
+      const a = await celular();
+      const primeira = await enviar(a, mix());
+      await confirmar(primeira.id).expect(200);
+      const direta = await enviar(a, mix());
+      return { a, primeira, direta };
+    };
+    const cancelar = (id: string, cookie = ana) =>
+      http().post(`/equipe/rodadas/${id}/cancelar`).set('Cookie', cookie);
+    const entregar = (id: string) =>
+      http().post(`/equipe/rodadas/${id}/entregar`).set('Cookie', ana);
+    const prontos = (rodadaId: string) =>
+      t.prisma.itemRodada.updateMany({
+        where: { rodadaId },
+        data: { status: 'PRONTO', prontoEm: new Date() },
+      });
+
+    it('rodada direta tem cancelavelAte', async () => {
+      const { direta } = await rodadaDireta();
+      const r = (await rodadaEquipe(direta.id)) as RodadaJanela;
+      expect(r.fase).toBe('NA_COZINHA');
+      const ate = new Date(r.cancelavelAte!).getTime();
+      expect(ate - Date.now()).toBeGreaterThan(100_000);
+      expect(ate - Date.now()).toBeLessThanOrEqual(120_000);
+    });
+
+    it('rodada confirmada pelo garçom na mesa não tem janela (cancelavelAte: null)', async () => {
+      const { primeira } = await rodadaDireta();
+      const r = (await rodadaEquipe(primeira.id)) as RodadaJanela;
+      expect(r.cancelavelAte).toBeNull();
+      await cancelar(primeira.id).expect(409);
+    });
+
+    it('garçom responsável cancela dentro da janela', async () => {
+      const { a, direta } = await rodadaDireta();
+      const res = await cancelar(direta.id).expect(200);
+      expect(res.body).toMatchObject({
+        status: 'CANCELADA',
+        fase: 'CANCELADA',
+      });
+      const gravada = await t.prisma.rodada.findUniqueOrThrow({
+        where: { id: direta.id },
+      });
+      expect(gravada.canceladaEm).not.toBeNull();
+      const evento = await t.prisma.evento.findFirstOrThrow({
+        where: { tipo: 'PedidoCancelado' },
+      });
+      expect(evento.dados).toMatchObject({
+        rodadaId: direta.id,
+        porJanela: true,
+      });
+      const cliente = await doCliente(a);
+      expect(cliente.totalParcialCentavos).toBe(5990);
+    });
+
+    it('depois da janela → 409', async () => {
+      await t.prisma.restaurante.update({
+        where: { id: t.restauranteId },
+        data: { janelaCancelamentoSegundos: 1 },
+      });
+      const { direta } = await rodadaDireta();
+      await new Promise((r) => setTimeout(r, 1100));
+      const res = await cancelar(direta.id).expect(409);
+      expect(res.body).toEqual({ mensagem: 'O prazo para cancelar acabou' });
+      expect(
+        ((await rodadaEquipe(direta.id)) as RodadaJanela).cancelavelAte,
+      ).toBeNull();
+    });
+
+    it('outro garçom → 403', async () => {
+      const { direta } = await rodadaDireta();
+      await http()
+        .patch('/equipe/turno')
+        .set('Cookie', bruno)
+        .send({ emTurno: true });
+      const res = await cancelar(direta.id, bruno).expect(403);
+      expect(res.body).toEqual({ mensagem: 'Esta mesa é de outro garçom' });
+    });
+
+    it('dono cancela', async () => {
+      const { direta } = await rodadaDireta();
+      await cancelar(direta.id, dono).expect(200);
+    });
+
+    it('entregar passa só os prontos', async () => {
+      const a = await celular();
+      const rodada = await enviar(a, mix(), pizzaM());
+      await confirmar(rodada.id).expect(200);
+      const [primeiro] = await t.prisma.itemRodada.findMany({
+        where: { rodadaId: rodada.id },
+        orderBy: { id: 'asc' },
+      });
+      await t.prisma.itemRodada.update({
+        where: { id: primeiro.id },
+        data: { status: 'PRONTO', prontoEm: new Date() },
+      });
+      const res = await entregar(rodada.id).expect(200);
+      const itens = (res.body as { itens: { id: string; status: string }[] })
+        .itens;
+      const status = Object.fromEntries(itens.map((i) => [i.id, i.status]));
+      expect(Object.values(status).sort()).toEqual(['ENTREGUE', 'NA_FILA']);
+      expect(status[primeiro.id]).toBe('ENTREGUE');
+      expect(
+        await t.prisma.evento.count({ where: { tipo: 'PedidoEntregue' } }),
+      ).toBe(0);
+    });
+
+    it('tudo entregue publica PedidoEntregue e o cliente vê ENTREGUE', async () => {
+      const a = await celular();
+      const rodada = await enviar(a, mix());
+      await confirmar(rodada.id).expect(200);
+      await prontos(rodada.id);
+      await entregar(rodada.id).expect(200);
+      expect(
+        await t.prisma.evento.count({ where: { tipo: 'PedidoEntregue' } }),
+      ).toBe(1);
+      expect((await doCliente(a)).rodadas[0]).toMatchObject({
+        fase: 'ENTREGUE',
+      });
+    });
+
+    it('nada pronto → 409', async () => {
+      const { direta } = await rodadaDireta();
+      const res = await entregar(direta.id).expect(409);
+      expect(res.body).toEqual({ mensagem: 'Nada pronto para entregar' });
+    });
+
+    it('mesas mostra prontos', async () => {
+      const { direta } = await rodadaDireta();
+      await prontos(direta.id);
+      const mesas = (
+        await http().get('/equipe/mesas').set('Cookie', ana).expect(200)
+      ).body as { numero: number; prontos: number }[];
+      expect(mesas.find((m) => m.numero === 7)!.prontos).toBe(1);
+      expect(mesas.find((m) => m.numero === 8)!.prontos).toBe(0);
+    });
+  });
 });

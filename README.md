@@ -30,6 +30,15 @@
 4. Abrir a mesa: encoste o celular (logado no app da equipe) na etiqueta. O cardápio percebe que é da equipe e abre a tela da mesa. Também dá para tocar no chamado ou em "Todas as mesas".
 5. Sem celular à mão: `pnpm garcom chamados`, `pnpm garcom confirmar 7` etc. simulam o garçom pelo terminal.
 
+## Tela da produção (cozinha e bar)
+
+1. **Uma vez, no banco de dev:** `pnpm --filter api dev:etapa3`. Ele cria a Dani (`cozinha@demo.com` / `demo1234`) e põe as Bebidas no **Bar**, sem mexer no resto (o seed troca os tokens das mesas, então não use o seed no dev).
+2. No tablet/TV, abra o app da equipe (`http://localhost:5174` ou o endereço do Tailscale) e entre com `cozinha@demo.com`. A cozinha cai direto na produção.
+3. Escolha a estação no topo (Cozinha ou Bar; o aparelho lembra) e toque **Ativar som** para ouvir o bipe de pedido novo. A tela fica ligada enquanto estiver aberta.
+4. Toque no item para avançar (Na fila → Preparando → Pronto) ou use **Começar** / **Pronto** no cartão. Cartão amarelo: esperando há 10 min; vermelho: 20 min. Cancelado aparece em vermelho até tocar **Ok**.
+5. O dono vê a mesma tela pelo botão **Produção** no início.
+6. Pela regra: a primeira rodada da mesa (e a de celular novo) passa pelo garçom; as seguintes vão direto para a produção, e o garçom pode cancelar nos primeiros 2 minutos. Quando a estação termina, o garçom recebe "Pronto" e toca **Entregar prontos**.
+
 ## Celular com HTTPS (Tailscale)
 
 Notificação push, instalar como app e o botão "Ler etiqueta" (Web NFC) só funcionam em HTTPS.

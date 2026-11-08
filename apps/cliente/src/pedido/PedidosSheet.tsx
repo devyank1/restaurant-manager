@@ -2,9 +2,11 @@ import type { RodadaPublica } from '../api/tipos'
 import { formatarReais } from '@cardapio/opcoes'
 import './pedido.css'
 
-const STATUS: Record<RodadaPublica['status'], string> = {
+const FASE: Record<RodadaPublica['fase'], string> = {
   AGUARDANDO_GARCOM: 'Aguardando garçom',
-  CONFIRMADA: 'Confirmado',
+  NA_COZINHA: 'Na cozinha',
+  PRONTO: 'Pronto',
+  ENTREGUE: 'Entregue',
   CANCELADA: 'Cancelado',
 }
 
@@ -32,10 +34,10 @@ export default function PedidosSheet({
 
         <ol className="pedidos-rodadas">
           {rodadas.map((rodada) => (
-            <li key={rodada.id} className={`pedidos-rodada pedidos-rodada--${rodada.status.toLowerCase()}`}>
+            <li key={rodada.id} className={`pedidos-rodada pedidos-rodada--${rodada.fase.toLowerCase()}`}>
               <div className="pedidos-rodada-topo">
                 <span>{hora(rodada.criadoEm)}</span>
-                <span className="pedidos-status">{STATUS[rodada.status]}</span>
+                <span className="pedidos-status">{FASE[rodada.fase]}</span>
               </div>
               <ul className="carrinho-itens">
                 {rodada.itens.map((item, i) => (

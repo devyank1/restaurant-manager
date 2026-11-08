@@ -4,6 +4,7 @@ import { io } from 'socket.io-client'
 export type AoMudarEquipe = {
   chamados?: () => void
   mesas?: () => void
+  producao?: () => void
 }
 
 /**
@@ -24,11 +25,13 @@ export function useEquipeAoVivo(aoMudar: AoMudarEquipe): void {
     const recarregar = () => {
       atual.current.chamados?.()
       atual.current.mesas?.()
+      atual.current.producao?.()
     }
     const socket = io({ transports: ['websocket', 'polling'] })
     socket.on('connect', recarregar)
     socket.on('chamados-mudaram', () => atual.current.chamados?.())
     socket.on('mesa-mudou', () => atual.current.mesas?.())
+    socket.on('producao-mudou', () => atual.current.producao?.())
 
     const reconectar = () => {
       socket.disconnect()
