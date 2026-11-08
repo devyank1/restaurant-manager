@@ -1,4 +1,5 @@
 import { Selecao } from '../pedidos/preco';
+import { faseDa } from './fase';
 import { RodadaComItens, RodadaEquipe, RodadaPublica } from './rodadas.types';
 
 export function somarConfirmadas(rodadas: RodadaComItens[]): number {
@@ -11,6 +12,7 @@ export function paraPublica(r: RodadaComItens): RodadaPublica {
   return {
     id: r.id,
     status: r.status,
+    fase: faseDa(r),
     criadoEm: r.criadoEm,
     totalCentavos: r.totalCentavos,
     itens: r.itens.map((i) => ({
@@ -19,6 +21,7 @@ export function paraPublica(r: RodadaComItens): RodadaPublica {
       observacao: i.observacao,
       quantidade: i.quantidade,
       precoUnitarioCentavos: i.precoUnitarioCentavos,
+      status: i.status,
     })),
   };
 }
@@ -39,6 +42,8 @@ export function paraEquipe(
       observacao: i.observacao,
       quantidade: i.quantidade,
       precoUnitarioCentavos: i.precoUnitarioCentavos,
+      status: i.status,
+      estacao: i.estacao,
     })),
   };
 }

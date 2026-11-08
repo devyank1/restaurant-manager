@@ -19,6 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "dotenv -e .env.test -- jest --config ./test/jest-e2e.json --runInBand",
     "vapid": "node scripts/gerar-vapid.mjs",
+    "dev:etapa3": "node scripts/dev-etapa3.mjs",
     "db:seed": "prisma db seed"
   },
   "dependencies": {

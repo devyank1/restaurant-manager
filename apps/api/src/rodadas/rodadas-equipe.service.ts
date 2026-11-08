@@ -247,6 +247,7 @@ export class RodadasEquipeService {
           observacao: novo.observacao,
           quantidade: novo.quantidade,
           precoUnitarioCentavos: precoUnitario(prato, novo.selecao),
+          estacao: prato.categoria.estacao,
         },
       });
       return {

@@ -67,6 +67,7 @@ describe('seedDemo', () => {
     expect(usuarios.map((u) => [u.email, u.papel])).toEqual([
       ['ana@demo.com', 'GARCOM'],
       ['bruno@demo.com', 'GARCOM'],
+      ['cozinha@demo.com', 'COZINHA'],
       ['dono@demo.com', 'DONO'],
     ]);
     const ana = usuarios[0];
