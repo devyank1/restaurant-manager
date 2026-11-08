@@ -4,6 +4,7 @@ import { caminhoAtual, navegar } from '../rotas'
 import type {
   ChamadoEquipe,
   FilaProducao,
+  FormaPagamento,
   MesaEquipe,
   MesaResumo,
   RodadaEquipe,
@@ -103,6 +104,15 @@ export const recusarRodada = (rodadaId: string) =>
 /** Rodada que foi direto para a produção, dentro da janela de cancelamento. */
 export const cancelarRodada = (rodadaId: string) =>
   chamar<RodadaEquipe>(`/api/equipe/rodadas/${enc(rodadaId)}/cancelar`, json('POST'))
+/** Dá baixa na conta: o servidor confere o total que o garçom viu. */
+export const fecharConta = (
+  token: string,
+  corpo: { servico: boolean; couvert: boolean; pessoas?: number; formaPagamento: FormaPagamento; totalCentavos: number },
+) =>
+  chamar<{ mesa: { numero: number }; totalCentavos: number; formaPagamento: FormaPagamento }>(
+    `/api/equipe/mesas/${enc(token)}/fechar`,
+    json('POST', corpo),
+  )
 export const entregarRodada = (rodadaId: string) =>
   chamar<RodadaEquipe>(`/api/equipe/rodadas/${enc(rodadaId)}/entregar`, json('POST'))
 

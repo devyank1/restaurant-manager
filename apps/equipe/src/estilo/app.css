@@ -773,3 +773,98 @@
   font-size: var(--t-sm);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Conta da mesa ---------- */
+.conta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.conta > .voltar {
+  align-self: flex-start;
+}
+
+.conta-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  min-height: 48px;
+  padding: var(--e-2) 0;
+  border-bottom: 1px solid var(--borda);
+  font-size: var(--t-lg);
+}
+
+.conta-linha strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.conta-linha--total {
+  border-bottom: none;
+  font-size: var(--t-xl);
+  font-weight: 800;
+}
+
+.conta-opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  cursor: pointer;
+}
+
+.conta-opcao input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--destaque);
+}
+
+.conta-pessoas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  color: var(--texto-suave);
+}
+
+.conta-pessoas .item-qtd {
+  margin-right: 0;
+  color: var(--texto);
+}
+
+.item-qtd output {
+  min-width: 24px;
+  text-align: center;
+}
+
+.conta-formas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--e-2);
+}
+
+.chip-forma {
+  min-height: 52px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: var(--t-md);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chip-forma--ativo {
+  border-color: var(--destaque);
+  background: var(--destaque);
+  color: #fff;
+}
+
+.conta-aviso {
+  margin: 0;
+  padding: var(--e-3);
+  border-radius: var(--raio);
+  background: var(--alerta-fundo);
+  color: var(--alerta);
+  font-weight: 600;
+}

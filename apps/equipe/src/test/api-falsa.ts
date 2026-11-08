@@ -1,6 +1,6 @@
 // API da equipe em memória para os testes. `uma(...)` desvia a próxima chamada.
 import { vi } from 'vitest'
-import { precoUnitario, resumirOpcoes } from '@cardapio/opcoes'
+import { calcularConta, precoUnitario, resumirOpcoes } from '@cardapio/opcoes'
 import type { CardapioPublico } from '../api/cardapio'
 import type {
   ChamadoEquipe,
@@ -106,6 +106,25 @@ export function criarApiFalsa() {
       }
       r.totalCentavos = r.itens.reduce((s, i) => s + i.precoUnitarioCentavos * i.quantidade, 0)
       return { status: metodo === 'POST' ? 201 : 200, corpo: r }
+    }
+    const fechar = /^\/api\/equipe\/mesas\/([^/]+)\/fechar$/.exec(caminho)
+    if (fechar && metodo === 'POST') {
+      const m = estado.mesa[decodeURIComponent(fechar[1])]
+      if (!m) return { status: 404, corpo: { mensagem: 'Mesa não encontrada' } }
+      if (!m.aberta) return { status: 409, corpo: { mensagem: 'Esta mesa já foi fechada' } }
+      const c = corpo as { servico: boolean; couvert: boolean; pessoas?: number; totalCentavos: number }
+      const conta = calcularConta({
+        subtotalCentavos: m.totalConfirmadoCentavos,
+        servico: c.servico,
+        couvert: c.couvert,
+        pessoas: c.pessoas ?? 0,
+        couvertUnitarioCentavos: m.conta.couvert.valorCentavos,
+      })
+      if (conta.totalCentavos !== c.totalCentavos) {
+        return { status: 409, corpo: { mensagem: 'A conta mudou. Confira o novo total.' } }
+      }
+      estado.mesa[decodeURIComponent(fechar[1])] = { ...m, aberta: false, rodadas: [], totalConfirmadoCentavos: 0 }
+      return { status: 200, corpo: { mesa: { numero: m.mesa.numero }, totalCentavos: conta.totalCentavos } }
     }
     const depois = /^\/api\/equipe\/rodadas\/([^/]+)\/(entregar|cancelar)$/.exec(caminho)
     if (depois) {
