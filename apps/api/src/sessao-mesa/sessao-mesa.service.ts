@@ -10,6 +10,8 @@ import { dispositivoValido, Participante } from './participante';
 import { travarMesa } from './trava';
 
 const MESA_NAO_ENCONTRADA = { mensagem: 'Mesa não encontrada' };
+/** Por quanto tempo o celular de uma conta fechada vê "Conta fechada". */
+const CONTA_FECHADA_VISIVEL_MS = 2 * 60 * 60_000;
 
 @Injectable()
 export class SessaoMesaService {
@@ -68,7 +70,27 @@ export class SessaoMesaService {
       include: { dispositivos: { where: { dispositivoId } } },
     });
     const dispositivo = sessao?.dispositivos[0];
-    if (!sessao || !dispositivo) throw fora;
+    if (!sessao || !dispositivo) {
+      // Estava na mesa quando a conta fechou: mostra "Conta fechada" em vez de
+      // entrar calado numa sessão nova.
+      const antiga = await this.prisma.dispositivoSessao.findFirst({
+        where: {
+          dispositivoId,
+          sessao: {
+            mesaId: mesa.id,
+            status: 'FECHADA',
+            fechadaEm: { gte: new Date(Date.now() - CONTA_FECHADA_VISIVEL_MS) },
+          },
+        },
+      });
+      if (antiga) {
+        throw new ForbiddenException({
+          mensagem: 'Conta fechada',
+          codigo: 'CONTA_FECHADA',
+        });
+      }
+      throw fora;
+    }
 
     return {
       restauranteId: mesa.restauranteId,
