@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { ana, criarApiFalsa, type ApiFalsa } from './test/api-falsa'
+import { ana, criarApiFalsa, dani, type ApiFalsa } from './test/api-falsa'
 
 async function entrar(senha = 'demo1234') {
   await userEvent.type(await screen.findByLabelText('E-mail'), 'ana@demo.com')
@@ -42,6 +42,16 @@ describe('App da equipe', () => {
     render(<App />)
     await entrar('errada')
     expect(await screen.findByText('E-mail ou senha inválidos')).toBeInTheDocument()
+  })
+
+  it('cozinha logada cai na produção, sem interruptor de turno', async () => {
+    api.estado.usuario = { ...dani }
+    api.estado.producao = { Cozinha: [] }
+    render(<App />)
+    expect(await screen.findByRole('button', { name: 'Cozinha' })).toBeInTheDocument()
+    expect(screen.getByText('Dani')).toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: 'Em turno' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Chamados')).not.toBeInTheDocument()
   })
 
   it('sessão aberta vai direto para o início', async () => {

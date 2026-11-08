@@ -58,3 +58,27 @@ export type MesaEquipe = {
   rodadas: RodadaEquipe[]
   totalConfirmadoCentavos: number
 }
+
+// Produção (cozinha, bar)
+export type StatusItem = 'NA_FILA' | 'EM_PREPARO' | 'PRONTO' | 'ENTREGUE'
+export type StatusProducao = Exclude<StatusItem, 'ENTREGUE'>
+
+export type ItemProducao = {
+  id: string
+  nome: string
+  resumoOpcoes: string
+  observacao: string
+  quantidade: number
+  status: StatusItem
+}
+
+export type PedidoProducao = {
+  rodadaId: string
+  mesa: { numero: number }
+  garcomNome: string | null
+  confirmadaEm: string | null
+  cancelada: boolean
+  itens: ItemProducao[]
+}
+
+export type FilaProducao = { estacoes: string[]; pedidos: PedidoProducao[] }

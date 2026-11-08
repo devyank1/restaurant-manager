@@ -6,6 +6,7 @@ import Topo from './inicio/Topo'
 import Login from './login/Login'
 import TelaMesa from './mesa/TelaMesa'
 import TodasMesas from './mesas/TodasMesas'
+import TelaProducao from './producao/TelaProducao'
 import { caminhoAtual, navegar, useRota } from './rotas'
 import './estilo/app.css'
 
@@ -44,9 +45,18 @@ export default function App() {
   return (
     <div className="app">
       <Topo usuario={usuario} onMudou={setUsuario} onSair={sair} />
-      {rota.nome === 'inicio' && <Inicio usuario={usuario} />}
-      {rota.nome === 'mesas' && <TodasMesas />}
-      {rota.nome === 'mesa' && <TelaMesa key={rota.token} token={rota.token} />}
+      {usuario.papel === 'COZINHA' ? (
+        // A cozinha só usa a tela da produção.
+        <TelaProducao />
+      ) : (
+        <>
+          {rota.nome === 'inicio' && <Inicio usuario={usuario} />}
+          {rota.nome === 'mesas' && <TodasMesas />}
+          {rota.nome === 'mesa' && <TelaMesa key={rota.token} token={rota.token} />}
+          {rota.nome === 'producao' &&
+            (usuario.papel === 'DONO' ? <TelaProducao /> : <Inicio usuario={usuario} />)}
+        </>
+      )}
     </div>
   )
 }

@@ -1,0 +1,235 @@
+/* Tela da produção: tablet ou TV, lida de longe, tocada com pressa. */
+.producao {
+  padding: 0 var(--e-4) var(--e-5);
+}
+
+.producao-barra {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3) 0;
+  background: var(--fundo);
+}
+
+.producao-estacoes {
+  display: flex;
+  gap: var(--e-2);
+  margin-right: auto;
+  overflow-x: auto;
+}
+
+.chip-estacao {
+  min-height: 48px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--superficie);
+  padding: var(--e-2) var(--e-5);
+  font-size: var(--t-lg);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip-estacao--ativo {
+  border-color: var(--destaque);
+  background: var(--destaque);
+  color: #fff;
+}
+
+.grade-producao {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--e-3);
+  align-items: start;
+}
+
+/* Cartão */
+.cartao-producao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding: var(--e-4);
+  border: 1px solid var(--borda);
+  border-top: 6px solid var(--texto-apagado);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.cartao-producao--alerta {
+  border-top-color: var(--alerta);
+}
+
+.cartao-producao--perigo {
+  border-top-color: var(--perigo);
+  background: var(--perigo-fundo);
+}
+
+.cartao-producao--cancelado {
+  border-color: rgba(248, 113, 113, 0.5);
+  border-top-color: var(--perigo);
+  background: var(--perigo-fundo);
+}
+
+.cartao-producao--cancelado .producao-nome {
+  text-decoration: line-through;
+}
+
+.cartao-producao-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-2);
+}
+
+.cartao-producao-mesa {
+  font-size: var(--t-xl);
+  font-weight: 800;
+}
+
+.cartao-producao-tempo {
+  font-size: var(--t-lg);
+  font-weight: 700;
+  color: var(--texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao-producao--alerta .cartao-producao-tempo {
+  color: var(--alerta);
+}
+
+.cartao-producao--perigo .cartao-producao-tempo {
+  color: var(--perigo);
+}
+
+.cartao-producao-cancelado {
+  font-size: var(--t-lg);
+  font-weight: 800;
+  color: var(--perigo);
+  text-transform: uppercase;
+}
+
+.cartao-producao-garcom {
+  margin-top: calc(-1 * var(--e-2));
+  font-size: var(--t-sm);
+  color: var(--texto-suave);
+}
+
+/* Itens */
+.producao-itens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.producao-item {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-3);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--superficie-2);
+  padding: var(--e-3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.producao-item:disabled {
+  cursor: default;
+}
+
+.producao-qtd {
+  min-width: 36px;
+  font-size: var(--t-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.producao-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.producao-nome {
+  font-size: var(--t-lg);
+  font-weight: 700;
+}
+
+.producao-opcoes {
+  font-size: var(--t-sm);
+  color: var(--texto-suave);
+}
+
+.producao-obs {
+  align-self: flex-start;
+  margin-top: var(--e-1);
+  padding: 2px var(--e-2);
+  border-radius: var(--raio-pequeno);
+  background: var(--alerta-fundo);
+  color: var(--alerta);
+  font-size: var(--t-md);
+  font-weight: 700;
+}
+
+.producao-status {
+  align-self: center;
+  border-radius: 999px;
+  padding: 2px var(--e-2);
+  background: var(--superficie);
+  color: var(--texto-suave);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.producao-item--em_preparo {
+  border-color: rgba(255, 90, 31, 0.5);
+  background: var(--destaque-fundo);
+}
+
+.producao-item--em_preparo .producao-status {
+  background: var(--destaque);
+  color: #fff;
+}
+
+.producao-item--pronto,
+.producao-item--entregue {
+  opacity: 0.7;
+}
+
+.producao-item--pronto .producao-status {
+  background: var(--sucesso-fundo);
+  color: var(--sucesso);
+}
+
+.cartao-producao > .botao {
+  min-height: 56px;
+  font-size: var(--t-lg);
+}
+
+/* Prontos (para desfazer um toque errado) */
+.producao-prontos {
+  margin-top: var(--e-5);
+}
+
+.producao-prontos h2 {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  color: var(--texto-apagado);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.producao-prontos .cartao-producao {
+  opacity: 0.75;
+}
