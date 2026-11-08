@@ -157,4 +157,21 @@ describe('Início', () => {
     await screen.findByText('Nenhum chamado agora')
     expect(screen.queryByRole('button', { name: /Ler etiqueta/ })).not.toBeInTheDocument()
   })
+
+  it('minhas mesas mostra 2 prontos', async () => {
+    api.estado.mesas = mesasDemo.map((m) => (m.numero === 7 ? { ...m, prontos: 2 } : m))
+    renderizar()
+    const minhas = await screen.findByRole('region', { name: 'Minhas mesas' })
+    expect(await within(minhas).findByText('2 prontos')).toHaveClass('selo--sucesso')
+  })
+
+  it('dono vê o botão Produção e o garçom não', async () => {
+    const { unmount } = renderizar()
+    await screen.findByText('Nenhum chamado agora')
+    expect(screen.queryByRole('button', { name: 'Produção' })).not.toBeInTheDocument()
+    unmount()
+    render(<Inicio usuario={{ ...ana, papel: 'DONO', emTurno: true }} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Produção' }))
+    expect(window.location.pathname).toBe('/producao')
+  })
 })

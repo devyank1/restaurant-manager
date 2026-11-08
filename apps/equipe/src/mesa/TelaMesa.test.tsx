@@ -169,4 +169,62 @@ describe('Tela da mesa', () => {
     render(<TelaMesa token="nao-existe" />)
     expect(await screen.findByText('Mesa não encontrada')).toBeInTheDocument()
   })
+
+  describe('andamento da produção', () => {
+    const confirmada = () => api.estado.mesa.tok7.rodadas[0]
+
+    it('item pronto mostra selo verde e Entregar prontos chama a API', async () => {
+      confirmada().itens[0].status = 'PRONTO'
+      confirmada().fase = 'PRONTO'
+      render(<TelaMesa token="tok7" />)
+      const rodada = await screen.findByRole('region', { name: 'Pedido confirmado' })
+      expect(within(rodada).getByText('Pronto', { selector: '.selo' })).toHaveClass('selo--sucesso')
+      await userEvent.click(within(rodada).getByRole('button', { name: 'Entregar prontos (1)' }))
+      expect(api.chamadas('POST', /\/rodadas\/r0\/entregar$/)).toHaveLength(1)
+      expect(await within(rodada).findByText('Entregue', { selector: '.selo' })).toBeInTheDocument()
+      expect(within(rodada).queryByRole('button', { name: /Entregar prontos/ })).not.toBeInTheDocument()
+    })
+
+    it('item na fila mostra Na fila e não oferece entrega', async () => {
+      render(<TelaMesa token="tok7" />)
+      const rodada = await screen.findByRole('region', { name: 'Pedido confirmado' })
+      expect(within(rodada).getByText('Na fila')).toBeInTheDocument()
+      expect(within(rodada).queryByRole('button', { name: /Entregar prontos/ })).not.toBeInTheDocument()
+    })
+
+    it('contagem regressiva some quando a janela acaba', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      try {
+        confirmada().cancelavelAte = new Date(Date.now() + 65_000).toISOString()
+        render(<TelaMesa token="tok7" />)
+        expect(await screen.findByRole('button', { name: 'Cancelar pedido (1:05)' })).toBeInTheDocument()
+        act(() => vi.advanceTimersByTime(5_000))
+        expect(screen.getByRole('button', { name: 'Cancelar pedido (1:00)' })).toBeInTheDocument()
+        act(() => vi.advanceTimersByTime(61_000))
+        expect(screen.queryByRole('button', { name: /Cancelar pedido/ })).not.toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('Cancelar pedido pede confirmação', async () => {
+      confirmada().cancelavelAte = new Date(Date.now() + 90_000).toISOString()
+      render(<TelaMesa token="tok7" />)
+      await userEvent.click(await screen.findByRole('button', { name: /Cancelar pedido/ }))
+      expect(screen.getByText('Cancelar este pedido?')).toBeInTheDocument()
+      expect(api.chamadas('POST', /\/cancelar$/)).toHaveLength(0)
+      await userEvent.click(screen.getByRole('button', { name: 'Sim, cancelar' }))
+      expect(api.chamadas('POST', /\/rodadas\/r0\/cancelar$/)).toHaveLength(1)
+      expect(await screen.findByText('Recusado')).toBeInTheDocument()
+    })
+
+    it('prazo acabou no servidor (409) avisa e recarrega', async () => {
+      confirmada().cancelavelAte = new Date(Date.now() + 90_000).toISOString()
+      render(<TelaMesa token="tok7" />)
+      await userEvent.click(await screen.findByRole('button', { name: /Cancelar pedido/ }))
+      api.uma('POST', /\/cancelar$/, () => ({ status: 409, corpo: { mensagem: 'O prazo para cancelar acabou' } }))
+      await userEvent.click(screen.getByRole('button', { name: 'Sim, cancelar' }))
+      expect(await screen.findByRole('status')).toHaveTextContent('O prazo para cancelar acabou')
+    })
+  })
 })

@@ -99,7 +99,12 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
               <li key={m.token}>
                 <button type="button" className="mesa-cartao" onClick={() => navegar(`/mesa/${encodeURIComponent(m.token)}`)}>
                   <span className="mesa-numero">{`Mesa ${m.numero}`}</span>
-                  {m.pendentes > 0 && <span className="selo selo--alerta">{`${m.pendentes} aguardando`}</span>}
+                  <span className="mesa-selos">
+                    {m.prontos > 0 && (
+                      <span className="selo selo--sucesso">{`${m.prontos} ${m.prontos === 1 ? 'pronto' : 'prontos'}`}</span>
+                    )}
+                    {m.pendentes > 0 && <span className="selo selo--alerta">{`${m.pendentes} aguardando`}</span>}
+                  </span>
                 </button>
               </li>
             ))}
@@ -116,6 +121,11 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
         <button type="button" className="botao botao--secundario" onClick={() => navegar('/mesas')}>
           Todas as mesas
         </button>
+        {usuario.papel === 'DONO' && (
+          <button type="button" className="botao botao--secundario" onClick={() => navegar('/producao')}>
+            Produção
+          </button>
+        )}
       </div>
       {erroNfc && (
         <p className="erro" role="alert">

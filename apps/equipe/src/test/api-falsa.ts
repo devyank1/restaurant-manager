@@ -96,7 +96,7 @@ export function criarApiFalsa() {
       }
       if (metodo === 'POST') {
         const novo = corpo as Omit<ItemRodadaEquipe, 'id' | 'nome' | 'resumoOpcoes' | 'precoUnitarioCentavos'>
-        const vazio = { id: `i-${r.itens.length + 100}`, nome: '', resumoOpcoes: '', precoUnitarioCentavos: 0 }
+        const vazio = { id: `i-${r.itens.length + 100}`, nome: '', resumoOpcoes: '', precoUnitarioCentavos: 0, status: 'NA_FILA' as const, estacao: 'Cozinha' }
         r.itens = [...r.itens, montar({ ...vazio, ...novo }, {})]
       } else {
         const edicao = corpo as Partial<ItemRodadaEquipe>
@@ -106,6 +106,30 @@ export function criarApiFalsa() {
       }
       r.totalCentavos = r.itens.reduce((s, i) => s + i.precoUnitarioCentavos * i.quantidade, 0)
       return { status: metodo === 'POST' ? 201 : 200, corpo: r }
+    }
+    const depois = /^\/api\/equipe\/rodadas\/([^/]+)\/(entregar|cancelar)$/.exec(caminho)
+    if (depois) {
+      const [, id, acao] = depois
+      for (const m of Object.values(estado.mesa)) {
+        const r = m.rodadas.find((x) => x.id === id)
+        if (!r) continue
+        if (acao === 'cancelar') {
+          if (!r.cancelavelAte || new Date(r.cancelavelAte) <= new Date()) {
+            return { status: 409, corpo: { mensagem: 'O prazo para cancelar acabou' } }
+          }
+          r.status = 'CANCELADA'
+          r.fase = 'CANCELADA'
+          r.cancelavelAte = null
+          m.totalConfirmadoCentavos -= r.totalCentavos
+          return { status: 200, corpo: r }
+        }
+        if (!r.itens.some((i) => i.status === 'PRONTO')) {
+          return { status: 409, corpo: { mensagem: 'Nada pronto para entregar' } }
+        }
+        r.itens = r.itens.map((i) => (i.status === 'PRONTO' ? { ...i, status: 'ENTREGUE' } : i))
+        return { status: 200, corpo: r }
+      }
+      return { status: 404, corpo: { mensagem: 'Rodada não encontrada' } }
     }
     const rodada = /^\/api\/equipe\/rodadas\/([^/]+)\/(confirmar|recusar)$/.exec(caminho)
     if (rodada) {
@@ -117,6 +141,7 @@ export function criarApiFalsa() {
           return { status: 409, corpo: { mensagem: 'Esta rodada já foi confirmada ou recusada' } }
         }
         r.status = acao === 'confirmar' ? 'CONFIRMADA' : 'CANCELADA'
+        r.fase = r.status === 'CONFIRMADA' ? 'NA_COZINHA' : 'CANCELADA'
         if (r.status === 'CONFIRMADA') m.totalConfirmadoCentavos += r.totalCentavos
         return { status: 200, corpo: r }
       }

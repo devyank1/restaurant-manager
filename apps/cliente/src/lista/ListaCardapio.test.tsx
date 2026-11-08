@@ -272,6 +272,7 @@ describe('ListaCardapio', () => {
       {
         id: 'r1',
         status: 'CONFIRMADA',
+        fase: 'NA_COZINHA',
         criadoEm: '2026-11-06T20:00:00.000Z',
         totalCentavos: 5990,
         itens: [{ nome: 'Mix da Casa', resumoOpcoes: '', observacao: '', quantidade: 1, precoUnitarioCentavos: 5990 }],
@@ -280,10 +281,10 @@ describe('ListaCardapio', () => {
     api.estado.totalParcialCentavos = 5990
     act(() => ultimoSocket().servidor('rodadas-mudaram'))
     const faixa = await screen.findByRole('button', { name: /Seus pedidos/ })
-    expect(within(faixa).getByText('Confirmado')).toBeInTheDocument()
+    expect(within(faixa).getByText('Na cozinha')).toBeInTheDocument()
     expect(within(faixa).getByText(reais(5990))).toBeInTheDocument()
 
-    api.estado.rodadas = [...api.estado.rodadas, { ...api.estado.rodadas[0], id: 'r2', status: 'AGUARDANDO_GARCOM' }]
+    api.estado.rodadas = [...api.estado.rodadas, { ...api.estado.rodadas[0], id: 'r2', status: 'AGUARDANDO_GARCOM', fase: 'AGUARDANDO_GARCOM' }]
     act(() => ultimoSocket().servidor('rodadas-mudaram'))
     expect(await within(faixa).findByText('Aguardando garçom')).toBeInTheDocument()
 

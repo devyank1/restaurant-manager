@@ -2,21 +2,18 @@ import { formatarReais } from '@cardapio/opcoes'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CardapioPublico } from '../api/cardapio'
 import { buscarCardapio, buscarChamados, buscarMesa, ErroEquipe, ErroNaoAutenticado, marcarLido } from '../api/equipe'
-import type { MesaEquipe, RodadaEquipe } from '../api/tipos'
+import type { MesaEquipe } from '../api/tipos'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
 import { useMaisRecente } from '../tempo-real/useMaisRecente'
+import RodadaConfirmada from './RodadaConfirmada'
 import RodadaPendente from './RodadaPendente'
 
 const JA_FECHADA = 'Este pedido já foi confirmado ou recusado'
+/** 409 da API ao editar rodada que já saiu de AGUARDANDO_GARCOM. */
+const RODADA_FECHADA_API = 'Esta rodada já foi confirmada ou recusada'
 const SEM_CONEXAO = 'Sem conexão. Tente de novo.'
 const DURACAO_AVISO_MS = 4000
-
-const STATUS: Record<RodadaEquipe['status'], string> = {
-  AGUARDANDO_GARCOM: 'Aguardando',
-  CONFIRMADA: 'Confirmado',
-  CANCELADA: 'Recusado',
-}
 
 export default function TelaMesa({ token }: { token: string }) {
   const [mesa, setMesa] = useState<MesaEquipe | null>(null)
@@ -88,7 +85,7 @@ export default function TelaMesa({ token }: { token: string }) {
       .catch((erro: unknown) => {
         if (erro instanceof ErroNaoAutenticado) return
         const texto =
-          erro instanceof ErroEquipe ? (erro.status === 409 ? JA_FECHADA : erro.message) : SEM_CONEXAO
+          erro instanceof ErroEquipe ? (erro.message === RODADA_FECHADA_API ? JA_FECHADA : erro.message) : SEM_CONEXAO
         setAviso({ texto, id: Date.now() })
       })
       .finally(() => {
@@ -113,7 +110,8 @@ export default function TelaMesa({ token }: { token: string }) {
   if (!mesa) return <p className="carregando">Carregando…</p>
 
   const pendentes = mesa.rodadas.filter((r) => r.status === 'AGUARDANDO_GARCOM')
-  const fechadas = mesa.rodadas.filter((r) => r.status !== 'AGUARDANDO_GARCOM')
+  const confirmadas = mesa.rodadas.filter((r) => r.status === 'CONFIRMADA')
+  const canceladas = mesa.rodadas.filter((r) => r.status === 'CANCELADA')
 
   return (
     <main className="tela-mesa">
@@ -129,12 +127,16 @@ export default function TelaMesa({ token }: { token: string }) {
         <RodadaPendente key={r.id} rodada={r} cardapio={cardapio} ocupado={ocupado} agir={agir} />
       ))}
 
-      {fechadas.length > 0 && (
-        <section className="rodadas-fechadas" aria-label="Pedidos da mesa">
-          {fechadas.map((r) => (
-            <div key={r.id} className={`rodada rodada--${r.status.toLowerCase()}`}>
+      {confirmadas.map((r) => (
+        <RodadaConfirmada key={r.id} rodada={r} ocupado={ocupado} agir={agir} />
+      ))}
+
+      {canceladas.length > 0 && (
+        <section className="rodadas-fechadas" aria-label="Pedidos recusados">
+          {canceladas.map((r) => (
+            <div key={r.id} className="rodada rodada--cancelada">
               <div className="rodada-topo">
-                <span className="rodada-status">{STATUS[r.status]}</span>
+                <span className="rodada-status">Recusado</span>
                 <span>{formatarReais(r.totalCentavos)}</span>
               </div>
               <ul className="itens itens--compacto">

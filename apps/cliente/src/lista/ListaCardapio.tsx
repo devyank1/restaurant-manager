@@ -55,8 +55,17 @@ export default function ListaCardapio({ cardapio, token }: { cardapio: CardapioP
 
   // Faixa "Seus pedidos": o que importa é se ainda tem algo esperando o garçom.
   const algumAguardando = rodadas.rodadas.some((r) => r.status === 'AGUARDANDO_GARCOM')
-  const algumConfirmado = rodadas.rodadas.some((r) => r.status === 'CONFIRMADA')
-  const statusPedidos = algumAguardando ? 'Aguardando garçom' : algumConfirmado ? 'Confirmado' : 'Cancelado'
+  // Resumo na faixa: o que mais interessa ao cliente primeiro.
+  const fases = new Set(rodadas.rodadas.map((r) => r.fase))
+  const statusPedidos = algumAguardando
+    ? 'Aguardando garçom'
+    : fases.has('PRONTO')
+      ? 'Pronto'
+      : fases.has('NA_COZINHA')
+        ? 'Na cozinha'
+        : fases.has('ENTREGUE')
+          ? 'Entregue'
+          : 'Cancelado'
 
   useEffect(() => {
     if (!aviso) return

@@ -154,6 +154,21 @@
   color: var(--alerta);
 }
 
+.selo--sucesso {
+  background: var(--sucesso-fundo);
+  color: var(--sucesso);
+}
+
+.selo--destaque {
+  background: var(--destaque-fundo);
+  color: var(--destaque);
+}
+
+.mesa-selos {
+  display: flex;
+  gap: var(--e-1);
+}
+
 /* ---------- Login ---------- */
 .login {
   min-height: 100dvh;
@@ -558,7 +573,19 @@
 }
 
 .rodada--confirmada .rodada-status {
+  color: var(--destaque);
+}
+
+.rodada--fase-pronto .rodada-status,
+.rodada--fase-entregue .rodada-status {
   color: var(--sucesso);
+}
+
+.item-andamento {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-2);
 }
 
 .rodada--cancelada .rodada-status {

@@ -27,6 +27,8 @@ export type MesaResumo = {
   garcomNome: string | null
   /** Rodadas aguardando garçom. */
   pendentes: number
+  /** Itens prontos esperando o garçom entregar. */
+  prontos: number
 }
 
 export type StatusRodada = 'AGUARDANDO_GARCOM' | 'CONFIRMADA' | 'CANCELADA'
@@ -40,11 +42,18 @@ export type ItemRodadaEquipe = {
   observacao: string
   quantidade: number
   precoUnitarioCentavos: number
+  status: StatusItem
+  estacao: string
 }
+
+export type FaseRodada = 'AGUARDANDO_GARCOM' | 'NA_COZINHA' | 'PRONTO' | 'ENTREGUE' | 'CANCELADA'
 
 export type RodadaEquipe = {
   id: string
   status: StatusRodada
+  fase: FaseRodada
+  /** Foi direto para a produção: o garçom cancela até esta hora (ISO). */
+  cancelavelAte: string | null
   criadoEm: string
   totalCentavos: number
   /** Celular que ainda não teve rodada confirmada nesta sessão. */

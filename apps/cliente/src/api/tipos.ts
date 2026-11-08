@@ -35,6 +35,8 @@ export type CarrinhoPublico = {
 export type RodadaPublica = {
   id: string
   status: 'AGUARDANDO_GARCOM' | 'CONFIRMADA' | 'CANCELADA'
+  /** Andamento calculado pela API a partir dos itens. */
+  fase: 'AGUARDANDO_GARCOM' | 'NA_COZINHA' | 'PRONTO' | 'ENTREGUE' | 'CANCELADA'
   criadoEm: string
   totalCentavos: number
   itens: {
