@@ -489,5 +489,7 @@ export class RodadasEquipeService {
   private avisarDecisao(restauranteId: string, sessaoId: string): void {
     this.avisar(restauranteId, sessaoId);
     this.tempoReal.paraEquipe(restauranteId, 'chamados-mudaram', {});
+    // Confirmada entra na produção; recusada não muda nada lá, mas avisar é inofensivo.
+    this.tempoReal.paraEquipe(restauranteId, 'producao-mudou', {});
   }
 }

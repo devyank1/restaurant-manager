@@ -179,4 +179,13 @@ describe('TelaProducao', () => {
       status: 'EM_PREPARO',
     })
   })
+
+  it('pedido já entregue pelo garçom não oferece Desfazer', async () => {
+    api.estado.producao.Cozinha = [pedido(5, [{ nome: 'Pudim de Leite', status: 'ENTREGUE' }])]
+    render(<TelaProducao />)
+    const prontos = await screen.findByRole('region', { name: 'Prontos' })
+    const cinco = within(prontos).getByRole('article', { name: 'Mesa 5' })
+    expect(within(cinco).queryByRole('button', { name: 'Desfazer' })).not.toBeInTheDocument()
+    expect(within(cinco).getByText('Entregue', { selector: '.cartao-producao-entregue' })).toBeInTheDocument()
+  })
 })

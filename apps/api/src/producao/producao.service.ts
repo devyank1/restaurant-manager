@@ -262,7 +262,11 @@ export class ProducaoService {
   ): Promise<Mudanca> {
     const jaPublicado = async (tipo: TipoEvento) =>
       (await tx.evento.count({
-        where: { tipo, dados: { path: ['rodadaId'], equals: rodada.id } },
+        where: {
+          restauranteId: rodada.restauranteId,
+          tipo,
+          dados: { path: ['rodadaId'], equals: rodada.id },
+        },
       })) > 0;
 
     const eventos: TipoEvento[] = [];

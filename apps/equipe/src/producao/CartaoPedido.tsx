@@ -37,6 +37,8 @@ export default function CartaoPedido({
     : 0
   const naFila = pedido.itens.some((i) => i.status === 'NA_FILA')
   const preparando = pedido.itens.some((i) => i.status === 'EM_PREPARO')
+  // Garçom já levou tudo: não há o que desfazer (a API responderia 409).
+  const entregue = pedido.itens.every((i) => i.status === 'ENTREGUE')
 
   let classe = 'cartao-producao'
   if (pedido.cancelada) classe += ' cartao-producao--cancelado'
@@ -94,6 +96,8 @@ export default function CartaoPedido({
         <button type="button" className="botao botao--sucesso" disabled={ocupado} onClick={() => onEstacao('PRONTO')}>
           Pronto
         </button>
+      ) : entregue ? (
+        <p className="cartao-producao-entregue">Entregue</p>
       ) : (
         <button type="button" className="botao botao--secundario" disabled={ocupado} onClick={() => onEstacao('EM_PREPARO')}>
           Desfazer

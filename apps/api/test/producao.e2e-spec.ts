@@ -1,6 +1,7 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import request from 'supertest';
 import { ESTACAO_PRONTA } from '../src/producao/producao.types';
+import { TempoRealService } from '../src/tempo-real/tempo-real.service';
 import { AppTeste, criarAppTeste, loginComo } from './app-teste';
 
 type ItemProducao = {
@@ -331,5 +332,49 @@ describe('produção', () => {
       data: { prontoEm: new Date(Date.now() - 16 * 60_000) },
     });
     expect((await fila('Cozinha')).pedidos).toEqual([]);
+  });
+
+  it('confirmar e pedido direto avisam a produção (producao-mudou)', async () => {
+    const tempoReal = t.app.get(TempoRealService);
+    const espiao = jest.spyOn(tempoReal, 'paraEquipe');
+    try {
+      const { cliente } = await pedido(token7, item(ids.mix));
+      const avisos = () =>
+        espiao.mock.calls.filter(([, evento]) => evento === 'producao-mudou')
+          .length;
+      expect(avisos()).toBe(1);
+      await cliente
+        .post(`/publico/mesas/${token7}/carrinho/itens`)
+        .send(item(ids.pudim))
+        .expect(201);
+      await cliente.post(`/publico/mesas/${token7}/rodadas`).expect(201);
+      expect(avisos()).toBe(2);
+    } finally {
+      espiao.mockRestore();
+    }
+  });
+
+  it('evento de outro restaurante não conta como já publicado', async () => {
+    const outro = await t.prisma.restaurante.create({
+      data: { nome: 'Outro', slug: 'outro-producao' },
+    });
+    try {
+      const { rodadaId } = await pedido(token7, item(ids.mix));
+      await t.prisma.evento.create({
+        data: {
+          restauranteId: outro.id,
+          tipo: 'PedidoEmPreparo',
+          dados: { rodadaId },
+        },
+      });
+      await mudarRodada(rodadaId, 'Cozinha', 'EM_PREPARO').expect(200);
+      expect(
+        await t.prisma.evento.count({
+          where: { tipo: 'PedidoEmPreparo', restauranteId: t.restauranteId },
+        }),
+      ).toBe(1);
+    } finally {
+      await t.prisma.restaurante.delete({ where: { id: outro.id } });
+    }
   });
 });

@@ -176,6 +176,8 @@ export class RodadasService {
         dados: { ...dados, direto: true, garcomId },
       });
       if (garcomId) this.tempoReal.paraGarcom(garcomId, 'chamados-mudaram', {});
+      // Foi direto: a tela da produção precisa buscar já (e tocar o bipe).
+      this.tempoReal.paraEquipe(p.restauranteId, 'producao-mudou', {});
     }
     this.tempoReal.paraSessao(p.sessao.id, 'rodadas-mudaram', {});
     this.tempoReal.paraEquipe(p.restauranteId, 'mesa-mudou', {

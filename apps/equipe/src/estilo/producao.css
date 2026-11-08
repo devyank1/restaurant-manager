@@ -233,3 +233,10 @@
 .producao-prontos .cartao-producao {
   opacity: 0.75;
 }
+
+.cartao-producao-entregue {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+  color: var(--sucesso);
+}
