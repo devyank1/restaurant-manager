@@ -1,7 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import webpush from 'web-push';
 import { PrismaService } from '../prisma/prisma.service';
-import { PushService } from './push.service';
+import {
+  mensagemEstacaoPronta,
+  mensagemPedidoDireto,
+  PushService,
+} from './push.service';
 
 jest.mock('web-push', () => ({
   __esModule: true,
@@ -169,5 +173,31 @@ describe('PushService', () => {
     expect(payload(0)).toMatchObject({
       corpo: 'Chamou o atendente',
     });
+  });
+});
+
+describe('mensagens de push da produção', () => {
+  const mesa = { numero: 7, token: 'tok7' };
+
+  it('mensagem do pedido direto', () => {
+    expect(mensagemPedidoDireto(mesa, 120)).toEqual({
+      titulo: 'Mesa 7',
+      corpo: 'Novo pedido na produção. Dá para cancelar em 2 min',
+      url: '/mesa/tok7',
+    });
+    expect(mensagemPedidoDireto(mesa, 30).corpo).toBe(
+      'Novo pedido na produção. Dá para cancelar em 1 min',
+    );
+  });
+
+  it('mensagem de estação pronta com singular e plural', () => {
+    expect(mensagemEstacaoPronta(mesa, 'Bar', 1)).toEqual({
+      titulo: 'Mesa 7',
+      corpo: 'Pronto (Bar): 1 item',
+      url: '/mesa/tok7',
+    });
+    expect(mensagemEstacaoPronta(mesa, 'Cozinha', 2).corpo).toBe(
+      'Pronto (Cozinha): 2 itens',
+    );
   });
 });

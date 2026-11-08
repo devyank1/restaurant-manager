@@ -26,13 +26,26 @@ export function paraPublica(r: RodadaComItens): RodadaPublica {
   };
 }
 
+/** Fim da janela de cancelamento, se a rodada foi direto e ainda está nela. */
+export function cancelavelAte(
+  r: { direta: boolean; status: string; confirmadaEm: Date | null },
+  janelaSegundos: number,
+  agora = new Date(),
+): Date | null {
+  if (!r.direta || r.status !== 'CONFIRMADA' || !r.confirmadaEm) return null;
+  const fim = new Date(r.confirmadaEm.getTime() + janelaSegundos * 1000);
+  return fim > agora ? fim : null;
+}
+
 export function paraEquipe(
   r: RodadaComItens,
   dispositivoNovo: boolean,
+  janelaSegundos = 0,
 ): RodadaEquipe {
   return {
     ...paraPublica(r),
     dispositivoNovo,
+    cancelavelAte: cancelavelAte(r, janelaSegundos)?.toISOString() ?? null,
     itens: r.itens.map((i) => ({
       id: i.id,
       pratoId: i.pratoId,

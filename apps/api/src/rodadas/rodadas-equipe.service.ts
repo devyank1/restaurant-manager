@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -19,7 +20,7 @@ import { ITEM_NAO_ENCONTRADO, pratoValidado } from '../pedidos/validar-item';
 import { PrismaService } from '../prisma/prisma.service';
 import { travarMesa } from '../sessao-mesa/trava';
 import { TempoRealService } from '../tempo-real/tempo-real.service';
-import { paraEquipe, somarConfirmadas } from './mapear';
+import { cancelavelAte, paraEquipe, somarConfirmadas } from './mapear';
 import {
   COM_ITENS,
   MesaEquipe,
@@ -72,8 +73,10 @@ export class RodadasEquipeService {
           where: { status: 'ABERTA' },
           include: {
             rodadas: {
-              where: { status: 'AGUARDANDO_GARCOM' },
-              select: { id: true },
+              select: {
+                status: true,
+                itens: { where: { status: 'PRONTO' }, select: { id: true } },
+              },
             },
           },
         },
@@ -89,7 +92,13 @@ export class RodadasEquipeService {
         token: m.token,
         aberta: sessao !== undefined,
         garcomNome: (sessao?.garcomId && nomes.get(sessao.garcomId)) || null,
-        pendentes: sessao?.rodadas.length ?? 0,
+        pendentes:
+          sessao?.rodadas.filter((r) => r.status === 'AGUARDANDO_GARCOM')
+            .length ?? 0,
+        prontos:
+          sessao?.rodadas
+            .filter((r) => r.status === 'CONFIRMADA')
+            .reduce((soma, r) => soma + r.itens.length, 0) ?? 0,
       };
     });
   }
@@ -116,11 +125,16 @@ export class RodadasEquipeService {
         .map((d) => d.dispositivoId),
     );
     const rodadas = sessao?.rodadas ?? [];
+    const { janelaCancelamentoSegundos: janela } =
+      await this.prisma.restaurante.findUniqueOrThrow({
+        where: { id: usuario.restauranteId },
+        select: { janelaCancelamentoSegundos: true },
+      });
     return {
       mesa: { numero: mesa.numero, token: mesa.token },
       garcomNome,
       rodadas: rodadas.map((r) =>
-        paraEquipe(r, !confirmados.has(r.dispositivoId)),
+        paraEquipe(r, !confirmados.has(r.dispositivoId), janela),
       ),
       totalConfirmadoCentavos: somarConfirmadas(rodadas),
     };
@@ -334,6 +348,135 @@ export class RodadasEquipeService {
     });
     this.avisarDecisao(usuario.restauranteId, resultado.r.sessaoId);
     return resultado.rodada;
+  }
+
+  /**
+   * Rodada CONFIRMADA do restaurante, numa transação com a mesa travada.
+   * Para o que acontece depois de confirmada (cancelar na janela, entregar).
+   */
+  private async naConfirmada<T>(
+    rodadaId: string,
+    usuario: UsuarioToken,
+    trabalho: (
+      tx: Tx,
+      rodada: Prisma.RodadaGetPayload<{
+        include: { sessao: { include: { restaurante: true } } };
+      }>,
+    ) => Promise<T>,
+  ): Promise<T> {
+    exigirSalao(usuario);
+    const achada = await this.prisma.rodada.findFirst({
+      where: { id: rodadaId, restauranteId: usuario.restauranteId },
+      include: { sessao: true },
+    });
+    if (!achada) throw RODADA_NAO_ENCONTRADA();
+    return this.prisma.$transaction(async (tx) => {
+      await travarMesa(tx, achada.sessao.mesaId);
+      const rodada = await tx.rodada.findUniqueOrThrow({
+        where: { id: rodadaId },
+        include: { sessao: { include: { restaurante: true } } },
+      });
+      return trabalho(tx, rodada);
+    });
+  }
+
+  /**
+   * Cancela a rodada que foi direto para a produção, dentro da janela.
+   * Só o garçom responsável pela mesa ou o dono.
+   */
+  async cancelar(
+    rodadaId: string,
+    usuario: UsuarioToken,
+  ): Promise<RodadaEquipe> {
+    const agora = new Date();
+    const resultado = await this.naConfirmada(
+      rodadaId,
+      usuario,
+      async (tx, r) => {
+        if (usuario.papel !== 'DONO' && r.sessao.garcomId !== usuario.id) {
+          throw new ForbiddenException({
+            mensagem: 'Esta mesa é de outro garçom',
+          });
+        }
+        const janela = r.sessao.restaurante.janelaCancelamentoSegundos;
+        if (!cancelavelAte(r, janela, agora)) {
+          throw new ConflictException({
+            mensagem: 'O prazo para cancelar acabou',
+          });
+        }
+        await tx.rodada.update({
+          where: { id: rodadaId },
+          data: { status: 'CANCELADA', canceladaEm: agora },
+        });
+        return { rodada: await this.fecharEdicao(tx, rodadaId), r };
+      },
+    );
+    await this.eventos.publicar({
+      restauranteId: usuario.restauranteId,
+      tipo: 'PedidoCancelado',
+      dados: {
+        rodadaId,
+        sessaoId: resultado.r.sessaoId,
+        mesaId: resultado.r.sessao.mesaId,
+        garcomId: usuario.id,
+        porJanela: true,
+      },
+    });
+    this.avisarProducao(usuario.restauranteId, resultado.r.sessaoId);
+    return resultado.rodada;
+  }
+
+  /** Passa os itens prontos para entregues. */
+  async entregar(
+    rodadaId: string,
+    usuario: UsuarioToken,
+  ): Promise<RodadaEquipe> {
+    const agora = new Date();
+    const resultado = await this.naConfirmada(
+      rodadaId,
+      usuario,
+      async (tx, r) => {
+        const prontos =
+          r.status === 'CONFIRMADA'
+            ? await tx.itemRodada.updateMany({
+                where: { rodadaId, status: 'PRONTO' },
+                data: { status: 'ENTREGUE', entregueEm: agora },
+              })
+            : { count: 0 };
+        if (prontos.count === 0) {
+          throw new ConflictException({
+            mensagem: 'Nada pronto para entregar',
+          });
+        }
+        const faltam = await tx.itemRodada.count({
+          where: { rodadaId, status: { not: 'ENTREGUE' } },
+        });
+        return {
+          rodada: await this.fecharEdicao(tx, rodadaId),
+          r,
+          tudoEntregue: faltam === 0,
+        };
+      },
+    );
+    if (resultado.tudoEntregue) {
+      await this.eventos.publicar({
+        restauranteId: usuario.restauranteId,
+        tipo: 'PedidoEntregue',
+        dados: {
+          rodadaId,
+          sessaoId: resultado.r.sessaoId,
+          mesaId: resultado.r.sessao.mesaId,
+          garcomId: usuario.id,
+        },
+      });
+    }
+    this.avisarProducao(usuario.restauranteId, resultado.r.sessaoId);
+    return resultado.rodada;
+  }
+
+  private avisarProducao(restauranteId: string, sessaoId: string): void {
+    this.avisar(restauranteId, sessaoId);
+    this.tempoReal.paraEquipe(restauranteId, 'producao-mudou', {});
   }
 
   private async resolverChamado(tx: Tx, rodadaId: string, agora: Date) {

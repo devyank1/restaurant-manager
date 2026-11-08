@@ -37,6 +37,8 @@ export type ItemRodadaEquipe = ItemRodadaPublico & {
 export type RodadaEquipe = Omit<RodadaPublica, 'itens'> & {
   /** Celular que ainda não teve rodada confirmada nesta sessão. */
   dispositivoNovo: boolean;
+  /** Rodada que foi direto para a produção: o garçom cancela até esta hora (ISO). */
+  cancelavelAte: string | null;
   itens: ItemRodadaEquipe[];
 };
 
@@ -54,6 +56,8 @@ export type MesaResumo = {
   garcomNome: string | null;
   /** Rodadas aguardando garçom. */
   pendentes: number;
+  /** Itens prontos esperando o garçom entregar. */
+  prontos: number;
 };
 
 export const COM_ITENS = {
