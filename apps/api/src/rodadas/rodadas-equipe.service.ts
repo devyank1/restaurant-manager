@@ -125,13 +125,32 @@ export class RodadasEquipeService {
         .map((d) => d.dispositivoId),
     );
     const rodadas = sessao?.rodadas ?? [];
-    const { janelaCancelamentoSegundos: janela } =
-      await this.prisma.restaurante.findUniqueOrThrow({
-        where: { id: usuario.restauranteId },
-        select: { janelaCancelamentoSegundos: true },
-      });
+    const config = await this.prisma.restaurante.findUniqueOrThrow({
+      where: { id: usuario.restauranteId },
+      select: {
+        janelaCancelamentoSegundos: true,
+        servicoHabilitado: true,
+        servicoPadrao: true,
+        couvertHabilitado: true,
+        couvertPadrao: true,
+        couvertCentavos: true,
+      },
+    });
+    const janela = config.janelaCancelamentoSegundos;
     return {
       mesa: { numero: mesa.numero, token: mesa.token },
+      aberta: sessao !== null,
+      conta: {
+        servico: {
+          habilitado: config.servicoHabilitado,
+          padrao: config.servicoPadrao,
+        },
+        couvert: {
+          habilitado: config.couvertHabilitado,
+          padrao: config.couvertPadrao,
+          valorCentavos: config.couvertCentavos,
+        },
+      },
       garcomNome,
       rodadas: rodadas.map((r) =>
         paraEquipe(r, !confirmados.has(r.dispositivoId), janela),

@@ -42,8 +42,17 @@ export type RodadaEquipe = Omit<RodadaPublica, 'itens'> & {
   itens: ItemRodadaEquipe[];
 };
 
+/** Opções da conta que o restaurante liga (e se vêm marcadas). */
+export type ConfigConta = {
+  servico: { habilitado: boolean; padrao: boolean };
+  couvert: { habilitado: boolean; padrao: boolean; valorCentavos: number };
+};
+
 export type MesaEquipe = {
   mesa: { numero: number; token: string };
+  /** Há sessão aberta (dá para fechar a conta). */
+  aberta: boolean;
+  conta: ConfigConta;
   garcomNome: string | null;
   rodadas: RodadaEquipe[];
   totalConfirmadoCentavos: number;
