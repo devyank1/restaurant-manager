@@ -13,6 +13,8 @@ export type LinhaEditavel = {
   /** Item com embalagem: quantas embalagens (texto). Sem: quantidade + unidade. */
   embalagens: string
   valor: ValorCampo
+  /** Item com embalagem: contar em embalagens ou na unidade (ovos quebrados). */
+  modo: 'embalagem' | 'base'
 }
 
 /** Plural simples para nomes de embalagem ("Cartela" → "Cartelas", "Barril" → "Barris"). */
@@ -34,12 +36,13 @@ export function linhaEditavel(l: LinhaCompra, fornecedor: FornecedorLinha): Linh
     fornecedor,
     embalagens: l.embalagem ? String(Math.ceil(l.quantidade / l.embalagem.quantidade)) : '',
     valor: campoDe(l.quantidade, l.unidade),
+    modo: l.embalagem ? 'embalagem' : 'base',
   }
 }
 
 /** Quantidade na unidade base; inválida → null. */
 export function lerLinha(l: LinhaEditavel, aceitaZero: boolean): number | null {
-  if (l.embalagem) {
+  if (l.embalagem && l.modo === 'embalagem') {
     const n = l.embalagens.trim()
     if (!/^\d+$/.test(n)) return null
     const total = Number(n) * l.embalagem.quantidade

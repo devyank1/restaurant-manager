@@ -26,6 +26,22 @@ describe('unidades do estoque', () => {
 
   it('aceita zero quando pedido (contagem)', () => {
     expect(paraBase('0', 'kg', true)).toBe(0)
+  })
+
+  it('ponto com 3 dígitos é milhar (jeito brasileiro)', () => {
+    expect(paraBase('1.500', 'g')).toBe(1500)
+    expect(paraBase('1.000.000', 'ml')).toBe(1_000_000)
+    expect(paraBase('2.500,5', 'g')).toBe(2501)
+  })
+
+  it('unidade não aceita fração', () => {
+    expect(paraBase('2,5', 'un')).toBeNull()
+    expect(paraBase('2', 'un')).toBe(2)
+  })
+
+  it('valor acima do limite é recusado', () => {
+    expect(paraBase('1000000', 'kg')).toBe(1_000_000_000)
+    expect(paraBase('1000001', 'kg')).toBeNull()
     expect(paraBase('-1', 'kg', true)).toBeNull()
   })
 

@@ -298,3 +298,19 @@ a.botao {
   justify-content: center;
   text-decoration: none;
 }
+
+/* Barra "Desfazer" do último lançamento */
+.barra-desfazer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+  margin: var(--e-3) 0;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--superficie-2);
+  font-size: var(--t-md);
+  color: var(--texto);
+}

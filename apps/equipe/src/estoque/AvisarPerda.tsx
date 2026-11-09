@@ -24,6 +24,7 @@ export default function AvisarPerda({ onFechar }: { onFechar: () => void }) {
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [desfazendo, setDesfazendo] = useState(false)
   const titulo = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -78,12 +79,16 @@ export default function AvisarPerda({ onFechar }: { onFechar: () => void }) {
   }
 
   const voltarAtras = async () => {
+    if (desfazendo) return
+    setDesfazendo(true)
     setErro('')
     try {
       await desfazer()
       setAviso('Perda desfeita')
     } catch (e) {
       setErro(mensagemDe(e))
+    } finally {
+      setDesfazendo(false)
     }
   }
 
@@ -178,7 +183,7 @@ export default function AvisarPerda({ onFechar }: { onFechar: () => void }) {
             <p role="status">{aviso}</p>
             <div className="confirmacao-botoes">
               {aviso === 'Perda avisada' && (
-                <button type="button" className="botao botao--secundario" onClick={voltarAtras}>
+                <button type="button" className="botao botao--secundario" disabled={desfazendo} onClick={voltarAtras}>
                   Desfazer
                 </button>
               )}

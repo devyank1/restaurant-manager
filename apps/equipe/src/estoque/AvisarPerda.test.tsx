@@ -79,8 +79,13 @@ describe('Avisar perda', () => {
     await userEvent.click(within(d).getByRole('button', { name: 'Continuar' }))
     await userEvent.click(within(d).getByRole('button', { name: 'Validade' }))
     await userEvent.click(within(d).getByRole('button', { name: 'Avisar' }))
-    await userEvent.click(await within(d).findByRole('button', { name: 'Desfazer' }))
+    let responder: () => void = () => undefined
+    api.uma('POST', /\/estoque\/desfazer$/, () => new Promise((ok) => (responder = () => ok({ status: 200, corpo: {} }))))
+    const botao = await within(d).findByRole('button', { name: 'Desfazer' })
+    await userEvent.click(botao)
+    await userEvent.click(botao)
     expect(api.chamadas('POST', /\/estoque\/desfazer$/)).toHaveLength(1)
+    responder()
     expect(await within(d).findByRole('status')).toHaveTextContent('Perda desfeita')
   })
 

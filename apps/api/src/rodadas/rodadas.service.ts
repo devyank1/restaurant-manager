@@ -163,7 +163,7 @@ export class RodadasService {
     }
 
     const { rodada, chamado, garcomId, estoque } = resultado;
-    await this.avisosEstoque.enviar(p.restauranteId, estoque);
+    this.avisosEstoque.soltar(p.restauranteId, estoque);
     const dados = {
       rodadaId: rodada.id,
       sessaoId: p.sessao.id,

@@ -58,3 +58,21 @@ export function cookieDe(
   if (!encontrado) throw new Error(`cookie ${nome} ausente`);
   return encontrado.split(';')[0];
 }
+
+/**
+ * Avisos de estoque saem depois da resposta (não seguram o pedido): espera o
+ * evento aparecer no banco, até 2 s, e devolve quantos há.
+ */
+export async function contarEventos(
+  t: AppTeste,
+  tipo: string,
+  esperado: number,
+): Promise<number> {
+  let n = 0;
+  for (let i = 0; i < 40; i++) {
+    n = await t.prisma.evento.count({ where: { tipo } });
+    if (n >= esperado) break;
+    await new Promise((ok) => setTimeout(ok, 50));
+  }
+  return n;
+}

@@ -35,3 +35,6 @@ export function formatarCompra(
   const total = formatarQuantidade(n * embalagem.quantidade, unidade);
   return `${n} ${embalagem.nome} (${total})`;
 }
+
+/** Teto de qualquer quantidade digitada (cabe no int do banco com folga para somar). */
+export const QUANTIDADE_MAXIMA = 1_000_000_000;

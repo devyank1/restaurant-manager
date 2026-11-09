@@ -347,7 +347,7 @@ export class RodadasEquipeService {
         garcomId: usuario.id,
       },
     });
-    await this.avisosEstoque.enviar(usuario.restauranteId, resultado.estoque);
+    this.avisosEstoque.soltar(usuario.restauranteId, resultado.estoque);
     this.avisarDecisao(usuario.restauranteId, resultado.r.sessaoId);
     return resultado.rodada;
   }
@@ -460,7 +460,7 @@ export class RodadasEquipeService {
         porJanela: true,
       },
     });
-    await this.avisosEstoque.enviar(usuario.restauranteId, resultado.estoque);
+    this.avisosEstoque.soltar(usuario.restauranteId, resultado.estoque);
     this.avisarProducao(usuario.restauranteId, resultado.r.sessaoId);
     return resultado.rodada;
   }

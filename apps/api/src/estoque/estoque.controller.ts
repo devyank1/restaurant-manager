@@ -16,8 +16,9 @@ import { EquipeGuard } from '../equipe/equipe.guard';
 import type { UsuarioToken } from '../equipe/equipe.types';
 import { UsuarioAtual } from '../equipe/usuario-atual.decorator';
 import { EstoqueService } from './estoque.service';
+import { QUANTIDADE_MAXIMA } from './quantidade';
 
-const inteiro = z.number().int();
+const inteiro = z.number().int().max(QUANTIDADE_MAXIMA);
 const textoOpcional = z.string().trim().max(200).nullish();
 
 const itemSchema = z.object({

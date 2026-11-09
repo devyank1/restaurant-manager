@@ -17,12 +17,25 @@ function numero(valor: number): string {
   return String(Math.round(valor * 1000) / 1000).replace('.', ',')
 }
 
-/** "1,5" em kg → 1500. Inválido ou ≤ 0 → null (zero só com `aceitaZero`). */
+/** Teto de qualquer quantidade (igual ao da API). */
+export const QUANTIDADE_MAXIMA = 1_000_000_000
+
+/** Texto digitado → número. Ponto seguido de 3 dígitos é milhar ("1.500"); vírgula é decimal. */
+function lerNumero(texto: string): number | null {
+  let t = texto.trim()
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g, '')
+  t = t.replace(',', '.')
+  if (!/^\d+(\.\d+)?$/.test(t)) return null
+  return Number(t)
+}
+
+/** "1,5" em kg → 1500. Inválido, ≤ 0, fração de unidade ou acima do teto → null (zero só com `aceitaZero`). */
 export function paraBase(texto: string, digitada: UnidadeDigitada, aceitaZero = false): number | null {
-  const limpo = texto.trim().replace(',', '.')
-  if (!/^\d+(\.\d+)?$/.test(limpo)) return null
-  const base = Math.round(Number(limpo) * FATOR[digitada])
-  if (base < 0 || (base === 0 && !aceitaZero)) return null
+  const n = lerNumero(texto)
+  if (n === null) return null
+  if (digitada === 'un' && !Number.isInteger(n)) return null
+  const base = Math.round(n * FATOR[digitada])
+  if (base < 0 || (base === 0 && !aceitaZero) || base > QUANTIDADE_MAXIMA) return null
   return base
 }
 

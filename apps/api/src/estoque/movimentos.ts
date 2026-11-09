@@ -93,10 +93,15 @@ export async function aplicarMovimentos(
   restauranteId: string,
   usuarioId: string | null,
   movimentos: NovoMovimento[],
+  lote: string = randomUUID(),
 ): Promise<AvisoEstoque[]> {
-  const lote = randomUUID();
   const avisos: AvisoEstoque[] = [];
-  for (const m of movimentos) {
+  // Sempre na mesma ordem (por id): duas transações que mexem nos mesmos
+  // itens travam as linhas na mesma sequência e não entram em deadlock.
+  const ordenados = [...movimentos].sort((a, b) =>
+    a.itemId < b.itemId ? -1 : a.itemId > b.itemId ? 1 : 0,
+  );
+  for (const m of ordenados) {
     if (m.quantidade === 0) continue;
     await tx.movimentoEstoque.create({
       data: {

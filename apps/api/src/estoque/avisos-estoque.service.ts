@@ -46,6 +46,16 @@ export class AvisosEstoqueService {
     private readonly tempoReal: TempoRealService,
   ) {}
 
+  /**
+   * Manda os avisos sem segurar a resposta: o lançamento já foi gravado, e
+   * push lento ou fora do ar não pode atrasar nem derrubar o pedido.
+   */
+  soltar(restauranteId: string, avisos: AvisoEstoque[]): void {
+    this.enviar(restauranteId, avisos).catch((erro: unknown) =>
+      this.logger.error(`Aviso de estoque falhou: ${String(erro)}`),
+    );
+  }
+
   async enviar(restauranteId: string, avisos: AvisoEstoque[]): Promise<void> {
     this.tempoReal.paraEquipe(restauranteId, 'estoque-mudou', {});
     for (const aviso of avisos) {

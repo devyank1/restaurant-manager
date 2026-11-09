@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { QUANTIDADE_MAXIMA } from './quantidade';
 import { lerCorpo } from '../comum/ler-corpo';
 import { EquipeGuard } from '../equipe/equipe.guard';
 import type { UsuarioToken } from '../equipe/equipe.types';
@@ -19,7 +20,7 @@ const linhas = z
   .array(
     z.object({
       itemId: z.string().uuid(),
-      quantidade: z.number().int().min(1),
+      quantidade: z.number().int().max(QUANTIDADE_MAXIMA).min(1),
     }),
   )
   .max(50);

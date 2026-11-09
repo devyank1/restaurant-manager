@@ -174,6 +174,41 @@ describe('lista de compras', () => {
     expect(bebidas.getRow(2).getCell(3).value).toBe('L');
   });
 
+  it('resumo mostra todas as compras abertas, a mais nova primeiro', async () => {
+    const a = await salvar([{ itemId: ovos, quantidade: 30 }]);
+    const b = await salvar([{ itemId: chopp, quantidade: 30000 }]);
+    const res = await http()
+      .get('/equipe/estoque')
+      .set('Cookie', dono)
+      .expect(200);
+    expect(
+      (res.body as { listasAbertas: { id: string }[] }).listasAbertas.map(
+        (l) => l.id,
+      ),
+    ).toEqual([b.id, a.id]);
+  });
+
+  it('desfazer a chegada reabre a lista para lançar de novo', async () => {
+    const lista = await salvar([{ itemId: ovos, quantidade: 120 }]);
+    const chegou = () =>
+      http()
+        .post(`/equipe/estoque/compras/${lista.id}/chegou`)
+        .set('Cookie', dono)
+        .send({ itens: [{ itemId: ovos, quantidade: 120 }] });
+    await chegou().expect(200);
+    await http()
+      .post('/equipe/estoque/desfazer')
+      .set('Cookie', dono)
+      .expect(200);
+    expect(await qtd(ovos)).toBe(10);
+    const reaberta = await t.prisma.listaCompra.findUniqueOrThrow({
+      where: { id: lista.id },
+    });
+    expect(reaberta.chegouEm).toBeNull();
+    await chegou().expect(200);
+    expect(await qtd(ovos)).toBe(130);
+  });
+
   it('compra chegou lança entrada, tira do acabando e não lança duas vezes', async () => {
     const lista = await salvar([{ itemId: ovos, quantidade: 120 }]);
     const aberta = await http()
@@ -181,8 +216,10 @@ describe('lista de compras', () => {
       .set('Cookie', dono)
       .expect(200);
     expect(
-      (aberta.body as { listaAberta: { id: string } }).listaAberta.id,
-    ).toBe(lista.id);
+      (aberta.body as { listasAbertas: { id: string }[] }).listasAbertas.map(
+        (l) => l.id,
+      ),
+    ).toEqual([lista.id]);
     await http()
       .post(`/equipe/estoque/compras/${lista.id}/chegou`)
       .set('Cookie', dono)

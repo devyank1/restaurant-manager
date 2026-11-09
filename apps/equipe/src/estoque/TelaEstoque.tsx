@@ -4,6 +4,7 @@ import type { ResumoEstoque } from '../api/tipos'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
 import { useMaisRecente } from '../tempo-real/useMaisRecente'
+import BarraDesfazer from './BarraDesfazer'
 import { BarraTitulo, Quantidade } from './comum'
 import { mensagemDe, NOME_MOTIVO } from './textos'
 import { formatarQuantidade } from './unidades'
@@ -51,6 +52,7 @@ export default function TelaEstoque() {
         <p className="carregando">Carregando…</p>
       ) : (
         <>
+          <BarraDesfazer chave={resumo} onDesfez={() => void recarregar()} />
           {vazio && <p className="vazio">Tudo em dia ✓</p>}
 
           {resumo.acabou.length > 0 && (
@@ -129,15 +131,18 @@ export default function TelaEstoque() {
             <button type="button" className="botao botao--primario" onClick={() => navegar('/estoque/compras')}>
               Gerar lista de compras
             </button>
-            {resumo.listaAberta && (
+            {resumo.listasAbertas.map((l) => (
               <button
+                key={l.id}
                 type="button"
                 className="botao botao--sucesso"
-                onClick={() => navegar(`/estoque/compras/${encodeURIComponent(resumo.listaAberta!.id)}/chegou`)}
+                onClick={() => navegar(`/estoque/compras/${encodeURIComponent(l.id)}/chegou`)}
               >
-                Chegou compra
+                {resumo.listasAbertas.length === 1
+                  ? 'Chegou compra'
+                  : `Chegou compra de ${new Date(l.criadaEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })}`}
               </button>
-            )}
+            ))}
             <button type="button" className="botao botao--secundario" onClick={() => navegar('/estoque/itens')}>
               Itens
             </button>

@@ -83,7 +83,7 @@ export type ResumoEstoque = {
     observacao: string | null;
     criadoEm: Date;
   }[];
-  listaAberta: { id: string; criadaEm: Date } | null;
+  listasAbertas: { id: string; criadaEm: Date }[];
 };
 
 type ItemComFornecedor = ItemEstoque & { fornecedor: Fornecedor | null };
@@ -207,19 +207,23 @@ export class EstoqueService {
           mensagem: 'Já existe um item com esse nome',
         });
       }
-      // Item arquivado com o mesmo nome volta (e mantém o histórico).
-      const base = existente
-        ? await tx.itemEstoque.update({
-            where: { id: existente.id },
-            data: { ...campos, ativo: true },
-          })
-        : await tx.itemEstoque.create({
-            data: {
-              ...campos,
-              restauranteId: usuario.restauranteId,
-              nivel: nivelDe(0, campos.minimo),
-            },
-          });
+      // Arquivado com o mesmo nome: ganha um nome de arquivo e o item novo
+      // começa do zero (sem misturar unidade, quantidade e histórico antigos).
+      if (existente) {
+        await tx.itemEstoque.update({
+          where: { id: existente.id },
+          data: {
+            nome: `${existente.nome} (arquivado ${existente.id.slice(0, 8)})`,
+          },
+        });
+      }
+      const base = await tx.itemEstoque.create({
+        data: {
+          ...campos,
+          restauranteId: usuario.restauranteId,
+          nivel: nivelDe(0, campos.minimo),
+        },
+      });
       const avisos =
         quantidade > 0
           ? await aplicarMovimentos(tx, usuario.restauranteId, usuario.id, [
@@ -228,7 +232,7 @@ export class EstoqueService {
           : [];
       return { item: await this.achar(tx, base.id, usuario), avisos };
     });
-    await this.avisos.enviar(usuario.restauranteId, avisos);
+    this.avisos.soltar(usuario.restauranteId, avisos);
     return itemDto(item);
   }
 
@@ -272,7 +276,7 @@ export class EstoqueService {
       const aviso = await recalcularNivel(tx, salvo);
       return { item: await this.achar(tx, id, usuario), aviso };
     });
-    await this.avisos.enviar(usuario.restauranteId, aviso ? [aviso] : []);
+    this.avisos.soltar(usuario.restauranteId, aviso ? [aviso] : []);
     return itemDto(item);
   }
 
@@ -283,7 +287,7 @@ export class EstoqueService {
       await tx.receitaItem.deleteMany({ where: { itemId: id } });
       await tx.itemEstoque.update({ where: { id }, data: { ativo: false } });
     });
-    await this.avisos.enviar(usuario.restauranteId, []);
+    this.avisos.soltar(usuario.restauranteId, []);
   }
 
   async movimentos(id: string, usuario: UsuarioToken) {
@@ -315,7 +319,7 @@ export class EstoqueService {
     trabalho: (tx: Tx) => Promise<{ resultado: T; avisos: AvisoEstoque[] }>,
   ): Promise<T> {
     const { resultado, avisos } = await this.prisma.$transaction(trabalho);
-    await this.avisos.enviar(usuario.restauranteId, avisos);
+    this.avisos.soltar(usuario.restauranteId, avisos);
     return resultado;
   }
 
@@ -449,14 +453,27 @@ export class EstoqueService {
       }
       const avisos: AvisoEstoque[] = [];
       const agora = new Date();
-      for (const m of lote) {
-        await tx.movimentoEstoque.update({
-          where: { id: m.id },
-          data: { desfeitoEm: agora },
-        });
+      // Só desfaz o que ainda não foi desfeito: dois toques ao mesmo tempo
+      // esperam a trava da linha e o segundo não acha nada.
+      const marcados = await tx.movimentoEstoque.updateMany({
+        where: { lote: lote[0].lote, desfeitoEm: null },
+        data: { desfeitoEm: agora },
+      });
+      if (marcados.count !== lote.length) {
+        throw new ConflictException({ mensagem: 'Nada para desfazer' });
+      }
+      const ordenados = [...lote].sort((a, b) =>
+        a.itemId < b.itemId ? -1 : a.itemId > b.itemId ? 1 : 0,
+      );
+      for (const m of ordenados) {
         const aviso = await ajustarItem(tx, m.itemId, -m.quantidade);
         if (aviso) avisos.push(aviso);
       }
+      // Chegada de compra desfeita: a lista volta a ficar aberta.
+      await tx.listaCompra.updateMany({
+        where: { loteChegada: lote[0].lote },
+        data: { chegouEm: null, loteChegada: null },
+      });
       return { resultado: undefined, avisos };
     });
   }
@@ -489,9 +506,10 @@ export class EstoqueService {
       include: { item: true },
       orderBy: { criadoEm: 'desc' },
     });
-    const lista = await this.prisma.listaCompra.findFirst({
+    const listas = await this.prisma.listaCompra.findMany({
       where: { restauranteId, chegouEm: null },
       orderBy: { criadaEm: 'desc' },
+      select: { id: true, criadaEm: true },
     });
 
     return {
@@ -524,7 +542,7 @@ export class EstoqueService {
         observacao: m.observacao,
         criadoEm: m.criadoEm,
       })),
-      listaAberta: lista ? { id: lista.id, criadaEm: lista.criadaEm } : null,
+      listasAbertas: listas,
     };
   }
 

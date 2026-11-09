@@ -450,6 +450,8 @@ model ListaCompra {
   itens         Json
   criadaEm      DateTime    @default(now())
   chegouEm      DateTime?
+  /// Lote da entrada lançada no "Chegou compra" (desfazer reabre a lista).
+  loteChegada   String?
 
   @@index([restauranteId, criadaEm])
 }

@@ -1,7 +1,8 @@
 import { useId } from 'react'
 import CampoQuantidade from './CampoQuantidade'
-import { plural, porFornecedor, type LinhaEditavel } from './compra'
-import { formatarQuantidade } from './unidades'
+import { campoDe } from './campo'
+import { lerLinha, plural, porFornecedor, type LinhaEditavel } from './compra'
+import { formatarQuantidade, unidadesDe } from './unidades'
 
 /** Grupos por fornecedor com as quantidades editáveis (lista e chegada). */
 export default function LinhasCompra({
@@ -24,7 +25,26 @@ export default function LinhasCompra({
             <ul>
               {g.linhas.map((l) => (
                 <li key={l.itemId} className="linha-receita">
-                  {l.embalagem ? (
+                  {l.embalagem && (
+                    <label className="campo-quantidade">
+                      {`Medida de ${l.nome}`}
+                      <select
+                        value={l.modo}
+                        onChange={(e) => {
+                          const modo = e.target.value as LinhaEditavel['modo']
+                          const atual = lerLinha(l, true)
+                          onMudar(l.itemId, {
+                            modo,
+                            ...(modo === 'base' && atual !== null ? { valor: campoDe(atual, l.unidade) } : {}),
+                          })
+                        }}
+                      >
+                        <option value="embalagem">{plural(l.embalagem.nome)}</option>
+                        <option value="base">{unidadesDe(l.unidade).join(' ou ')}</option>
+                      </select>
+                    </label>
+                  )}
+                  {l.embalagem && l.modo === 'embalagem' ? (
                     <label className="campo-quantidade">
                       {`${plural(l.embalagem.nome)} de ${l.nome}`}
                       <span className="linha-estoque-sub">{`1 ${l.embalagem.nome} = ${formatarQuantidade(l.embalagem.quantidade, l.unidade)}`}</span>

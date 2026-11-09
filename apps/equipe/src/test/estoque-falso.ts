@@ -27,7 +27,7 @@ export type EstoqueFalso = {
 export function estoqueVazio(): EstoqueFalso {
   return {
     itens: [],
-    resumo: { acabando: [], acabou: [], perdasHoje: [], listaAberta: null },
+    resumo: { acabando: [], acabou: [], perdasHoje: [], listasAbertas: [] },
     fornecedores: [],
     movimentos: {},
     receitas: [],

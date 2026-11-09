@@ -1,7 +1,7 @@
 import request from 'supertest';
 import TestAgent from 'supertest/lib/agent';
 import { TempoRealService } from '../src/tempo-real/tempo-real.service';
-import { AppTeste, criarAppTeste, loginComo } from './app-teste';
+import { AppTeste, criarAppTeste, loginComo, contarEventos } from './app-teste';
 
 type Corpo = {
   id: string;
@@ -312,9 +312,7 @@ describe('receitas e baixa pela venda', () => {
         'estoque-mudou',
         {},
       );
-      expect(
-        await t.prisma.evento.count({ where: { tipo: 'EstoqueAcabando' } }),
-      ).toBe(1);
+      expect(await contarEventos(t, 'EstoqueAcabando', 1)).toBe(1);
     } finally {
       equipeSpy.mockRestore();
     }

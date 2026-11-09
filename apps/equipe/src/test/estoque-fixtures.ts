@@ -55,7 +55,7 @@ export function estoqueDemo(): EstoqueFalso {
           criadoEm: new Date().toISOString(),
         },
       ],
-      listaAberta: null,
+      listasAbertas: [],
     },
     fornecedores: [granja],
     movimentos: {

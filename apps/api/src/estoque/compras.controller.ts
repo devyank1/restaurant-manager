@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
+import { QUANTIDADE_MAXIMA } from './quantidade';
 import { lerCorpo } from '../comum/ler-corpo';
 import { EquipeGuard } from '../equipe/equipe.guard';
 import type { UsuarioToken } from '../equipe/equipe.types';
@@ -26,7 +27,7 @@ const itens = (minimo: number) =>
       .array(
         z.object({
           itemId: z.string().uuid(),
-          quantidade: z.number().int().min(minimo),
+          quantidade: z.number().int().max(QUANTIDADE_MAXIMA).min(minimo),
         }),
       )
       .min(1)

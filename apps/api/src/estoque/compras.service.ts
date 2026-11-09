@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   ConflictException,
   Injectable,
@@ -167,7 +168,7 @@ export class ComprasService {
     const lista = await this.prisma.listaCompra.create({
       data: { restauranteId: usuario.restauranteId, itens },
     });
-    await this.avisos.enviar(usuario.restauranteId, []);
+    this.avisos.soltar(usuario.restauranteId, []);
     return this.montar(lista, usuario);
   }
 
@@ -191,9 +192,10 @@ export class ComprasService {
     exigirDono(usuario);
     const avisos = await this.prisma.$transaction(async (tx) => {
       // Marca primeiro: o segundo clique acha chegouEm preenchido.
+      const lote = randomUUID();
       const marcada = await tx.listaCompra.updateMany({
         where: { id, restauranteId: usuario.restauranteId, chegouEm: null },
-        data: { chegouEm: new Date() },
+        data: { chegouEm: new Date(), loteChegada: lote },
       });
       if (marcada.count === 0) {
         await this.achar(id, usuario);
@@ -220,8 +222,9 @@ export class ComprasService {
           tipo: 'ENTRADA' as const,
           quantidade: i.quantidade,
         })),
+        lote,
       );
     });
-    await this.avisos.enviar(usuario.restauranteId, avisos);
+    this.avisos.soltar(usuario.restauranteId, avisos);
   }
 }

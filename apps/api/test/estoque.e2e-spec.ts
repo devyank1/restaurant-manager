@@ -1,7 +1,8 @@
 import request from 'supertest';
+import { AvisosEstoqueService } from '../src/estoque/avisos-estoque.service';
 import { aplicarMovimentos } from '../src/estoque/movimentos';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { AppTeste, criarAppTeste, loginComo } from './app-teste';
+import { AppTeste, criarAppTeste, loginComo, contarEventos } from './app-teste';
 
 type Item = { id: string; nome: string; quantidade: number; nivel: string };
 type Corpo = {
@@ -129,9 +130,7 @@ describe('estoque', () => {
       motivo: 'ACIDENTE',
     }).expect(200);
     expect((await item(ovos.id)).quantidade).toBe(60);
-    expect(
-      await t.prisma.evento.count({ where: { tipo: 'PerdaRegistrada' } }),
-    ).toBe(1);
+    expect(await contarEventos(t, 'PerdaRegistrada', 1)).toBe(1);
     const res = await http()
       .get('/equipe/estoque')
       .set('Cookie', dono)
@@ -257,6 +256,73 @@ describe('estoque', () => {
       .set('Cookie', ana)
       .expect(409);
     expect((await item(ovos.id)).quantidade).toBe(87);
+  });
+
+  it('desfazer duas vezes ao mesmo tempo volta a perda uma vez só', async () => {
+    const ovos = await criar({ nome: 'Ovos', quantidade: 90 });
+    await perda(ana, { itemId: ovos.id, quantidade: 30, motivo: 'ACIDENTE' });
+    const respostas = await Promise.all([
+      http().post('/equipe/estoque/desfazer').set('Cookie', ana),
+      http().post('/equipe/estoque/desfazer').set('Cookie', ana),
+    ]);
+    expect(respostas.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect((await item(ovos.id)).quantidade).toBe(90);
+  });
+
+  it('item novo com o nome de um arquivado começa do zero, na unidade nova', async () => {
+    const velho = await criar({
+      nome: 'Queijo',
+      unidade: 'G',
+      quantidade: 800,
+    });
+    await http()
+      .delete(`/equipe/estoque/itens/${velho.id}`)
+      .set('Cookie', dono)
+      .expect(204);
+    const novo = await criar({ nome: 'Queijo', unidade: 'UN', minimo: 2 });
+    expect(novo.id).not.toBe(velho.id);
+    expect(await item(novo.id)).toMatchObject({
+      unidade: 'UN',
+      quantidade: 0,
+      nivel: 'ZERADO',
+      ativo: true,
+    });
+    expect(await item(velho.id)).toMatchObject({
+      ativo: false,
+      quantidade: 800,
+    });
+  });
+
+  it('aviso de estoque que falha não derruba o lançamento', async () => {
+    const ovos = await criar({ nome: 'Ovos', quantidade: 90 });
+    const avisos = t.app.get(AvisosEstoqueService);
+    const espiao = jest
+      .spyOn(avisos, 'enviar')
+      .mockRejectedValue(new Error('push fora do ar'));
+    try {
+      await perda(cozinha, {
+        itemId: ovos.id,
+        quantidade: 30,
+        motivo: 'ACIDENTE',
+      }).expect(200);
+      expect((await item(ovos.id)).quantidade).toBe(60);
+    } finally {
+      espiao.mockRestore();
+    }
+  });
+
+  it('quantidade acima do limite dá 422, não 500', async () => {
+    const ovos = await criar({ nome: 'Ovos' });
+    await http()
+      .post('/equipe/estoque/entradas')
+      .set('Cookie', dono)
+      .send({ itens: [{ itemId: ovos.id, quantidade: 3_000_000_000 }] })
+      .expect(422);
+    await http()
+      .post(`/equipe/estoque/itens/${ovos.id}/contagem`)
+      .set('Cookie', dono)
+      .send({ quantidade: 3_000_000_000 })
+      .expect(422);
   });
 
   it('entrada de vários itens e desfazer volta o lote inteiro', async () => {

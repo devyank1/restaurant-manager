@@ -38,17 +38,43 @@ describe('Início do estoque', () => {
   })
 
   it('sem nada mostra Tudo em dia', async () => {
-    api.estado.estoque.resumo = { acabando: [], acabou: [], perdasHoje: [], listaAberta: null }
+    api.estado.estoque.resumo = { acabando: [], acabou: [], perdasHoje: [], listasAbertas: [] }
     render(<TelaEstoque />)
     expect(await screen.findByText('Tudo em dia ✓')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Chegou compra' })).not.toBeInTheDocument()
   })
 
   it('lista aberta mostra Chegou compra', async () => {
-    api.estado.estoque.resumo.listaAberta = { id: 'l9', criadaEm: new Date().toISOString() }
+    api.estado.estoque.resumo.listasAbertas = [{ id: 'l9', criadaEm: new Date().toISOString() }]
     render(<TelaEstoque />)
     await userEvent.click(await screen.findByRole('button', { name: 'Chegou compra' }))
     expect(window.location.pathname).toBe('/estoque/compras/l9/chegou')
+  })
+
+  it('duas listas abertas mostram um Chegou compra para cada, com a data', async () => {
+    api.estado.estoque.resumo.listasAbertas = [
+      { id: 'l2', criadaEm: '2026-11-09T15:00:00.000Z' },
+      { id: 'l1', criadaEm: '2026-11-07T15:00:00.000Z' },
+    ]
+    render(<TelaEstoque />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Chegou compra de 07/11' }))
+    expect(window.location.pathname).toBe('/estoque/compras/l1/chegou')
+    expect(screen.getByRole('button', { name: 'Chegou compra de 09/11' })).toBeInTheDocument()
+  })
+
+  it('gerente desfaz o último lançamento dele pela barra Desfazer', async () => {
+    api.estado.estoque.desfazivel = {
+      lote: 'lote-9',
+      descricao: 'Contagem de Ovos',
+      ate: new Date(Date.now() + 600_000).toISOString(),
+    }
+    render(<TelaEstoque />)
+    const barra = await screen.findByRole('region', { name: 'Desfazer' })
+    expect(within(barra).getByText('Contagem de Ovos')).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('button', { name: 'Desfazer' }))
+    expect(api.chamadas('POST', /\/estoque\/desfazer$/)).toHaveLength(1)
+    expect(await screen.findByRole('status')).toHaveTextContent('Desfeito')
+    expect(screen.queryByRole('region', { name: 'Desfazer' })).not.toBeInTheDocument()
   })
 
   it('Gerar lista de compras leva para as compras', async () => {
@@ -60,7 +86,7 @@ describe('Início do estoque', () => {
   it('socket estoque-mudou recarrega', async () => {
     render(<TelaEstoque />)
     await screen.findByRole('region', { name: 'Acabando' })
-    api.estado.estoque.resumo = { acabando: [], acabou: [], perdasHoje: [], listaAberta: null }
+    api.estado.estoque.resumo = { acabando: [], acabou: [], perdasHoje: [], listasAbertas: [] }
     act(() => ultimoSocket().servidor('estoque-mudou'))
     expect(await screen.findByText('Tudo em dia ✓')).toBeInTheDocument()
   })

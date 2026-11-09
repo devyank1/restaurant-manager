@@ -140,7 +140,7 @@ export type ResumoEstoque = {
   acabando: ItemEstoque[]
   acabou: (ItemEstoque & { pratos: PratoQueUsa[] })[]
   perdasHoje: PerdaHoje[]
-  listaAberta: { id: string; criadaEm: string } | null
+  listasAbertas: { id: string; criadaEm: string }[]
 }
 
 export type Fornecedor = { id: string; nome: string; telefone: string | null; observacao: string | null }

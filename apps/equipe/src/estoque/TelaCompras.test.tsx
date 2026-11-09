@@ -92,6 +92,29 @@ describe('Lista de compras', () => {
     await vi.waitFor(() => expect(window.location.pathname).toBe('/estoque'))
   })
 
+  it('chegou em unidades: 1 cartela com 5 ovos quebrados vira 25 un', async () => {
+    api.estado.estoque.listas['lista-1'] = {
+      id: 'lista-1',
+      restaurante: 'Cantina Demo',
+      criadaEm: new Date().toISOString(),
+      chegouEm: null,
+      grupos: api.estado.estoque.sugestao,
+    }
+    render(<TelaChegou listaId="lista-1" />)
+    await userEvent.selectOptions(await screen.findByLabelText('Medida de Ovos'), 'un')
+    const ovos = screen.getByLabelText('Quantidade de Ovos')
+    await userEvent.clear(ovos)
+    await userEvent.type(ovos, '25')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar chegada' }))
+    const [, init] = api.chamadas('POST', /\/compras\/lista-1\/chegou$/)[0]
+    expect(JSON.parse(String(init?.body))).toEqual({
+      itens: [
+        { itemId: 'ovos', quantidade: 25 },
+        { itemId: 'queijo', quantidade: 10000 },
+      ],
+    })
+  })
+
   it('chegou duas vezes mostra a mensagem', async () => {
     api.estado.estoque.listas['lista-1'] = {
       id: 'lista-1',

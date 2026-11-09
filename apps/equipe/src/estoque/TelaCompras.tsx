@@ -67,6 +67,7 @@ export default function TelaCompras() {
         fornecedor: item.fornecedor ? { ...item.fornecedor, telefone: null } : null,
         embalagens: '',
         valor: campoVazio(item.unidade),
+        modo: item.embalagem ? 'embalagem' : 'base',
       },
     ])
   }
