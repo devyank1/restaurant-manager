@@ -8,6 +8,8 @@ import {
 import { Prisma } from '@prisma/client';
 import type { UsuarioToken } from '../equipe/equipe.types';
 import { exigirSalao } from '../equipe/papel';
+import { AvisosEstoqueService } from '../estoque/avisos-estoque.service';
+import { baixarRodada, estornarRodada } from '../estoque/baixa';
 import { EventosService } from '../eventos/eventos.service';
 import { COM_OPCOES, NovoItem } from '../pedidos/pratos';
 import {
@@ -52,6 +54,7 @@ export class RodadasEquipeService {
     private readonly prisma: PrismaService,
     private readonly eventos: EventosService,
     private readonly tempoReal: TempoRealService,
+    private readonly avisosEstoque: AvisosEstoqueService,
   ) {}
 
   private async nomes(ids: (string | null)[]): Promise<Map<string, string>> {
@@ -325,7 +328,13 @@ export class RodadasEquipeService {
         data: { confirmado: true },
       });
       await this.resolverChamado(tx, rodadaId, agora);
-      return { rodada: await this.fecharEdicao(tx, rodadaId), r };
+      const estoque = await baixarRodada(
+        tx,
+        usuario.restauranteId,
+        rodadaId,
+        usuario.id,
+      );
+      return { rodada: await this.fecharEdicao(tx, rodadaId), r, estoque };
     });
     await this.eventos.publicar({
       restauranteId: usuario.restauranteId,
@@ -338,6 +347,7 @@ export class RodadasEquipeService {
         garcomId: usuario.id,
       },
     });
+    await this.avisosEstoque.enviar(usuario.restauranteId, resultado.estoque);
     this.avisarDecisao(usuario.restauranteId, resultado.r.sessaoId);
     return resultado.rodada;
   }
@@ -430,7 +440,13 @@ export class RodadasEquipeService {
           where: { id: rodadaId },
           data: { status: 'CANCELADA', canceladaEm: agora },
         });
-        return { rodada: await this.fecharEdicao(tx, rodadaId), r };
+        const estoque = await estornarRodada(
+          tx,
+          usuario.restauranteId,
+          rodadaId,
+          usuario.id,
+        );
+        return { rodada: await this.fecharEdicao(tx, rodadaId), r, estoque };
       },
     );
     await this.eventos.publicar({
@@ -444,6 +460,7 @@ export class RodadasEquipeService {
         porJanela: true,
       },
     });
+    await this.avisosEstoque.enviar(usuario.restauranteId, resultado.estoque);
     this.avisarProducao(usuario.restauranteId, resultado.r.sessaoId);
     return resultado.rodada;
   }

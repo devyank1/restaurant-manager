@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { CarrinhoService } from '../carrinho/carrinho.service';
 import { ChamadosService } from '../chamados/chamados.service';
+import { AvisosEstoqueService } from '../estoque/avisos-estoque.service';
+import { baixarRodada } from '../estoque/baixa';
 import { EventosService } from '../eventos/eventos.service';
 import { COM_OPCOES } from '../pedidos/pratos';
 import { precoUnitario, resumirOpcoes, Selecao } from '../pedidos/preco';
@@ -24,6 +26,7 @@ export class RodadasService {
     private readonly chamados: ChamadosService,
     private readonly eventos: EventosService,
     private readonly tempoReal: TempoRealService,
+    private readonly avisosEstoque: AvisosEstoqueService,
   ) {}
 
   async listar(sessaoId: string): Promise<RodadasDaMesa> {
@@ -124,6 +127,9 @@ export class RodadasService {
         },
         include: COM_ITENS,
       });
+      const estoque = precisaConfirmar
+        ? []
+        : await baixarRodada(tx, p.restauranteId, rodada.id, null);
       // Só os itens lidos: algo adicionado agora fica para a próxima rodada.
       await tx.itemCarrinho.deleteMany({
         where: { id: { in: itens.map((i) => i.id) } },
@@ -143,6 +149,7 @@ export class RodadasService {
         rodada,
         chamado,
         garcomId: sessao.garcomId,
+        estoque,
       };
     });
 
@@ -155,7 +162,8 @@ export class RodadasService {
       });
     }
 
-    const { rodada, chamado, garcomId } = resultado;
+    const { rodada, chamado, garcomId, estoque } = resultado;
+    await this.avisosEstoque.enviar(p.restauranteId, estoque);
     const dados = {
       rodadaId: rodada.id,
       sessaoId: p.sessao.id,

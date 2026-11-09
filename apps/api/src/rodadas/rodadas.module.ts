@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CarrinhoModule } from '../carrinho/carrinho.module';
 import { ChamadosModule } from '../chamados/chamados.module';
 import { EquipeModule } from '../equipe/equipe.module';
+import { EstoqueModule } from '../estoque/estoque.module';
 import { SessaoMesaModule } from '../sessao-mesa/sessao-mesa.module';
 import { MesasEquipeController } from './mesas-equipe.controller';
 import { RodadasEquipeController } from './rodadas-equipe.controller';
@@ -10,7 +11,13 @@ import { RodadasPublicoController } from './rodadas-publico.controller';
 import { RodadasService } from './rodadas.service';
 
 @Module({
-  imports: [CarrinhoModule, ChamadosModule, EquipeModule, SessaoMesaModule],
+  imports: [
+    CarrinhoModule,
+    ChamadosModule,
+    EquipeModule,
+    EstoqueModule,
+    SessaoMesaModule,
+  ],
   controllers: [
     RodadasPublicoController,
     RodadasEquipeController,
