@@ -287,7 +287,7 @@ git commit -m "feat(api): stock schema, service day, quantity format and recipe 
 
   Regras das rotas:
   - **Itens:**
-    - `GET /itens` traz só `ativo`, em ordem alfabética, e é usado pelo "Avisar perda";
+    - `GET /itens` traz só `ativo`, em ordem alfabética; `?ordem=perdas` põe primeiro os 5 itens com mais `PERDA` nos últimos 30 dias ("mais usados no topo" do Avisar perda);
     - `POST /itens`: nome duplicado → 409 "Já existe um item com esse nome"; `quantidade` cria a quantidade inicial via `ENTRADA`;
     - `PATCH /itens/:id`: mudar `unidade` com movimentos → 409 "Não dá para mudar a unidade de um item que já tem movimentos";
     - `DELETE /itens/:id` arquiva (`ativo:false`) e apaga as linhas `ReceitaItem` do item.
@@ -324,6 +324,7 @@ Testes:
 - `'contagem 0 em item negativo grava diferença positiva'`: forçar `quantidade: -4` via prisma; contagem 0 → movimento +4.
 - `'cozinha avisa perda: baixa, evento PerdaRegistrada e aparece em perdasHoje sem nome'`: corpo do resumo não contém `'Dani'`.
 - `'perda OUTRO sem observação dá 422'`
+- `'itens?ordem=perdas põe o item com mais perdas primeiro'`
 - `'vendas seguidas abaixo do mínimo avisam uma vez só'`: chamar `aplicarMovimentos` duas vezes via `t.app.get(PrismaService).$transaction` com −5 e −5 (50 → 45 → 40; mínimo 46). A 1ª devolve `[ACABANDO]`, a 2ª `[]`. Chegando a 0 → `[ZERADO]`. Entrada para 100 → nível OK.
 - `'acabou lista os pratos que usam o item'`: criar ReceitaItem do Mix da Casa com o item; zerar → `acabou[0].pratos[0].nome === 'Mix da Casa'`.
 - `'desfazer volta a perda da própria pessoa e some do resumo'`
@@ -672,7 +673,7 @@ git commit -m "feat(equipe): recipe editor with size multiplier and sold-out tog
   - `GET /compras/sugestao`, `POST /compras`, `GET /compras/:id`, `GET /compras/:id/planilha`, `POST /compras/:id/chegou`.
 - Produces:
   - **`<AvisarPerda aberto onFechar />`:** um `dialog` "Avisar perda" em 3 passos.
-    1. Busca (input "Buscar item") e lista de itens; clicar escolhe.
+    1. Busca (input "Buscar item") e lista de `GET /itens?ordem=perdas` (mais usados no topo); clicar escolhe.
     2. `CampoQuantidade` com a unidade do item.
     3. Chips de motivo (Acidente, Validade, Erro de preparo, Outro); Outro mostra o textarea "O que aconteceu?".
     - Botão "Avisar".
