@@ -102,3 +102,90 @@ export type PedidoProducao = {
 }
 
 export type FilaProducao = { estacoes: string[]; pedidos: PedidoProducao[] }
+
+// ---------- Estoque (etapa 4A) ----------
+
+export type Unidade = 'UN' | 'G' | 'ML'
+export type NivelEstoque = 'OK' | 'ACABANDO' | 'ZERADO'
+export type MotivoPerda = 'ACIDENTE' | 'VALIDADE' | 'PREPARO' | 'OUTRO'
+export type TipoMovimento = 'VENDA' | 'ESTORNO' | 'ENTRADA' | 'CONTAGEM' | 'PERDA'
+export type Embalagem = { nome: string; quantidade: number }
+
+export type ItemEstoque = {
+  id: string
+  nome: string
+  unidade: Unidade
+  /** Na unidade base (un, g, ml). */
+  quantidade: number
+  minimo: number
+  cheio: number
+  nivel: NivelEstoque
+  fornecedor: { id: string; nome: string } | null
+  embalagem: Embalagem | null
+}
+
+export type PratoQueUsa = { id: string; nome: string; esgotado: boolean }
+
+export type PerdaHoje = {
+  itemId: string
+  nome: string
+  quantidade: number
+  unidade: Unidade
+  motivo: MotivoPerda | null
+  observacao: string | null
+  criadoEm: string
+}
+
+export type ResumoEstoque = {
+  acabando: ItemEstoque[]
+  acabou: (ItemEstoque & { pratos: PratoQueUsa[] })[]
+  perdasHoje: PerdaHoje[]
+  listaAberta: { id: string; criadaEm: string } | null
+}
+
+export type Fornecedor = { id: string; nome: string; telefone: string | null; observacao: string | null }
+
+export type MovimentoEstoque = {
+  id: string
+  tipo: TipoMovimento
+  quantidade: number
+  motivo: MotivoPerda | null
+  observacao: string | null
+  usuario: string | null
+  criadoEm: string
+  desfeito: boolean
+}
+
+export type Desfazivel = { lote: string; descricao: string; ate: string }
+
+export type LinhaReceita = { itemId: string; nome: string; unidade: Unidade; quantidade: number }
+
+export type PratoReceita = {
+  id: string
+  nome: string
+  categoria: string
+  esgotado: boolean
+  receita: LinhaReceita[]
+  grupos: {
+    id: string
+    nome: string
+    tipo: 'UNICA' | 'MULTIPLA' | 'SABORES'
+    opcoes: { id: string; nome: string; multiplicadorPct: number; receita: LinhaReceita[] }[]
+  }[]
+}
+
+export type LinhaCompra = {
+  itemId: string
+  nome: string
+  unidade: Unidade
+  quantidade: number
+  texto: string
+  embalagem: Embalagem | null
+}
+
+export type GrupoCompra = {
+  fornecedor: { id: string; nome: string; telefone: string | null } | null
+  itens: LinhaCompra[]
+}
+
+export type ListaCompra = { id: string; criadaEm: string; chegouEm: string | null; grupos: GrupoCompra[] }

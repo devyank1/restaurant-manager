@@ -5,6 +5,7 @@ export type AoMudarEquipe = {
   chamados?: () => void
   mesas?: () => void
   producao?: () => void
+  estoque?: () => void
 }
 
 /**
@@ -26,12 +27,14 @@ export function useEquipeAoVivo(aoMudar: AoMudarEquipe): void {
       atual.current.chamados?.()
       atual.current.mesas?.()
       atual.current.producao?.()
+      atual.current.estoque?.()
     }
     const socket = io({ transports: ['websocket', 'polling'] })
     socket.on('connect', recarregar)
     socket.on('chamados-mudaram', () => atual.current.chamados?.())
     socket.on('mesa-mudou', () => atual.current.mesas?.())
     socket.on('producao-mudou', () => atual.current.producao?.())
+    socket.on('estoque-mudou', () => atual.current.estoque?.())
 
     const reconectar = () => {
       socket.disconnect()

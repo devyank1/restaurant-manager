@@ -43,7 +43,7 @@ function irParaLogin() {
   navegar(`/login?volta=${encodeURIComponent(caminhoAtual())}`)
 }
 
-async function chamar<T>(url: string, init?: RequestInit, opcoes: { semRedirecionar?: boolean } = {}): Promise<T> {
+export async function chamar<T>(url: string, init?: RequestInit, opcoes: { semRedirecionar?: boolean } = {}): Promise<T> {
   let resposta: Response
   try {
     resposta = await fetch(url, init)
@@ -62,13 +62,13 @@ async function chamar<T>(url: string, init?: RequestInit, opcoes: { semRedirecio
   throw new ErroRede(`HTTP ${resposta.status}`)
 }
 
-const json = (method: string, corpo?: unknown): RequestInit => ({
+export const json = (method: string, corpo?: unknown): RequestInit => ({
   method,
   headers: corpo === undefined ? undefined : { 'Content-Type': 'application/json' },
   body: corpo === undefined ? undefined : JSON.stringify(corpo),
 })
 
-const enc = encodeURIComponent
+export const enc = encodeURIComponent
 
 // Sessão
 export const login = (email: string, senha: string) =>

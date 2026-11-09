@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { eu, logout } from './api/equipe'
 import type { UsuarioEquipe } from './api/tipos'
+import TelaEstoqueRotas from './estoque/TelaEstoqueRotas'
 import Inicio from './inicio/Inicio'
 import Topo from './inicio/Topo'
 import Login from './login/Login'
@@ -55,6 +56,8 @@ export default function App() {
           {rota.nome === 'mesa' && <TelaMesa key={rota.token} token={rota.token} />}
           {rota.nome === 'producao' &&
             (usuario.papel === 'DONO' ? <TelaProducao /> : <Inicio usuario={usuario} />)}
+          {rota.nome.startsWith('estoque') &&
+            (usuario.papel === 'DONO' ? <TelaEstoqueRotas rota={rota} /> : <Inicio usuario={usuario} />)}
         </>
       )}
     </div>

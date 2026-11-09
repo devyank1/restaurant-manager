@@ -2,6 +2,7 @@
 import { vi } from 'vitest'
 import { calcularConta, precoUnitario, resumirOpcoes } from '@cardapio/opcoes'
 import type { CardapioPublico } from '../api/cardapio'
+import { estoqueVazio, rotaEstoque } from './estoque-falso'
 import type {
   ChamadoEquipe,
   FilaProducao,
@@ -30,6 +31,7 @@ export function criarApiFalsa() {
     chavePush: null as string | null,
     /** Fila por estação; a primeira chave é a estação padrão. */
     producao: {} as Record<string, FilaProducao['pedidos']>,
+    estoque: estoqueVazio(),
   }
   const desvios: { metodo: string; padrao: RegExp; rota: Rota }[] = []
 
@@ -167,6 +169,9 @@ export function criarApiFalsa() {
       return { status: 404, corpo: { mensagem: 'Rodada não encontrada' } }
     }
     if (caminho.startsWith('/api/equipe/producao')) return producao(metodo, caminho, corpo)
+    if (caminho.startsWith('/api/equipe/estoque') || caminho.startsWith('/api/equipe/pratos/')) {
+      return rotaEstoque(estado.estoque, metodo, caminho, corpo)
+    }
     if (caminho === '/api/equipe/push/chave') return { status: 200, corpo: { chavePublica: estado.chavePush } }
     if (caminho === '/api/equipe/push/inscricoes') return { status: 201 }
     return { status: 404, corpo: { mensagem: `rota falsa ausente: ${metodo} ${caminho}` } }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { buscarResumo } from '../api/estoque'
 import { buscarChamados, buscarMesas } from '../api/equipe'
 import type { ChamadoEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
 import { lerEtiqueta, suportaNfc } from '../nfc/lerEtiqueta'
@@ -25,7 +26,18 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
     void recarregarMesas()
   }, [recarregarChamados, recarregarMesas])
 
-  useEquipeAoVivo({ chamados: recarregarChamados, mesas: recarregarMesas })
+  // Gerente: quantos itens do estoque pedem atenção (acabando + acabou).
+  const dono = usuario.papel === 'DONO'
+  const [atencao, setAtencao] = useState(0)
+  const recarregarEstoque = useMaisRecente(
+    () => (dono ? buscarResumo() : Promise.resolve(null)),
+    (r) => setAtencao(r ? r.acabando.length + r.acabou.length : 0),
+  )
+  useEffect(() => {
+    void recarregarEstoque()
+  }, [recarregarEstoque])
+
+  useEquipeAoVivo({ chamados: recarregarChamados, mesas: recarregarMesas, estoque: recarregarEstoque })
 
   // Permissão já dada: reenvia a inscrição (celular trocado, cookie novo, chave nova).
   useEffect(() => {
@@ -124,6 +136,11 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
         {usuario.papel === 'DONO' && (
           <button type="button" className="botao botao--secundario" onClick={() => navegar('/producao')}>
             Produção
+          </button>
+        )}
+        {dono && (
+          <button type="button" className="botao botao--secundario" onClick={() => navegar('/estoque')}>
+            {atencao > 0 ? `Estoque · ${atencao} acabando` : 'Estoque'}
           </button>
         )}
       </div>

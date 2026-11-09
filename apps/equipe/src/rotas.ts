@@ -6,6 +6,14 @@ export type Rota =
   | { nome: 'mesas' }
   | { nome: 'producao' }
   | { nome: 'mesa'; token: string }
+  | { nome: 'estoque' }
+  | { nome: 'estoque-itens' }
+  | { nome: 'estoque-item'; id: string }
+  | { nome: 'estoque-fornecedores' }
+  | { nome: 'estoque-receitas' }
+  | { nome: 'estoque-receita'; pratoId: string }
+  | { nome: 'estoque-compras' }
+  | { nome: 'estoque-chegou'; listaId: string }
 
 /** Só caminho interno (evita mandar para outro site depois do login). */
 function voltaSegura(volta: string | null): string | undefined {
@@ -19,9 +27,31 @@ export function lerRota(caminho: string, busca: string): Rota {
   }
   if (caminho === '/mesas') return { nome: 'mesas' }
   if (caminho === '/producao') return { nome: 'producao' }
+  const estoque = lerEstoque(caminho)
+  if (estoque) return estoque
   const mesa = /^\/mesa\/([^/]+)$/.exec(caminho)?.[1]
   if (mesa) return { nome: 'mesa', token: decodeURIComponent(mesa) }
   return { nome: 'inicio' }
+}
+
+/** Telas do estoque (só o gerente). */
+function lerEstoque(caminho: string): Rota | null {
+  const id = (padrao: RegExp) => {
+    const achado = padrao.exec(caminho)?.[1]
+    return achado ? decodeURIComponent(achado) : null
+  }
+  if (caminho === '/estoque') return { nome: 'estoque' }
+  if (caminho === '/estoque/itens') return { nome: 'estoque-itens' }
+  if (caminho === '/estoque/fornecedores') return { nome: 'estoque-fornecedores' }
+  if (caminho === '/estoque/receitas') return { nome: 'estoque-receitas' }
+  if (caminho === '/estoque/compras') return { nome: 'estoque-compras' }
+  const item = id(/^\/estoque\/itens\/([^/]+)$/)
+  if (item) return { nome: 'estoque-item', id: item }
+  const prato = id(/^\/estoque\/receitas\/([^/]+)$/)
+  if (prato) return { nome: 'estoque-receita', pratoId: prato }
+  const lista = id(/^\/estoque\/compras\/([^/]+)\/chegou$/)
+  if (lista) return { nome: 'estoque-chegou', listaId: lista }
+  return null
 }
 
 const MUDOU = 'popstate'
