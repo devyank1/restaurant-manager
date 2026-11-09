@@ -48,6 +48,18 @@
 5. Se um pedido for confirmado enquanto a conta está aberta na tela, o app avisa "A conta mudou" e mostra o total novo. Pedido aguardando confirmação impede fechar.
 6. Pelo terminal: `pnpm garcom fechar 7 pix`, `pnpm garcom fechar 7 cartao --couvert 2`, `pnpm garcom fechar 7 dinheiro --sem-servico`.
 
+## Estoque (gerente)
+
+1. **Uma vez, no banco de dev:** `pnpm --filter api dev:estoque`. Cria fornecedores, 7 itens (Ovos, Massa de pizza, Queijo muçarela, Calabresa, Bacon, Chopp Pilsen, Picanha) e as receitas da Pizza Margherita (P 70%, M 100%, G 150%), do Chopp 500ml e da Picanha na Chapa. Pode rodar de novo: não apaga nada e não mexe nas quantidades que você já contou. Não use o seed no dev.
+2. Entre como dono em `http://localhost:5174` → botão **Estoque** no início (mostra quantos itens pedem atenção).
+3. Pelo cardápio (`5173`), peça 2 pizzas G → em **Itens → Massa de pizza**, o histórico mostra uma venda de −900 g.
+4. Entre como cozinha → **Avisar perda** no topo → Ovos, 30 un, Acidente. O dono recebe o aviso e vê em **Perdas de hoje**.
+5. Dono → **Gerar lista de compras** → ajuste → **Salvar lista** → **Baixar planilha** (uma aba por fornecedor) e **Mandar no WhatsApp**.
+6. Quando a compra chegar → **Chegou compra** no Estoque → confira as quantidades → **Confirmar chegada**.
+7. Errou uma perda? Logo depois de avisar, **Desfazer** (vale para o seu último lançamento, por 10 minutos).
+
+O sistema nunca marca prato como esgotado sozinho: quando um item acaba, o Estoque mostra os pratos que usam ele e o gerente decide (**Marcar como esgotado**, ou em **Receitas**).
+
 ## Celular com HTTPS (Tailscale)
 
 Notificação push, instalar como app e o botão "Ler etiqueta" (Web NFC) só funcionam em HTTPS.
