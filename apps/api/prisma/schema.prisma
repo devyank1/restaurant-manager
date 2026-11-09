@@ -27,6 +27,13 @@ model Restaurante {
   janelaCancelamentoSegundos Int      @default(120)
   /// Rodada acima deste total sempre pede confirmação na mesa (nulo = sem limite).
   limiteConfirmacaoCentavos  Int?
+  /// Conta: checkbox "10% de serviço" aparece e vem marcado?
+  servicoHabilitado          Boolean  @default(true)
+  servicoPadrao              Boolean  @default(true)
+  /// Conta: checkbox "Couvert" (por pessoa) aparece, vem marcado e quanto custa.
+  couvertHabilitado          Boolean  @default(false)
+  couvertPadrao              Boolean  @default(false)
+  couvertCentavos            Int      @default(0)
   criadoEm                   DateTime @default(now())
 
   mesas       Mesa[]
@@ -147,6 +154,12 @@ enum StatusSessao {
   FECHADA
 }
 
+enum FormaPagamento {
+  CARTAO
+  PIX
+  DINHEIRO
+}
+
 model SessaoMesa {
   id            String       @id @default(uuid())
   restauranteId String
@@ -158,6 +171,14 @@ model SessaoMesa {
   garcomDesde   DateTime?
   abertaEm      DateTime     @default(now())
   fechadaEm     DateTime?
+  /// Fechamento da conta (preenchidos juntos no ContaFechada).
+  formaPagamento   FormaPagamento?
+  subtotalCentavos Int?
+  servicoCentavos  Int?
+  couvertCentavos  Int?
+  pessoas          Int?
+  totalCentavos    Int?
+  fechadaPorId     String?
 
   dispositivos  DispositivoSessao[]
   itensCarrinho ItemCarrinho[]

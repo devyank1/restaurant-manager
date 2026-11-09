@@ -10,12 +10,18 @@
 //   pnpm garcom atendido 7            marca o chamado de atendente como atendido
 //   pnpm garcom cancelar 7            cancela a rodada direta (dentro da janela)
 //   pnpm garcom entregar 7            entrega os itens prontos da mesa
+//   pnpm garcom fechar 7 pix          fecha a conta (cartao|pix|dinheiro)
+//        [--couvert N] [--sem-servico] couvert para N pessoas; sem os 10%
 // Opção: --como bruno|dono (padrão: ana). API em API_URL (padrão localhost:3000).
 
 const API = process.env.API_URL ?? 'http://localhost:3000';
 const args = process.argv.slice(2);
 const iComo = args.indexOf('--como');
 const quem = iComo >= 0 ? args.splice(iComo, 2)[1] : 'ana';
+const iCouvert = args.indexOf('--couvert');
+const pessoasCouvert = iCouvert >= 0 ? Number(args.splice(iCouvert, 2)[1]) : 0;
+const iSemServico = args.indexOf('--sem-servico');
+const semServico = iSemServico >= 0 && args.splice(iSemServico, 1).length > 0;
 const [comando, ...resto] = args;
 const reais = (c) =>
   (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -165,6 +171,34 @@ async function main() {
       mostrarMesa(await mesaPorNumero(resto[0]));
       break;
     }
+    case 'fechar': {
+      const [numero, forma = 'pix'] = resto;
+      const m = await mesaPorNumero(numero);
+      if (!m.aberta) throw new Error(`Mesa ${numero} não tem conta aberta`);
+      const servico = !semServico && m.conta.servico.habilitado;
+      const couvert = pessoasCouvert > 0;
+      // Mesma regra de src/conta/calcular-conta.ts.
+      const total =
+        m.totalConfirmadoCentavos +
+        (servico ? Math.round(m.totalConfirmadoCentavos / 10) : 0) +
+        (couvert ? m.conta.couvert.valorCentavos * pessoasCouvert : 0);
+      const { dados } = await pedir(
+        'POST',
+        `/equipe/mesas/${m.mesa.token}/fechar`,
+        {
+          servico,
+          couvert,
+          ...(couvert ? { pessoas: pessoasCouvert } : {}),
+          formaPagamento: forma.toUpperCase(),
+          totalCentavos: total,
+        },
+      );
+      const nomes = { CARTAO: 'Cartão', PIX: 'Pix', DINHEIRO: 'Dinheiro' };
+      console.log(
+        `Mesa ${dados.mesa.numero} fechada · ${reais(dados.totalCentavos)} · ${nomes[dados.formaPagamento]}`,
+      );
+      break;
+    }
     case 'tamanho': {
       const [numero, nomeTamanho] = resto;
       const m = await mesaPorNumero(numero);
@@ -211,7 +245,7 @@ async function main() {
     }
     default:
       console.log(
-        'Comandos: turno on|off, chamados, mesas, mesa N, confirmar N, recusar N, cancelar N, entregar N, tamanho N G, atendido N [--como bruno|dono]',
+        'Comandos: turno on|off, chamados, mesas, mesa N, confirmar N, recusar N, cancelar N, entregar N, fechar N pix [--couvert N] [--sem-servico], tamanho N G, atendido N [--como bruno|dono]',
       );
   }
 }

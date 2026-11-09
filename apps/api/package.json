@@ -20,6 +20,7 @@
     "test:e2e": "dotenv -e .env.test -- jest --config ./test/jest-e2e.json --runInBand",
     "vapid": "node scripts/gerar-vapid.mjs",
     "dev:etapa3": "node scripts/dev-etapa3.mjs",
+    "dev:conta": "node scripts/dev-conta.mjs",
     "db:seed": "prisma db seed"
   },
   "dependencies": {

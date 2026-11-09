@@ -39,6 +39,15 @@
 5. O dono vê a mesma tela pelo botão **Produção** no início.
 6. Pela regra: a primeira rodada da mesa (e a de celular novo) passa pelo garçom; as seguintes vão direto para a produção, e o garçom pode cancelar nos primeiros 2 minutos. Quando a estação termina, o garçom recebe "Pronto" e toca **Entregar prontos**.
 
+## Conta e fechamento
+
+1. **Uma vez, no banco de dev:** `pnpm --filter api dev:conta`. Liga os 10% (vem marcado) e o couvert de R$ 15,00 por pessoa (vem desmarcado). Não use o seed no dev.
+2. No app da equipe, abra a mesa e toque **Fechar conta**. A tela mostra os itens, o **Serviço (10%)** e o **Couvert** (com o número de pessoas) e o total.
+3. Escolha **Cartão**, **Pix** ou **Dinheiro** e toque **Fechar conta · R$ X**. O pagamento e a divisão são feitos na maquininha; o sistema só dá baixa.
+4. A mesa fica livre e o garçom volta a contar como livre. O cliente vê **Conta fechada** com o **Avalie no Google** em destaque; **Voltar ao cardápio** abre uma conta nova (o primeiro pedido passa pelo garçom).
+5. Se um pedido for confirmado enquanto a conta está aberta na tela, o app avisa "A conta mudou" e mostra o total novo. Pedido aguardando confirmação impede fechar.
+6. Pelo terminal: `pnpm garcom fechar 7 pix`, `pnpm garcom fechar 7 cartao --couvert 2`, `pnpm garcom fechar 7 dinheiro --sem-servico`.
+
 ## Celular com HTTPS (Tailscale)
 
 Notificação push, instalar como app e o botão "Ler etiqueta" (Web NFC) só funcionam em HTTPS.

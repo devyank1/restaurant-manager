@@ -371,6 +371,23 @@ describe('rodadas', () => {
     });
   });
 
+  it('mesa da equipe traz aberta e a configuração da conta', async () => {
+    const antes = (
+      await http().get(`/equipe/mesas/${token7}`).set('Cookie', ana).expect(200)
+    ).body as { aberta: boolean };
+    expect(antes.aberta).toBe(false);
+    const a = await celular();
+    await enviar(a, mix());
+    const depois = (
+      await http().get(`/equipe/mesas/${token7}`).set('Cookie', ana).expect(200)
+    ).body as { aberta: boolean; conta: unknown };
+    expect(depois.aberta).toBe(true);
+    expect(depois.conta).toEqual({
+      servico: { habilitado: true, padrao: true },
+      couvert: { habilitado: true, padrao: false, valorCentavos: 1500 },
+    });
+  });
+
   it('garçom de outro restaurante → 404 em /equipe/mesas/:token e nas rodadas', async () => {
     const a = await celular();
     const rodada = await enviar(a, mix());

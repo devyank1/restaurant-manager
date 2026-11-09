@@ -93,6 +93,11 @@ export const cardapioDemo: CardapioPublico = {
 export function mesa7(): MesaEquipe {
   return {
     mesa: { numero: 7, token: 'tok7' },
+    aberta: true,
+    conta: {
+      servico: { habilitado: true, padrao: true },
+      couvert: { habilitado: true, padrao: false, valorCentavos: 1500 },
+    },
     garcomNome: 'Ana',
     totalConfirmadoCentavos: 2380,
     rodadas: [

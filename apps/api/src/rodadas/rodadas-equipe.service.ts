@@ -125,13 +125,32 @@ export class RodadasEquipeService {
         .map((d) => d.dispositivoId),
     );
     const rodadas = sessao?.rodadas ?? [];
-    const { janelaCancelamentoSegundos: janela } =
-      await this.prisma.restaurante.findUniqueOrThrow({
-        where: { id: usuario.restauranteId },
-        select: { janelaCancelamentoSegundos: true },
-      });
+    const config = await this.prisma.restaurante.findUniqueOrThrow({
+      where: { id: usuario.restauranteId },
+      select: {
+        janelaCancelamentoSegundos: true,
+        servicoHabilitado: true,
+        servicoPadrao: true,
+        couvertHabilitado: true,
+        couvertPadrao: true,
+        couvertCentavos: true,
+      },
+    });
+    const janela = config.janelaCancelamentoSegundos;
     return {
       mesa: { numero: mesa.numero, token: mesa.token },
+      aberta: sessao !== null,
+      conta: {
+        servico: {
+          habilitado: config.servicoHabilitado,
+          padrao: config.servicoPadrao,
+        },
+        couvert: {
+          habilitado: config.couvertHabilitado,
+          padrao: config.couvertPadrao,
+          valorCentavos: config.couvertCentavos,
+        },
+      },
       garcomNome,
       rodadas: rodadas.map((r) =>
         paraEquipe(r, !confirmados.has(r.dispositivoId), janela),
@@ -397,6 +416,9 @@ export class RodadasEquipeService {
           throw new ForbiddenException({
             mensagem: 'Esta mesa é de outro garçom',
           });
+        }
+        if (r.sessao.status === 'FECHADA') {
+          throw new ConflictException({ mensagem: 'Esta mesa já foi fechada' });
         }
         const janela = r.sessao.restaurante.janelaCancelamentoSegundos;
         if (!cancelavelAte(r, janela, agora)) {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
 import type { CarrinhoPublico } from '../api/tipos'
 
@@ -7,6 +7,8 @@ export type AoMudarMesa = {
   carrinho: (carrinho?: CarrinhoPublico) => void
   rodadas: () => void
   atendido: () => void
+  /** O garçom fechou a conta. */
+  contaFechada: () => void
 }
 
 /**
@@ -17,8 +19,9 @@ export type AoMudarMesa = {
  * Por isso, ao voltar para a aba ou recuperar a rede, a conexão é refeita na
  * hora; ela só completa quando a rede voltou de fato, e aí busca o estado.
  */
-export function useMesaAoVivo(token: string, aoMudar: AoMudarMesa): void {
+export function useMesaAoVivo(token: string, aoMudar: AoMudarMesa): { reentrar: () => void } {
   const atual = useRef(aoMudar)
+  const socketAtual = useRef<ReturnType<typeof io> | null>(null)
   useEffect(() => {
     atual.current = aoMudar
   })
@@ -29,6 +32,7 @@ export function useMesaAoVivo(token: string, aoMudar: AoMudarMesa): void {
       atual.current.rodadas()
     }
     const socket = io({ transports: ['websocket', 'polling'] })
+    socketAtual.current = socket
     socket.on('connect', () => {
       socket.emit('entrar-mesa', { token })
       recarregar()
@@ -36,6 +40,7 @@ export function useMesaAoVivo(token: string, aoMudar: AoMudarMesa): void {
     socket.on('carrinho', (carrinho: CarrinhoPublico) => atual.current.carrinho(carrinho))
     socket.on('rodadas-mudaram', () => atual.current.rodadas())
     socket.on('chamado-atendido', () => atual.current.atendido())
+    socket.on('conta-fechada', () => atual.current.contaFechada())
 
     const reconectar = () => {
       socket.disconnect()
@@ -55,4 +60,10 @@ export function useMesaAoVivo(token: string, aoMudar: AoMudarMesa): void {
       socket.disconnect()
     }
   }, [token])
+
+  /** Entrou numa sessão nova (conta fechada): passa a ouvir a sala dela. */
+  const reentrar = useCallback(() => {
+    socketAtual.current?.emit('entrar-mesa', { token })
+  }, [token])
+  return { reentrar }
 }

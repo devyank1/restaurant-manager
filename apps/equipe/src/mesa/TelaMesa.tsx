@@ -6,6 +6,7 @@ import type { MesaEquipe } from '../api/tipos'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
 import { useMaisRecente } from '../tempo-real/useMaisRecente'
+import ContaMesa from './ContaMesa'
 import RodadaConfirmada from './RodadaConfirmada'
 import RodadaPendente from './RodadaPendente'
 
@@ -21,6 +22,7 @@ export default function TelaMesa({ token }: { token: string }) {
   const [cardapio, setCardapio] = useState<CardapioPublico | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [aviso, setAviso] = useState<{ texto: string; id: number } | null>(null)
+  const [naConta, setNaConta] = useState(false)
 
   // Falha de rede: mantém o que já tinha; a reconexão busca de novo.
   const recarregar = useMaisRecente(
@@ -72,6 +74,12 @@ export default function TelaMesa({ token }: { token: string }) {
     chamados: marcarLidosDaMesa,
   })
 
+  // Outro garçom fechou: sai da conta (e não reabre sozinha para o próximo grupo).
+  const aberta = mesa?.aberta
+  useEffect(() => {
+    if (aberta === false) setNaConta(false)
+  }, [aberta])
+
   useEffect(() => {
     if (!aviso) return
     const relogio = setTimeout(() => setAviso(null), DURACAO_AVISO_MS)
@@ -108,6 +116,24 @@ export default function TelaMesa({ token }: { token: string }) {
     )
   }
   if (!mesa) return <p className="carregando">Carregando…</p>
+
+  const avisoNaTela = aviso && (
+    <p className="aviso" role="status">
+      {aviso.texto}
+    </p>
+  )
+
+  if (naConta && mesa.aberta) {
+    return (
+      <main className="tela-mesa">
+        <div className="barra-titulo">
+          <h2>{`Conta · Mesa ${mesa.mesa.numero}`}</h2>
+        </div>
+        <ContaMesa mesa={mesa} ocupado={ocupado} agir={agir} onVoltar={() => setNaConta(false)} />
+        {avisoNaTela}
+      </main>
+    )
+  }
 
   const pendentes = mesa.rodadas.filter((r) => r.status === 'AGUARDANDO_GARCOM')
   const confirmadas = mesa.rodadas.filter((r) => r.status === 'CONFIRMADA')
@@ -159,11 +185,13 @@ export default function TelaMesa({ token }: { token: string }) {
         </p>
       )}
 
-      {aviso && (
-        <p className="aviso" role="status">
-          {aviso.texto}
-        </p>
+      {mesa.aberta && (
+        <button type="button" className="botao botao--secundario" onClick={() => setNaConta(true)}>
+          Fechar conta
+        </button>
       )}
+
+      {avisoNaTela}
     </main>
   )
 }
