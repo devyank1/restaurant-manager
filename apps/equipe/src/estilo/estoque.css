@@ -203,3 +203,33 @@
   border-color: var(--destaque);
   background: var(--destaque-fundo);
 }
+
+/* Receitas */
+.linha-receita {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--e-2);
+}
+
+.linha-receita .campo-quantidade {
+  flex: 1;
+}
+
+.linha-receitas {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+}
+
+.linha-receitas .linha-estoque--botao {
+  flex: 1;
+}
+
+.chip--esgotado {
+  border-color: var(--perigo);
+  background: var(--perigo-fundo);
+}
+
+.grupo-receita {
+  margin-top: var(--e-5);
+}
