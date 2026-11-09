@@ -9,7 +9,12 @@ type Linha = {
   texto: string;
 };
 type Grupo = { fornecedor: { nome: string } | null; itens: Linha[] };
-type Lista = { id: string; grupos: Grupo[]; chegouEm: string | null };
+type Lista = {
+  id: string;
+  restaurante: string;
+  grupos: Grupo[];
+  chegouEm: string | null;
+};
 
 /** Supertest não lê binário sozinho: junta os pedaços num Buffer. */
 function binario(
@@ -131,6 +136,10 @@ describe('lista de compras', () => {
       { itemId: ovos, quantidade: 120 },
       { itemId: chopp, quantidade: 45000 },
     ]);
+    const restaurante = await t.prisma.restaurante.findUniqueOrThrow({
+      where: { id: t.restauranteId },
+    });
+    expect(lista.restaurante).toBe(restaurante.nome);
     const res = await http()
       .get(`/equipe/estoque/compras/${lista.id}/planilha`)
       .set('Cookie', dono)

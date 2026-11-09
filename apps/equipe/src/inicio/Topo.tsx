@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { mudarTurno } from '../api/equipe'
 import type { UsuarioEquipe } from '../api/tipos'
+import AvisarPerda from '../estoque/AvisarPerda'
 
 const PAPEL: Record<UsuarioEquipe['papel'], string> = { DONO: 'Dono', GARCOM: 'Garçom', COZINHA: 'Produção' }
 
@@ -14,6 +15,7 @@ export default function Topo({
   onSair: () => void
 }) {
   const [mudando, setMudando] = useState(false)
+  const [perda, setPerda] = useState(false)
 
   const alternar = async () => {
     setMudando(true)
@@ -46,6 +48,10 @@ export default function Topo({
         {usuario.emTurno ? 'Em turno' : 'Fora do turno'}
       </button>
       )}
+      <button type="button" className="topo-perda" onClick={() => setPerda(true)}>
+        Avisar perda
+      </button>
+      {perda && <AvisarPerda onFechar={() => setPerda(false)} />}
       <button type="button" className="topo-sair" onClick={onSair}>
         Sair
       </button>

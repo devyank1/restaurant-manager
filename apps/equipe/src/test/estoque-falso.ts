@@ -139,7 +139,7 @@ export function rotaEstoque(e: EstoqueFalso, metodo: string, caminho: string, co
           .map((l) => ({ ...l, quantidade: pedidas.find((x) => x.itemId === l.itemId)!.quantidade })),
       }))
       .filter((g) => g.itens.length > 0)
-    const lista: ListaCompra = { id: 'lista-1', criadaEm: new Date().toISOString(), chegouEm: null, grupos }
+    const lista: ListaCompra = { id: 'lista-1', restaurante: 'Cantina Demo', criadaEm: new Date().toISOString(), chegouEm: null, grupos }
     e.listas[lista.id] = lista
     return { status: 201, corpo: lista }
   }

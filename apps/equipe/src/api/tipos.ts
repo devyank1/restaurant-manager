@@ -188,4 +188,8 @@ export type GrupoCompra = {
   itens: LinhaCompra[]
 }
 
-export type ListaCompra = { id: string; criadaEm: string; chegouEm: string | null; grupos: GrupoCompra[] }
+export type ListaCompra = {
+  id: string
+  /** Nome do restaurante (texto do pedido no WhatsApp). */
+  restaurante: string
+  criadaEm: string; chegouEm: string | null; grupos: GrupoCompra[] }

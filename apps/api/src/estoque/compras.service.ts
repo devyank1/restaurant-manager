@@ -28,6 +28,8 @@ export type GrupoCompra = {
 
 export type ListaCompraDto = {
   id: string;
+  /** Nome do restaurante (texto do pedido no WhatsApp). */
+  restaurante: string;
   criadaEm: Date;
   chegouEm: Date | null;
   grupos: GrupoCompra[];
@@ -127,12 +129,17 @@ export class ComprasService {
       },
       include: { fornecedor: true },
     });
+    const restaurante = await this.prisma.restaurante.findUniqueOrThrow({
+      where: { id: usuario.restauranteId },
+      select: { nome: true },
+    });
     const porId = new Map(itens.map((i) => [i.id, i]));
     const linhas = pedidas
       .filter((p) => porId.has(p.itemId))
       .map((p) => ({ item: porId.get(p.itemId)!, quantidade: p.quantidade }));
     return {
       id: lista.id,
+      restaurante: restaurante.nome,
       criadaEm: lista.criadaEm,
       chegouEm: lista.chegouEm,
       grupos: agrupar(linhas),

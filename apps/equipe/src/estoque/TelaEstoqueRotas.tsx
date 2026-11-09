@@ -1,4 +1,6 @@
 import type { Rota } from '../rotas'
+import TelaChegou from './TelaChegou'
+import TelaCompras from './TelaCompras'
 import TelaEstoque from './TelaEstoque'
 import TelaFornecedores from './TelaFornecedores'
 import TelaItem from './TelaItem'
@@ -18,6 +20,10 @@ export default function TelaEstoqueRotas({ rota }: { rota: Rota }) {
       return <TelaReceitas />
     case 'estoque-receita':
       return <TelaReceita key={rota.pratoId} pratoId={rota.pratoId} />
+    case 'estoque-compras':
+      return <TelaCompras />
+    case 'estoque-chegou':
+      return <TelaChegou key={rota.listaId} listaId={rota.listaId} />
     case 'estoque-fornecedores':
       return <TelaFornecedores />
     default:
