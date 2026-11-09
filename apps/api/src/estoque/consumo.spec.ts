@@ -9,12 +9,46 @@ function receitasPizza(): Receitas {
       ['chopp', [linha('chopp', 500)]],
     ]),
     opcao: new Map([
-      ['G', { multiplicadorPct: 150, grupoId: 'tam', tipoGrupo: 'UNICA' as const }],
-      ['M', { multiplicadorPct: 100, grupoId: 'tam', tipoGrupo: 'UNICA' as const }],
-      ['marg', { multiplicadorPct: 100, grupoId: 'sab', tipoGrupo: 'SABORES' as const }],
-      ['cala', { multiplicadorPct: 100, grupoId: 'sab', tipoGrupo: 'SABORES' as const }],
-      ['quatro', { multiplicadorPct: 100, grupoId: 'sab', tipoGrupo: 'SABORES' as const }],
-      ['bacon', { multiplicadorPct: 100, grupoId: 'adi', tipoGrupo: 'MULTIPLA' as const }],
+      [
+        'G',
+        { multiplicadorPct: 150, grupoId: 'tam', tipoGrupo: 'UNICA' as const },
+      ],
+      [
+        'M',
+        { multiplicadorPct: 100, grupoId: 'tam', tipoGrupo: 'UNICA' as const },
+      ],
+      [
+        'marg',
+        {
+          multiplicadorPct: 100,
+          grupoId: 'sab',
+          tipoGrupo: 'SABORES' as const,
+        },
+      ],
+      [
+        'cala',
+        {
+          multiplicadorPct: 100,
+          grupoId: 'sab',
+          tipoGrupo: 'SABORES' as const,
+        },
+      ],
+      [
+        'quatro',
+        {
+          multiplicadorPct: 100,
+          grupoId: 'sab',
+          tipoGrupo: 'SABORES' as const,
+        },
+      ],
+      [
+        'bacon',
+        {
+          multiplicadorPct: 100,
+          grupoId: 'adi',
+          tipoGrupo: 'MULTIPLA' as const,
+        },
+      ],
     ]),
     linhasOpcao: new Map([
       ['marg', [linha('queijo', 200)]],
@@ -39,12 +73,23 @@ describe('consumoDaRodada', () => {
       ],
       receitasPizza(),
     );
-    expect(obj(r)).toEqual({ massa: 900, queijo: 300, calabresa: 225, bacon: 100 });
+    expect(obj(r)).toEqual({
+      massa: 900,
+      queijo: 300,
+      calabresa: 225,
+      bacon: 100,
+    });
   });
 
   it('pizza M só margherita', () => {
     const r = consumoDaRodada(
-      [{ pratoId: 'pizza', selecao: { tam: ['M'], sab: ['marg'] }, quantidade: 1 }],
+      [
+        {
+          pratoId: 'pizza',
+          selecao: { tam: ['M'], sab: ['marg'] },
+          quantidade: 1,
+        },
+      ],
       receitasPizza(),
     );
     expect(obj(r)).toEqual({ massa: 300, queijo: 200 });
@@ -71,7 +116,13 @@ describe('consumoDaRodada', () => {
 
   it('opção que não existe mais é ignorada', () => {
     const r = consumoDaRodada(
-      [{ pratoId: 'pizza', selecao: { tam: ['sumiu'], sab: ['marg'] }, quantidade: 1 }],
+      [
+        {
+          pratoId: 'pizza',
+          selecao: { tam: ['sumiu'], sab: ['marg'] },
+          quantidade: 1,
+        },
+      ],
       receitasPizza(),
     );
     expect(obj(r)).toEqual({ massa: 300, queijo: 200 });
@@ -89,9 +140,30 @@ describe('consumoDaRodada', () => {
       {
         ...receitasPizza(),
         opcao: new Map([
-          ['quatro', { multiplicadorPct: 100, grupoId: 'sab', tipoGrupo: 'SABORES' as const }],
-          ['quatro2', { multiplicadorPct: 100, grupoId: 'sab', tipoGrupo: 'SABORES' as const }],
-          ['quatro3', { multiplicadorPct: 100, grupoId: 'sab', tipoGrupo: 'SABORES' as const }],
+          [
+            'quatro',
+            {
+              multiplicadorPct: 100,
+              grupoId: 'sab',
+              tipoGrupo: 'SABORES' as const,
+            },
+          ],
+          [
+            'quatro2',
+            {
+              multiplicadorPct: 100,
+              grupoId: 'sab',
+              tipoGrupo: 'SABORES' as const,
+            },
+          ],
+          [
+            'quatro3',
+            {
+              multiplicadorPct: 100,
+              grupoId: 'sab',
+              tipoGrupo: 'SABORES' as const,
+            },
+          ],
         ]),
         linhasOpcao: new Map([
           ['quatro', [linha('queijo', 100)]],

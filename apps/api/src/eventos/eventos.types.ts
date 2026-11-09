@@ -6,7 +6,10 @@ export type TipoEvento =
   | 'PedidoEmPreparo'
   | 'PedidoPronto'
   | 'PedidoEntregue'
-  | 'ContaFechada';
+  | 'ContaFechada'
+  | 'EstoqueMovimentado'
+  | 'EstoqueAcabando'
+  | 'PerdaRegistrada';
 
 /** Evento de domínio: persistido em `Evento` e emitido internamente. */
 export type EventoDominio = {

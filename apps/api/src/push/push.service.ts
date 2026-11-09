@@ -152,6 +152,22 @@ export class PushService {
     });
   }
 
+  /** Todos os gerentes (DONO) do restaurante: avisos de estoque. */
+  async notificarGerentes(
+    restauranteId: string,
+    msg: MensagemPush,
+  ): Promise<void> {
+    const gerentes = await this.prisma.usuario.findMany({
+      where: { restauranteId, papel: 'DONO' },
+      select: { id: true },
+    });
+    if (gerentes.length === 0) return;
+    await this.enviarPara(
+      gerentes.map((g) => g.id),
+      msg,
+    );
+  }
+
   /** Garçom responsável pela mesa da rodada (nada se a mesa não tem). */
   private async garcomDaRodada(rodadaId: string) {
     const rodada = await this.prisma.rodada.findUnique({

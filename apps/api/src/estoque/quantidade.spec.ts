@@ -1,4 +1,8 @@
-import { embalagensPara, formatarCompra, formatarQuantidade } from './quantidade';
+import {
+  embalagensPara,
+  formatarCompra,
+  formatarQuantidade,
+} from './quantidade';
 
 describe('formatarQuantidade', () => {
   it.each([

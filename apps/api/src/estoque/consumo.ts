@@ -49,7 +49,9 @@ export function consumoDaRodada(
     const mult = escolhidas
       .filter((id) => dados(id).tipoGrupo === 'UNICA')
       .reduce((m, id) => m * (dados(id).multiplicadorPct / 100), 1);
-    const sabores = escolhidas.filter((id) => dados(id).tipoGrupo === 'SABORES');
+    const sabores = escolhidas.filter(
+      (id) => dados(id).tipoGrupo === 'SABORES',
+    );
     const outras = escolhidas.filter((id) => dados(id).tipoGrupo !== 'SABORES');
 
     somar(receitas.prato.get(item.pratoId), mult * item.quantidade);
