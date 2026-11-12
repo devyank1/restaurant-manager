@@ -230,6 +230,21 @@ describe('rodadas', () => {
     expect(segunda.status).toBe('CONFIRMADA');
   });
 
+  it('garçom que confirma a rodada de mesa sem responsável fica com o crédito', async () => {
+    const a = await celular();
+    const primeira = await enviar(a, mix());
+    await confirmar(primeira.id).expect(200);
+    const anaId = (
+      await t.prisma.usuario.findUniqueOrThrow({
+        where: { email: 'ana@demo.com' },
+      })
+    ).id;
+    const gravada = await t.prisma.rodada.findUniqueOrThrow({
+      where: { id: primeira.id },
+    });
+    expect(gravada.garcomId).toBe(anaId);
+  });
+
   it('celular novo na mesa aberta: 1ª rodada aguarda confirmação', async () => {
     const a = await celular();
     const primeira = await enviar(a, mix());
@@ -501,6 +516,57 @@ describe('rodadas', () => {
       });
       const segunda = await enviar(a, mix(), suco());
       expect(segunda.status).toBe('AGUARDANDO_GARCOM');
+    });
+
+    it('rodada direta guarda o garçom da mesa como crédito', async () => {
+      const a = await mesaAberta();
+      const segunda = await enviar(a, mix());
+      const anaId = (
+        await t.prisma.usuario.findUniqueOrThrow({
+          where: { email: 'ana@demo.com' },
+        })
+      ).id;
+      const gravada = await t.prisma.rodada.findUniqueOrThrow({
+        where: { id: segunda.id },
+      });
+      expect(gravada.garcomId).toBe(anaId);
+    });
+
+    it('item congela o tempo esperado do prato (ou da categoria, ou 15)', async () => {
+      const prato = (id: string) =>
+        t.prisma.prato.findUniqueOrThrow({ where: { id } });
+      const catPizza = (await prato(pizza.id)).categoriaId;
+      const catSuco = (await prato(sucoId)).categoriaId;
+      const catMix = (await prato(mixId)).categoriaId;
+      await t.prisma.categoria.update({
+        where: { id: catPizza },
+        data: { tempoPreparoMin: 12 },
+      });
+      await t.prisma.prato.update({
+        where: { id: sucoId },
+        data: { tempoPreparoMin: 4 },
+      });
+      try {
+        const a = await celular();
+        const rodada = await enviar(a, pizzaM(), suco(), mix());
+        const itens = await t.prisma.itemRodada.findMany({
+          where: { rodadaId: rodada.id },
+        });
+        const tempo = (pratoId: string) =>
+          itens.find((i) => i.pratoId === pratoId)!.tempoEsperadoMin;
+        expect(tempo(pizza.id)).toBe(12);
+        expect(tempo(sucoId)).toBe(4);
+        if (catMix !== catPizza) expect(tempo(mixId)).toBe(15);
+      } finally {
+        await t.prisma.categoria.updateMany({
+          where: { id: { in: [catPizza, catSuco, catMix] } },
+          data: { tempoPreparoMin: null },
+        });
+        await t.prisma.prato.update({
+          where: { id: sucoId },
+          data: { tempoPreparoMin: null },
+        });
+      }
     });
 
     it('rodada direta publica PedidoConfirmado com direto: true', async () => {

@@ -56,10 +56,40 @@ export class AuthService {
     return usuario && paraUsuarioEquipe(usuario);
   }
 
+  /** Liga/desliga "Em turno" e registra o turno (pausa = desligar e ligar). */
   async mudarTurno(id: string, emTurno: boolean): Promise<UsuarioEquipe> {
-    const usuario = await this.prisma.usuario.update({
-      where: { id },
-      data: { emTurno, emTurnoDesde: emTurno ? new Date() : null },
+    const agora = new Date();
+    const usuario = await this.prisma.$transaction(async (tx) => {
+      const aberto = emTurno
+        ? await tx.turnoEquipe.findFirst({
+            where: { usuarioId: id, fim: null },
+          })
+        : null;
+      // Já em turno: ligar de novo não zera o "desde" (o aviso de pausa conta dele).
+      const u = await tx.usuario.update({
+        where: { id },
+        data: {
+          emTurno,
+          emTurnoDesde: emTurno ? (aberto?.inicio ?? agora) : null,
+        },
+      });
+      if (emTurno) {
+        if (!aberto) {
+          await tx.turnoEquipe.create({
+            data: {
+              restauranteId: u.restauranteId,
+              usuarioId: id,
+              inicio: agora,
+            },
+          });
+        }
+      } else {
+        await tx.turnoEquipe.updateMany({
+          where: { usuarioId: id, fim: null },
+          data: { fim: agora },
+        });
+      }
+      return u;
     });
     return paraUsuarioEquipe(usuario);
   }

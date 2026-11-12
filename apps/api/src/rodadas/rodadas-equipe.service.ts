@@ -29,6 +29,7 @@ import {
   MesaResumo,
   RodadaEquipe,
 } from './rodadas.types';
+import { tempoEsperadoDe } from '../paineis/tempo-esperado';
 
 type Tx = Prisma.TransactionClient;
 
@@ -284,6 +285,7 @@ export class RodadasEquipeService {
           quantidade: novo.quantidade,
           precoUnitarioCentavos: precoUnitario(prato, novo.selecao),
           estacao: prato.categoria.estacao,
+          tempoEsperadoMin: tempoEsperadoDe(prato),
         },
       });
       return {
@@ -315,6 +317,8 @@ export class RodadasEquipeService {
           status: 'CONFIRMADA',
           confirmadaEm: agora,
           confirmadaPorId: usuario.id,
+          // Crédito: o responsável pela mesa; sem responsável, quem confirma vira.
+          garcomId: r.sessao.garcomId ?? usuario.id,
         },
       });
       if (!r.sessao.garcomId) {

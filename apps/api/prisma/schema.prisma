@@ -34,6 +34,8 @@ model Restaurante {
   couvertHabilitado          Boolean  @default(false)
   couvertPadrao              Boolean  @default(false)
   couvertCentavos            Int      @default(0)
+  /// Painel da equipe: avisa "X h em turno sem pausa" a partir destas horas.
+  horasSemPausa              Int      @default(4)
   criadoEm                   DateTime @default(now())
 
   mesas             Mesa[]
@@ -50,6 +52,8 @@ model Restaurante {
   receitaItens      ReceitaItem[]
   movimentosEstoque MovimentoEstoque[]
   listasCompra      ListaCompra[]
+  turnos            TurnoEquipe[]
+  metas             Meta[]
 }
 
 model Mesa {
@@ -67,14 +71,16 @@ model Mesa {
 }
 
 model Categoria {
-  id            String      @id @default(uuid())
-  restauranteId String
-  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
-  nome          String
-  ordem         Int
+  id              String      @id @default(uuid())
+  restauranteId   String
+  restaurante     Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  nome            String
+  ordem           Int
   /// Tela de produção que prepara os pratos desta categoria (ex.: Cozinha, Bar).
-  estacao       String      @default("Cozinha")
-  criadoEm      DateTime    @default(now())
+  estacao         String      @default("Cozinha")
+  /// Tempo de preparo padrão dos pratos desta categoria (min); nulo = 15.
+  tempoPreparoMin Int?
+  criadoEm        DateTime    @default(now())
 
   pratos Prato[]
 }
@@ -95,6 +101,8 @@ model Prato {
   videoUrl                 String?
   posterUrl                String?
   ordem                    Int
+  /// Tempo de preparo esperado (min); nulo = o padrão da categoria.
+  tempoPreparoMin          Int?
   criadoEm                 DateTime    @default(now())
 
   grupos  GrupoOpcao[]
@@ -156,6 +164,7 @@ model Usuario {
 
   inscricoesPush    InscricaoPush[]
   movimentosEstoque MovimentoEstoque[]
+  turnos            TurnoEquipe[]
 
   @@index([restauranteId])
 }
@@ -244,6 +253,8 @@ model Rodada {
   /// Nasceu confirmada, sem o garçom na mesa: só ela tem janela de cancelamento.
   direta          Boolean      @default(false)
   canceladaEm     DateTime?
+  /// Garçom responsável pela mesa na confirmação: recebe o crédito do valor vendido.
+  garcomId        String?
 
   itens ItemRodada[]
 }
@@ -262,6 +273,8 @@ model ItemRodada {
   precoUnitarioCentavos Int
   /// Estação congelada na criação, como o preço.
   estacao               String     @default("Cozinha")
+  /// Tempo esperado (min) congelado na criação, como o preço.
+  tempoEsperadoMin      Int        @default(15)
   status                StatusItem @default(NA_FILA)
   emPreparoEm           DateTime?
   prontoEm              DateTime?
@@ -454,4 +467,54 @@ model ListaCompra {
   loteChegada   String?
 
   @@index([restauranteId, criadaEm])
+}
+
+/// Cada "Em turno" de cada pessoa (pausa = desligar e ligar de novo).
+model TurnoEquipe {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  usuarioId     String
+  usuario       Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  inicio        DateTime    @default(now())
+  fim           DateTime?
+
+  @@index([restauranteId, inicio])
+  @@index([usuarioId, fim])
+}
+
+enum EscopoMeta {
+  EQUIPE
+  GARCOM
+  ESTACAO
+}
+
+enum TipoMeta {
+  VALOR
+  MESAS
+  NO_TEMPO
+  ESQUECIDOS
+}
+
+enum PeriodoMeta {
+  DIA
+  SEMANA
+}
+
+/// Meta definida pelo gerente. alvo: centavos (VALOR), mesas (MESAS), % (NO_TEMPO), 0 (ESQUECIDOS).
+/// GARCOM sem usuarioId = padrão de todos; com usuarioId = ajuste daquela pessoa.
+model Meta {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  escopo        EscopoMeta
+  tipo          TipoMeta
+  periodo       PeriodoMeta
+  alvo          Int
+  usuarioId     String?
+  estacao       String?
+  criadoEm      DateTime    @default(now())
+  atualizadoEm  DateTime    @updatedAt
+
+  @@index([restauranteId, escopo])
 }

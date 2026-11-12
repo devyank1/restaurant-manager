@@ -16,6 +16,7 @@ import { travarMesa } from '../sessao-mesa/trava';
 import { TempoRealService } from '../tempo-real/tempo-real.service';
 import { paraPublica, somarConfirmadas } from './mapear';
 import { COM_ITENS, RodadaPublica, RodadasDaMesa } from './rodadas.types';
+import { tempoEsperadoDe } from '../paineis/tempo-esperado';
 
 /** Lado do cliente: enviar o carrinho como rodada e ver as rodadas. */
 @Injectable()
@@ -101,6 +102,7 @@ export class RodadasService {
           quantidade: item.quantidade,
           precoUnitarioCentavos: precoUnitario(prato, selecao),
           estacao: prato.categoria.estacao,
+          tempoEsperadoMin: tempoEsperadoDe(prato),
         };
       });
       const total = congelados.reduce(
@@ -122,6 +124,8 @@ export class RodadasService {
           status: precisaConfirmar ? 'AGUARDANDO_GARCOM' : 'CONFIRMADA',
           confirmadaEm: precisaConfirmar ? null : agora,
           direta: !precisaConfirmar,
+          // Crédito do valor vendido: o responsável pela mesa na confirmação.
+          garcomId: precisaConfirmar ? null : sessao.garcomId,
           totalCentavos: total,
           itens: { create: congelados },
         },
