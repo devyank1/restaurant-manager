@@ -25,3 +25,13 @@ export function inicioDoDiaDeServico(agora: Date): Date {
   if (Number(p.hour) < HORA_VIRADA) dia -= 1;
   return new Date(Date.UTC(ano, mes, dia, HORA_VIRADA + DESLOCAMENTO_UTC));
 }
+
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+/** Início (segunda 05:00 em SP) da semana de serviço que contém `agora`. */
+export function inicioDaSemanaDeServico(agora: Date): Date {
+  const dia = inicioDoDiaDeServico(agora);
+  // 05:00 em SP é 08:00Z do mesmo dia do calendário: getUTCDay é o dia em SP.
+  const desdeSegunda = (dia.getUTCDay() + 6) % 7;
+  return new Date(dia.getTime() - desdeSegunda * DIA_MS);
+}
