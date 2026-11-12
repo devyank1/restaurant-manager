@@ -60,6 +60,18 @@
 
 O sistema nunca marca prato como esgotado sozinho: quando um item acaba, o Estoque mostra os pratos que usam ele e o gerente decide (**Marcar como esgotado**, ou em **Receitas**).
 
+## Painéis e metas
+
+1. **Uma vez, no banco de dev:** `pnpm --filter api dev:paineis`. Define 12 min nas Pizzas, 5 min no Bar, meta da equipe de R$ 3.000/dia, meta padrão do garçom de R$ 800/dia e, na Cozinha, 85% no tempo e zero esquecidos. Só preenche o que está vazio (não desfaz o que você mudou pelo app) e não cria vendas: os números vêm do uso real. Rodar de novo imprime "nada a fazer".
+2. Entre como dono em `http://localhost:5174`: o início é o painel da equipe (meta no topo, atalhos **Estoque**, **Metas** e **Tempo de preparo**, cartões da equipe e números da operação). **Hoje / Semana** troca o período.
+3. Em outro navegador, entre como Ana e ligue **Em turno**: o cartão dela aparece no painel do dono, e ela vê o **Meu dia** acima dos chamados.
+4. Peça pelo cardápio (`5173`) e a Ana confirma: o valor entra na barra dela e na da equipe. Na produção, o cartão fica amarelo depois do tempo esperado + 10% e vermelho no dobro.
+5. Feche a conta: conta uma mesa atendida para a Ana.
+6. Dono → **Metas** → baixe a meta da equipe para R$ 10 → **Salvar**. Na próxima venda, aparece "A equipe bateu a meta…" para todos (uma vez por dia).
+7. Entre como cozinha → **Hoje** na produção: pedidos de hoje, % no tempo e os esquecidos (sem nomes). **Voltar** no topo volta à fila.
+
+Abaixo da meta a barra fica cinza, nunca vermelha. Os avisos de cuidado ("X h em turno sem pausa", padrão 4 h em **Metas → Cuidado com a equipe**; "Pegou bem mais mesas que os colegas") aparecem em amarelo, só no cartão da pessoa.
+
 ## Celular com HTTPS (Tailscale)
 
 Notificação push, instalar como app e o botão "Ler etiqueta" (Web NFC) só funcionam em HTTPS.

@@ -22,6 +22,7 @@
     "dev:etapa3": "node scripts/dev-etapa3.mjs",
     "dev:conta": "node scripts/dev-conta.mjs",
     "dev:estoque": "node scripts/dev-estoque.mjs",
+    "dev:paineis": "node scripts/dev-paineis.mjs",
     "db:seed": "prisma db seed"
   },
   "dependencies": {
