@@ -136,6 +136,24 @@ describe('produção', () => {
     expect(bar.pedidos[0].itens.map((i) => i.nome)).toEqual(['Suco Natural']);
   });
 
+  it('produção manda esperadoMin da estação (o maior dos itens)', async () => {
+    await t.prisma.itemRodada.deleteMany();
+    const { rodadaId } = await pedido(token7, item(ids.mix), item(ids.pudim));
+    const itens = await t.prisma.itemRodada.findMany({ where: { rodadaId } });
+    await t.prisma.itemRodada.update({
+      where: { id: itens.find((i) => i.pratoId === ids.mix)!.id },
+      data: { tempoEsperadoMin: 25 },
+    });
+    await t.prisma.itemRodada.update({
+      where: { id: itens.find((i) => i.pratoId === ids.pudim)!.id },
+      data: { tempoEsperadoMin: 8 },
+    });
+    const [p] = (await fila('Cozinha')).pedidos as (PedidoProducao & {
+      esperadoMin: number;
+    })[];
+    expect(p.esperadoMin).toBe(25);
+  });
+
   it('estação desconhecida usa a primeira', async () => {
     await pedido(token7, item(ids.suco));
     const res = await fila('Churrasqueira');

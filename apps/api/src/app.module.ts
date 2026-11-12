@@ -10,6 +10,7 @@ import { EquipeModule } from './equipe/equipe.module';
 import { EstoqueModule } from './estoque/estoque.module';
 import { EventosModule } from './eventos/eventos.module';
 import { HealthModule } from './health/health.module';
+import { PaineisModule } from './paineis/paineis.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProducaoModule } from './producao/producao.module';
 import { PushModule } from './push/push.module';
@@ -23,6 +24,7 @@ import { TempoRealModule } from './tempo-real/tempo-real.module';
     EventEmitterModule.forRoot(),
     PrismaModule,
     EventosModule,
+    PaineisModule,
     TempoRealModule,
     HealthModule,
     CardapioPublicoModule,

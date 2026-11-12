@@ -3,6 +3,7 @@ import { vi } from 'vitest'
 import { calcularConta, precoUnitario, resumirOpcoes } from '@cardapio/opcoes'
 import type { CardapioPublico } from '../api/cardapio'
 import { estoqueVazio, rotaEstoque } from './estoque-falso'
+import { paineisVazio, rotaPaineis } from './paineis-falso'
 import type {
   ChamadoEquipe,
   FilaProducao,
@@ -32,6 +33,7 @@ export function criarApiFalsa() {
     /** Fila por estação; a primeira chave é a estação padrão. */
     producao: {} as Record<string, FilaProducao['pedidos']>,
     estoque: estoqueVazio(),
+    paineis: paineisVazio(),
   }
   const desvios: { metodo: string; padrao: RegExp; rota: Rota }[] = []
 
@@ -169,6 +171,8 @@ export function criarApiFalsa() {
       return { status: 404, corpo: { mensagem: 'Rodada não encontrada' } }
     }
     if (caminho.startsWith('/api/equipe/producao')) return producao(metodo, caminho, corpo)
+    const painel = rotaPaineis(estado.paineis, metodo, caminho, corpo)
+    if (painel) return painel
     if (caminho.startsWith('/api/equipe/estoque') || caminho.startsWith('/api/equipe/pratos/')) {
       return rotaEstoque(estado.estoque, metodo, caminho, corpo)
     }

@@ -13,8 +13,9 @@ const PROXIMO: Partial<Record<StatusItem, StatusProducao>> = {
   EM_PREPARO: 'PRONTO',
 }
 
-const ALERTA_MIN = 10
-const PERIGO_MIN = 20
+/** Amarelo: passou do esperado + 10%. Vermelho: passou do dobro [spec §4.1]. */
+const FOLGA = 1.1
+const DOBRO = 2
 
 export default function CartaoPedido({
   pedido,
@@ -43,8 +44,8 @@ export default function CartaoPedido({
   let classe = 'cartao-producao'
   if (pedido.cancelada) classe += ' cartao-producao--cancelado'
   else if (naFila || preparando) {
-    if (minutos >= PERIGO_MIN) classe += ' cartao-producao--perigo'
-    else if (minutos >= ALERTA_MIN) classe += ' cartao-producao--alerta'
+    if (minutos > pedido.esperadoMin * DOBRO) classe += ' cartao-producao--perigo'
+    else if (minutos > pedido.esperadoMin * FOLGA) classe += ' cartao-producao--alerta'
   }
 
   return (

@@ -26,6 +26,8 @@ export type PedidoProducao = {
   mesa: { numero: number };
   garcomNome: string | null;
   confirmadaEm: Date | null;
+  /** Maior tempo esperado (min) dos itens desta estação: cores do cartão. */
+  esperadoMin: number;
   cancelada: boolean;
   itens: ItemProducao[];
 };

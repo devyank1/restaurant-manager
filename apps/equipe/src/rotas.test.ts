@@ -25,6 +25,11 @@ describe('rotas', () => {
     expect(lerRota('/estoque/compras/f/granja', '')).toEqual({ nome: 'estoque-pedido', fornecedorId: 'granja' })
   })
 
+  it('telas de gestão', () => {
+    expect(lerRota('/tempos', '')).toEqual({ nome: 'tempos' })
+    expect(voltaDe({ nome: 'tempos' })).toBe('/')
+  })
+
   it('Voltar leva para a tela de cima', () => {
     expect(voltaDe({ nome: 'inicio' })).toBeNull()
     expect(voltaDe({ nome: 'mesas' })).toBe('/')

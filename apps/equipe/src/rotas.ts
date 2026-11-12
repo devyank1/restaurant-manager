@@ -7,6 +7,7 @@ export type Rota =
   | { nome: 'producao' }
   | { nome: 'mesa'; token: string }
   | { nome: 'estoque' }
+  | { nome: 'tempos' }
   | { nome: 'estoque-itens' }
   | { nome: 'estoque-item'; id: string }
   | { nome: 'estoque-fornecedores' }
@@ -28,6 +29,7 @@ export function lerRota(caminho: string, busca: string): Rota {
   }
   if (caminho === '/mesas') return { nome: 'mesas' }
   if (caminho === '/producao') return { nome: 'producao' }
+  if (caminho === '/tempos') return { nome: 'tempos' }
   const estoque = lerEstoque(caminho)
   if (estoque) return estoque
   const mesa = /^\/mesa\/([^/]+)$/.exec(caminho)?.[1]

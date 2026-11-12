@@ -9,6 +9,7 @@ import type { UsuarioToken } from '../equipe/equipe.types';
 import { exigirProducao } from '../equipe/papel';
 import { EventosService } from '../eventos/eventos.service';
 import type { TipoEvento } from '../eventos/eventos.types';
+import { TEMPO_PADRAO_MIN } from '../paineis/tempo-esperado';
 import { PrismaService } from '../prisma/prisma.service';
 import { travarMesa } from '../sessao-mesa/trava';
 import { TempoRealService } from '../tempo-real/tempo-real.service';
@@ -143,6 +144,9 @@ export class ProducaoService {
       mesa: { numero: r.sessao.mesa.numero },
       garcomNome: (r.sessao.garcomId && nomes.get(r.sessao.garcomId)) || null,
       confirmadaEm: r.confirmadaEm,
+      esperadoMin: r.itens.length
+        ? Math.max(...r.itens.map((i) => i.tempoEsperadoMin))
+        : TEMPO_PADRAO_MIN,
       cancelada: r.status === 'CANCELADA',
       itens: r.itens.map((i) => ({
         id: i.id,

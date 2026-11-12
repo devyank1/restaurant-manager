@@ -21,6 +21,7 @@ function pedido(mesa: number, itens: Partial<PedidoProducao['itens'][number]>[],
     mesa: { numero: mesa },
     garcomNome: 'Ana',
     confirmadaEm: minutosAtras(2),
+    esperadoMin: 15,
     cancelada: false,
     itens: itens.map((i, n) => ({
       id: `i-${mesa}-${n}`,
@@ -157,10 +158,10 @@ describe('TelaProducao', () => {
     expect(tocarBipe).toHaveBeenCalledTimes(1)
   })
 
-  it('tempo passa de 10 min → cartão em alerta', async () => {
+  it('passou do esperado + 10% → alerta; do dobro → perigo', async () => {
     api.estado.producao.Cozinha = [
-      pedido(5, [{ nome: 'Pudim de Leite' }], { confirmadaEm: minutosAtras(11) }),
-      pedido(6, [{ nome: 'Pudim de Leite' }], { confirmadaEm: minutosAtras(21) }),
+      pedido(5, [{ nome: 'Pudim de Leite' }], { confirmadaEm: minutosAtras(11), esperadoMin: 8 }),
+      pedido(6, [{ nome: 'Pudim de Leite' }], { confirmadaEm: minutosAtras(21), esperadoMin: 10 }),
     ]
     render(<TelaProducao />)
     expect(await cartao(5)).toHaveClass('cartao-producao--alerta')

@@ -97,6 +97,8 @@ export type PedidoProducao = {
   mesa: { numero: number }
   garcomNome: string | null
   confirmadaEm: string | null
+  /** Maior tempo esperado (min) dos itens desta estação. */
+  esperadoMin: number
   cancelada: boolean
   itens: ItemProducao[]
 }
@@ -193,3 +195,15 @@ export type ListaCompra = {
   /** Nome do restaurante (texto do pedido no WhatsApp). */
   restaurante: string
   criadaEm: string; chegouEm: string | null; grupos: GrupoCompra[] }
+
+// ---------- Etapa 4B: painéis, metas e tempos ----------
+
+export type TemposCardapio = {
+  categorias: {
+    id: string
+    nome: string
+    estacao: string
+    tempoPreparoMin: number | null
+    pratos: { id: string; nome: string; tempoPreparoMin: number | null }[]
+  }[]
+}
