@@ -1,6 +1,16 @@
 // Chamadas da etapa 4B: tempos de preparo, metas e painéis.
 import { chamar, enc, json } from './equipe'
-import type { MetaPessoa, MetasConfig, MetaValor, TemposCardapio, TipoPessoa } from './tipos'
+import type {
+  MetaPessoa,
+  MetasConfig,
+  MetaValor,
+  PainelEquipe,
+  PainelEstacao,
+  PainelGarcom,
+  PeriodoMeta,
+  TemposCardapio,
+  TipoPessoa,
+} from './tipos'
 
 const E = '/api/equipe'
 
@@ -26,3 +36,8 @@ export const salvarMetaEstacao = (estacao: string, v: { noTempoPct: number | nul
   chamar<object>(`${E}/metas/estacao/${enc(estacao)}`, json('PUT', v))
 export const salvarHorasSemPausa = (horasSemPausa: number) =>
   chamar<object>(`${E}/configuracoes/painel`, json('PATCH', { horasSemPausa }))
+
+// Painéis
+export const buscarPainel = (periodo: PeriodoMeta) => chamar<PainelEquipe>(`${E}/painel?periodo=${periodo}`)
+export const buscarMeuPainel = () => chamar<PainelGarcom>(`${E}/painel/eu`)
+export const buscarPainelEstacao = (estacao: string) => chamar<PainelEstacao>(`${E}/painel/estacao/${enc(estacao)}`)

@@ -8,6 +8,7 @@ import TelaTempos from './gestao/TelaTempos'
 import Inicio from './inicio/Inicio'
 import Topo from './inicio/Topo'
 import Login from './login/Login'
+import Comemoracao from './paineis/Comemoracao'
 import TelaMesa from './mesa/TelaMesa'
 import TodasMesas from './mesas/TodasMesas'
 import TelaProducao from './producao/TelaProducao'
@@ -54,6 +55,7 @@ export default function App() {
         onSair={sair}
         volta={usuario.papel === 'COZINHA' ? null : voltaDe(rota)}
       />
+      <Comemoracao />
       {usuario.papel === 'COZINHA' ? (
         // A cozinha só usa a tela da produção.
         <TelaProducao />

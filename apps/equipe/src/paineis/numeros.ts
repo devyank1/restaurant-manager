@@ -1,4 +1,37 @@
-// Números digitados nas telas de metas (pt-BR: "1.500,50").
+// Números das metas: o que se digita (pt-BR: "1.500,50") e o que se mostra.
+import { formatarReais } from '@cardapio/opcoes'
+import type { MetaBatida, PeriodoMeta, ProgressoMeta } from '../api/tipos'
+
+const mesas = (n: number) => `${n} ${n === 1 ? 'mesa' : 'mesas'}`
+
+export const textoPeriodo = (p: PeriodoMeta) => (p === 'DIA' ? 'hoje' : 'na semana')
+
+/** "R$ 1.200,00 de R$ 2.000,00", "6 de 10 mesas", "82% no tempo · meta 85%"… */
+export function textoMeta(m: ProgressoMeta): string {
+  switch (m.tipo) {
+    case 'VALOR':
+      return `${formatarReais(m.atual)} de ${formatarReais(m.alvo)}`
+    case 'MESAS':
+      return `${m.atual} de ${mesas(m.alvo)}`
+    case 'NO_TEMPO':
+      return `${m.atual}% no tempo · meta ${m.alvo}%`
+    case 'ESQUECIDOS':
+      return m.atual === 0 ? 'Nenhum esquecido' : `${m.atual} ${m.atual === 1 ? 'esquecido' : 'esquecidos'}`
+  }
+}
+
+/** "R$ 2.000,00 hoje", "30 mesas na semana". */
+export function textoAlvo(m: MetaBatida): string {
+  const quanto =
+    m.tipo === 'VALOR'
+      ? formatarReais(m.alvo)
+      : m.tipo === 'MESAS'
+        ? mesas(m.alvo)
+        : m.tipo === 'NO_TEMPO'
+          ? `${m.alvo}% no tempo`
+          : 'nenhum esquecido'
+  return `${quanto} ${textoPeriodo(m.periodo)}`
+}
 
 /** Reais digitados → centavos; inválido ou ≤ 0 → null. */
 export function lerReais(texto: string): number | null {

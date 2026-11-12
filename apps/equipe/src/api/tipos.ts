@@ -222,3 +222,63 @@ export type MetasConfig = {
 }
 
 export type MetaPessoa = { id: string; nome: string } & Record<TipoPessoa, { padrao: MetaValor; ajuste: number | null }>
+
+export type ProgressoMeta = {
+  tipo: TipoMeta
+  periodo: PeriodoMeta
+  alvo: number
+  atual: number
+  batida: boolean
+  /** 0 a 100, para a barra. */
+  pct: number
+}
+
+export type CartaoPessoa = {
+  id: string
+  nome: string
+  emTurno: boolean
+  emTurnoDesde: string | null
+  avisos: string[]
+  metas: ProgressoMeta[]
+  mesasHoje: number
+}
+
+export type MedidaEstacao = {
+  estacao: string
+  pedidos: number
+  avaliados: number
+  noTempo: number
+  noTempoPct: number | null
+  mediaMin: number | null
+  esquecidos: { rodadaId: string; mesa: number; minutos: number }[]
+}
+
+export type PainelEquipe = {
+  periodo: PeriodoMeta
+  inicio: string
+  metaEquipe: ProgressoMeta[]
+  pessoas: CartaoPessoa[]
+  operacao: {
+    faturamentoCentavos: number
+    contas: number
+    ticketMedioCentavos: number | null
+    porHora: { hora: number; rodadas: number }[]
+    porDiaSemana: { dia: number; mediaRodadas: number }[]
+    maisVendidos: { nome: string; quantidade: number }[]
+    estacoes: MedidaEstacao[]
+    chamadosDemorados: { quantidade: number; mediaRespostaSeg: number | null }
+    perdasSemana: { item: string; unidade: Unidade; quantidade: number; motivo: MotivoPerda | null }[]
+  }
+}
+
+export type PainelGarcom = { metaEquipe: ProgressoMeta[]; eu: CartaoPessoa }
+
+export type PainelEstacao = {
+  estacao: string
+  metaEquipe: ProgressoMeta[]
+  metas: ProgressoMeta[]
+  medida: MedidaEstacao
+}
+
+/** Dados do socket `meta-batida`. */
+export type MetaBatida = { tipo: TipoMeta; periodo: PeriodoMeta; alvo: number }
