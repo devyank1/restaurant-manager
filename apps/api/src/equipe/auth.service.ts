@@ -4,6 +4,8 @@ import { Usuario } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsuarioEquipe, UsuarioToken } from './equipe.types';
 import { conferirSenha } from './senha';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TURNO_MUDOU, type TurnoMudou } from '../paineis/paineis.types';
 
 type PayloadJwt = { sub: string; restauranteId: string; papel: string };
 
@@ -12,6 +14,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly emissor: EventEmitter2,
   ) {}
 
   /** null quando e-mail ou senha não conferem (sem dizer qual). */
@@ -91,6 +94,8 @@ export class AuthService {
       }
       return u;
     });
+    const aviso: TurnoMudou = { restauranteId: usuario.restauranteId };
+    this.emissor.emit(TURNO_MUDOU, aviso);
     return paraUsuarioEquipe(usuario);
   }
 }

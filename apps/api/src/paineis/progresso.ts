@@ -11,9 +11,15 @@ export type ProgressoMeta = {
 };
 
 export function progresso(
-  meta: { tipo: TipoMeta; periodo: PeriodoMeta; alvo: number },
+  {
+    tipo,
+    periodo,
+    alvo,
+  }: { tipo: TipoMeta; periodo: PeriodoMeta; alvo: number },
   atual: number,
 ): ProgressoMeta {
+  // Só os três campos: a linha da Meta tem ids que não vão para a tela.
+  const meta = { tipo, periodo, alvo };
   if (meta.tipo === 'ESQUECIDOS') {
     const batida = atual === 0;
     return { ...meta, atual, batida, pct: batida ? 100 : 0 };
