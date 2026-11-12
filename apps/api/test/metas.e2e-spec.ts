@@ -155,6 +155,21 @@ describe('metas', () => {
     expect(await t.prisma.meta.count()).toBe(0);
   });
 
+  it('mudar o período do padrão apaga os ajustes', async () => {
+    await put('/equipe/metas/garcom/VALOR', { periodo: 'DIA', alvo: 80000 });
+    await put(`/equipe/metas/garcom/pessoa/${anaId}/VALOR`, { alvo: 40000 });
+    await put('/equipe/metas/garcom/VALOR', { periodo: 'DIA', alvo: 90000 });
+    expect((await pessoa(anaId)).VALOR.ajuste).toBe(40000);
+    await put('/equipe/metas/garcom/VALOR', {
+      periodo: 'SEMANA',
+      alvo: 500000,
+    }).expect(200);
+    expect((await pessoa(anaId)).VALOR).toEqual({
+      padrao: { periodo: 'SEMANA', alvo: 500000 },
+      ajuste: null,
+    });
+  });
+
   it('pessoa que não é garçom dá 404', async () => {
     await http()
       .get(`/equipe/metas/garcom/pessoa/${daniId}`)

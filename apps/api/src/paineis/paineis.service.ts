@@ -113,14 +113,14 @@ export class PaineisService {
       metaEquipe,
       metas: metas
         .sort((a, b) => ordem.indexOf(a.tipo) - ordem.indexOf(b.tipo))
-        .map((m) =>
-          progresso(
-            m,
-            m.tipo === 'ESQUECIDOS'
-              ? medida.esquecidos.length
-              : (medida.noTempoPct ?? 0),
-          ),
-        ),
+        .map((m) => {
+          if (m.tipo !== 'ESQUECIDOS') {
+            return progresso(m, medida.noTempoPct ?? 0);
+          }
+          // "Zero esquecidos na noite" só se fecha no fim do dia: com o dia
+          // em andamento, nenhum esquecido é barra cheia mas sem comemorar.
+          return { ...progresso(m, medida.esquecidos.length), batida: false };
+        }),
       medida,
     };
   }

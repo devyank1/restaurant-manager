@@ -562,6 +562,30 @@ describe('painéis', () => {
       expect(JSON.stringify(corpo)).not.toMatch(/Ana|Bruno|Dani/);
     });
 
+    it('zero esquecidos não comemora com a noite em andamento', async () => {
+      await meta({
+        escopo: 'ESTACAO',
+        tipo: 'ESQUECIDOS',
+        alvo: 0,
+        estacao: 'Cozinha',
+      });
+      const res = await http()
+        .get('/equipe/painel/estacao/Cozinha')
+        .set('Cookie', cozinha)
+        .expect(200);
+      const { metas } = res.body as { metas: Progresso[] };
+      expect(metas).toEqual([
+        {
+          tipo: 'ESQUECIDOS',
+          periodo: 'DIA',
+          alvo: 0,
+          atual: 0,
+          batida: false,
+          pct: 100,
+        },
+      ]);
+    });
+
     it('perdas da semana sem nome de quem avisou', async () => {
       const item = await t.prisma.itemEstoque.create({
         data: {

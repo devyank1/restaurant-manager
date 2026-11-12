@@ -103,11 +103,20 @@ export class MetasService {
     exigirDono(usuario);
     const r = usuario.restauranteId;
     await this.naTrava(r, async (tx) => {
+      const antes = await tx.meta.findFirst({
+        where: { restauranteId: r, escopo: 'GARCOM', tipo, usuarioId: null },
+      });
       await this.gravar(r, { escopo: 'GARCOM', tipo }, valor, tx);
-      // Sem padrão, os ajustes por pessoa perdem o sentido.
-      if (!valor) {
+      // Sem padrão, ou com outro período (dia ↔ semana), os ajustes por
+      // pessoa perdem o sentido: R$ 400/dia não vira R$ 400/semana.
+      if (!valor || (antes && antes.periodo !== valor.periodo)) {
         await tx.meta.deleteMany({
-          where: { restauranteId: r, escopo: 'GARCOM', tipo },
+          where: {
+            restauranteId: r,
+            escopo: 'GARCOM',
+            tipo,
+            usuarioId: { not: null },
+          },
         });
       }
     });

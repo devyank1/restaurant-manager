@@ -27,7 +27,8 @@ export function textoMeta(m: ProgressoMeta): string {
     case 'NO_TEMPO':
       return `${m.atual}% no tempo · meta ${m.alvo}%`
     case 'ESQUECIDOS':
-      return m.atual === 0 ? 'Nenhum esquecido' : `${m.atual} ${m.atual === 1 ? 'esquecido' : 'esquecidos'}`
+      if (m.atual > 0) return `${m.atual} ${m.atual === 1 ? 'esquecido' : 'esquecidos'}`
+      return m.batida ? 'Nenhum esquecido' : 'Nenhum esquecido até agora'
   }
 }
 
