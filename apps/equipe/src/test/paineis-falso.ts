@@ -30,6 +30,25 @@ export const medidaVazia = (estacao: string): MedidaEstacao => ({
   esquecidos: [],
 })
 
+/** Painel do garçom com valores neutros (sobrescreve o que o teste pedir). */
+export function meuPainel(
+  p: { metaEquipe?: PainelGarcom['metaEquipe']; eu?: Partial<PainelGarcom['eu']> } = {},
+): PainelGarcom {
+  return {
+    metaEquipe: p.metaEquipe ?? [],
+    eu: {
+      id: 'u-ana',
+      nome: 'Ana',
+      emTurno: true,
+      emTurnoDesde: null,
+      avisos: [],
+      metas: [],
+      mesasHoje: 0,
+      ...p.eu,
+    },
+  }
+}
+
 export function painelVazio(): PainelEquipe {
   return {
     periodo: 'DIA',
@@ -62,7 +81,7 @@ export function paineisVazio(): PaineisFalso {
     },
     pessoas: {},
     equipe: painelVazio(),
-    eu: null,
+    eu: meuPainel(),
     estacoes: {},
   }
 }

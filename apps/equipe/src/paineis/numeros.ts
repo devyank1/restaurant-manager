@@ -2,6 +2,17 @@
 import { formatarReais } from '@cardapio/opcoes'
 import type { MetaBatida, PeriodoMeta, ProgressoMeta } from '../api/tipos'
 
+const horaSP = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+/** "Em turno desde 18:00" ou "Fora do turno". */
+export function textoTurno(emTurno: boolean, desde: string | null): string {
+  return emTurno && desde ? `Em turno desde ${horaSP.format(new Date(desde))}` : 'Fora do turno'
+}
+
 const mesas = (n: number) => `${n} ${n === 1 ? 'mesa' : 'mesas'}`
 
 export const textoPeriodo = (p: PeriodoMeta) => (p === 'DIA' ? 'hoje' : 'na semana')

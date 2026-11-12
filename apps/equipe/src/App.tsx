@@ -9,6 +9,7 @@ import Inicio from './inicio/Inicio'
 import Topo from './inicio/Topo'
 import Login from './login/Login'
 import Comemoracao from './paineis/Comemoracao'
+import PainelEstacao from './paineis/PainelEstacao'
 import TelaMesa from './mesa/TelaMesa'
 import TodasMesas from './mesas/TodasMesas'
 import TelaProducao from './producao/TelaProducao'
@@ -53,12 +54,16 @@ export default function App() {
         usuario={usuario}
         onMudou={setUsuario}
         onSair={sair}
-        volta={usuario.papel === 'COZINHA' ? null : voltaDe(rota)}
+        volta={usuario.papel !== 'COZINHA' || rota.nome === 'hoje' ? voltaDe(rota) : null}
       />
       <Comemoracao />
       {usuario.papel === 'COZINHA' ? (
-        // A cozinha só usa a tela da produção.
-        <TelaProducao />
+        // A cozinha usa a produção e o "Hoje" da estação.
+        rota.nome === 'hoje' ? (
+          <PainelEstacao key={rota.estacao} estacao={rota.estacao} />
+        ) : (
+          <TelaProducao />
+        )
       ) : usuario.papel === 'DONO' ? (
         // O dono não cuida do salão nem da produção: início e estoque.
         rota.nome.startsWith('estoque') ? (

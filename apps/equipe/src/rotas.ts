@@ -8,6 +8,7 @@ export type Rota =
   | { nome: 'mesa'; token: string }
   | { nome: 'estoque' }
   | { nome: 'tempos' }
+  | { nome: 'hoje'; estacao: string }
   | { nome: 'metas' }
   | { nome: 'meta-pessoa'; id: string }
   | { nome: 'estoque-itens' }
@@ -32,6 +33,8 @@ export function lerRota(caminho: string, busca: string): Rota {
   if (caminho === '/mesas') return { nome: 'mesas' }
   if (caminho === '/producao') return { nome: 'producao' }
   if (caminho === '/tempos') return { nome: 'tempos' }
+  const hoje = /^\/hoje\/([^/]+)$/.exec(caminho)?.[1]
+  if (hoje) return { nome: 'hoje', estacao: decodeURIComponent(hoje) }
   if (caminho === '/metas') return { nome: 'metas' }
   const pessoa = /^\/metas\/garcom\/([^/]+)$/.exec(caminho)?.[1]
   if (pessoa) return { nome: 'meta-pessoa', id: decodeURIComponent(pessoa) }

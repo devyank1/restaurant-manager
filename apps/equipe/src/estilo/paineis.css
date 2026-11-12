@@ -243,3 +243,8 @@
   list-style: none;
   padding-left: 0;
 }
+
+.titulo-painel {
+  margin: 0;
+  font-size: var(--t-lg);
+}

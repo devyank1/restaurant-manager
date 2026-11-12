@@ -32,6 +32,9 @@ describe('rotas', () => {
     expect(lerRota('/metas/garcom/u%2D1', '')).toEqual({ nome: 'meta-pessoa', id: 'u-1' })
     expect(voltaDe({ nome: 'metas' })).toBe('/')
     expect(voltaDe({ nome: 'meta-pessoa', id: 'x' })).toBe('/metas')
+    expect(lerRota('/hoje/Cozinha', '')).toEqual({ nome: 'hoje', estacao: 'Cozinha' })
+    expect(lerRota('/hoje/Caf%C3%A9', '')).toEqual({ nome: 'hoje', estacao: 'Café' })
+    expect(voltaDe({ nome: 'hoje', estacao: 'Bar' })).toBe('/')
   })
 
   it('Voltar leva para a tela de cima', () => {

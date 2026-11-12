@@ -4,6 +4,7 @@ import { buscarChamados, buscarMesas } from '../api/equipe'
 import type { ChamadoEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
 import { lerEtiqueta, suportaNfc } from '../nfc/lerEtiqueta'
 import { ativarNotificacoes, estadoNotificacoes, type EstadoPush } from '../push/ativarNotificacoes'
+import MeuDia from '../paineis/MeuDia'
 import PainelEquipe from '../paineis/PainelEquipe'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
@@ -97,6 +98,8 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
 
       {!dono && (
       <>
+      {usuario.papel === 'GARCOM' && <MeuDia />}
+
       <section aria-labelledby="titulo-chamados">
         <h2 id="titulo-chamados">Chamados</h2>
         {chamados === null ? (

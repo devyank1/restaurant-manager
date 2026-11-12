@@ -3,12 +3,7 @@ import type { CartaoPessoa, ProgressoMeta } from '../api/tipos'
 import { navegar } from '../rotas'
 import '../estilo/paineis.css'
 import BarraMeta from './BarraMeta'
-
-const horaSP = new Intl.DateTimeFormat('pt-BR', {
-  timeZone: 'America/Sao_Paulo',
-  hour: '2-digit',
-  minute: '2-digit',
-})
+import { textoTurno } from './numeros'
 
 const ROTULO_EQUIPE: Record<string, string> = {
   VALOR: 'Valor vendido pela equipe',
@@ -51,7 +46,7 @@ export function Cartao({ p }: { p: CartaoPessoa }) {
       ))}
       <h3>{p.nome}</h3>
       <p className="cartao-pessoa-turno">
-        {p.emTurno && p.emTurnoDesde ? `Em turno desde ${horaSP.format(new Date(p.emTurnoDesde))}` : 'Fora do turno'}
+        {textoTurno(p.emTurno, p.emTurnoDesde)}
         {` · ${p.mesasHoje} ${p.mesasHoje === 1 ? 'mesa' : 'mesas'} hoje`}
       </p>
       {p.metas.length === 0 ? (

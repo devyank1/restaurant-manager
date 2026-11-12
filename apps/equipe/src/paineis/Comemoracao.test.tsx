@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -24,6 +24,8 @@ describe('Comemoração', () => {
   it('socket meta-batida mostra a faixa para quem está logado', async () => {
     render(<App />)
     expect(await screen.findByText('Ana', undefined, { timeout: 3000 })).toBeInTheDocument()
+    // O socket abre no efeito, depois do primeiro desenho: espera alguém ouvir.
+    await waitFor(() => expect(socketsFalsos.some((s) => s.ouve('meta-batida'))).toBe(true))
     act(() => {
       for (const s of socketsFalsos) s.servidor('meta-batida', bateu)
     })

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { buscarProducao, ErroEquipe, ErroNaoAutenticado, mudarItemProducao, mudarRodadaProducao } from '../api/equipe'
 import type { FilaProducao, PedidoProducao } from '../api/tipos'
+import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
 import { useMaisRecente } from '../tempo-real/useMaisRecente'
 import CartaoPedido from './CartaoPedido'
@@ -143,6 +144,13 @@ export default function TelaProducao() {
             Ativar som
           </button>
         )}
+        <button
+          type="button"
+          className="botao botao--secundario"
+          onClick={() => navegar(`/hoje/${encodeURIComponent(atual)}`)}
+        >
+          Hoje
+        </button>
       </div>
 
       {andando.length === 0 ? (

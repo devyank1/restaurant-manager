@@ -55,6 +55,19 @@ describe('App da equipe', () => {
     expect(screen.queryByText('Chamados')).not.toBeInTheDocument()
   })
 
+  it('cozinha abre Hoje pela produção e volta pelo topo', async () => {
+    api.estado.usuario = { ...dani }
+    api.estado.producao = { Cozinha: [] }
+    render(<App />)
+    expect(screen.queryByRole('button', { name: 'Voltar' })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Hoje' }))
+    expect(window.location.pathname).toBe('/hoje/Cozinha')
+    expect(await screen.findByText('Pedidos hoje: 0')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(window.location.pathname).toBe('/')
+    expect(await screen.findByRole('button', { name: 'Cozinha' })).toBeInTheDocument()
+  })
+
   it('sessão aberta vai direto para o início', async () => {
     api.estado.usuario = { ...ana }
     render(<App />)
