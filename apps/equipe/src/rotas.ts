@@ -8,6 +8,8 @@ export type Rota =
   | { nome: 'mesa'; token: string }
   | { nome: 'estoque' }
   | { nome: 'tempos' }
+  | { nome: 'metas' }
+  | { nome: 'meta-pessoa'; id: string }
   | { nome: 'estoque-itens' }
   | { nome: 'estoque-item'; id: string }
   | { nome: 'estoque-fornecedores' }
@@ -30,6 +32,9 @@ export function lerRota(caminho: string, busca: string): Rota {
   if (caminho === '/mesas') return { nome: 'mesas' }
   if (caminho === '/producao') return { nome: 'producao' }
   if (caminho === '/tempos') return { nome: 'tempos' }
+  if (caminho === '/metas') return { nome: 'metas' }
+  const pessoa = /^\/metas\/garcom\/([^/]+)$/.exec(caminho)?.[1]
+  if (pessoa) return { nome: 'meta-pessoa', id: decodeURIComponent(pessoa) }
   const estoque = lerEstoque(caminho)
   if (estoque) return estoque
   const mesa = /^\/mesa\/([^/]+)$/.exec(caminho)?.[1]
@@ -71,6 +76,8 @@ export function voltaDe(rota: Rota): string | null {
       return '/estoque/receitas'
     case 'estoque-pedido':
       return '/estoque/compras'
+    case 'meta-pessoa':
+      return '/metas'
     case 'estoque-itens':
     case 'estoque-receitas':
     case 'estoque-fornecedores':

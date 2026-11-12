@@ -28,6 +28,10 @@ describe('rotas', () => {
   it('telas de gestão', () => {
     expect(lerRota('/tempos', '')).toEqual({ nome: 'tempos' })
     expect(voltaDe({ nome: 'tempos' })).toBe('/')
+    expect(lerRota('/metas', '')).toEqual({ nome: 'metas' })
+    expect(lerRota('/metas/garcom/u%2D1', '')).toEqual({ nome: 'meta-pessoa', id: 'u-1' })
+    expect(voltaDe({ nome: 'metas' })).toBe('/')
+    expect(voltaDe({ nome: 'meta-pessoa', id: 'x' })).toBe('/metas')
   })
 
   it('Voltar leva para a tela de cima', () => {

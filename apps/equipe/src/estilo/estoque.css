@@ -410,3 +410,36 @@ a.botao {
 .linha-estoque a.botao {
   margin-top: var(--e-2);
 }
+
+/* Metas */
+.editor-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0 0 var(--e-4);
+  padding: var(--e-3) 0 0;
+  border: 0;
+  border-top: 1px solid var(--borda);
+  min-width: 0;
+}
+
+.editor-meta legend {
+  padding: 0;
+  font-size: var(--t-md);
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.interruptor-linha {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  min-height: 44px;
+  font-size: var(--t-md);
+  color: var(--texto);
+}
+
+.interruptor-linha input {
+  width: 24px;
+  height: 24px;
+}

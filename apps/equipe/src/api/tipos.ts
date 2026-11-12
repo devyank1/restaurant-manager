@@ -207,3 +207,18 @@ export type TemposCardapio = {
     pratos: { id: string; nome: string; tempoPreparoMin: number | null }[]
   }[]
 }
+
+export type TipoMeta = 'VALOR' | 'MESAS' | 'NO_TEMPO' | 'ESQUECIDOS'
+export type PeriodoMeta = 'DIA' | 'SEMANA'
+export type TipoPessoa = 'VALOR' | 'MESAS'
+export type MetaValor = { periodo: PeriodoMeta; alvo: number } | null
+
+export type MetasConfig = {
+  equipe: Record<TipoPessoa, MetaValor>
+  garcomPadrao: Record<TipoPessoa, MetaValor>
+  estacoes: { estacao: string; noTempoPct: number | null; zeroEsquecidos: boolean }[]
+  garcons: { id: string; nome: string }[]
+  horasSemPausa: number
+}
+
+export type MetaPessoa = { id: string; nome: string } & Record<TipoPessoa, { padrao: MetaValor; ajuste: number | null }>

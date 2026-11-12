@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { eu, logout } from './api/equipe'
 import type { UsuarioEquipe } from './api/tipos'
 import TelaEstoqueRotas from './estoque/TelaEstoqueRotas'
+import TelaMetaPessoa from './gestao/TelaMetaPessoa'
+import TelaMetas from './gestao/TelaMetas'
 import TelaTempos from './gestao/TelaTempos'
 import Inicio from './inicio/Inicio'
 import Topo from './inicio/Topo'
@@ -61,6 +63,10 @@ export default function App() {
           <TelaEstoqueRotas rota={rota} />
         ) : rota.nome === 'tempos' ? (
           <TelaTempos />
+        ) : rota.nome === 'metas' ? (
+          <TelaMetas />
+        ) : rota.nome === 'meta-pessoa' ? (
+          <TelaMetaPessoa key={rota.id} id={rota.id} />
         ) : (
           <Inicio usuario={usuario} />
         )
