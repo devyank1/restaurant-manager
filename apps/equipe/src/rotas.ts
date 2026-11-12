@@ -13,6 +13,7 @@ export type Rota =
   | { nome: 'estoque-receitas' }
   | { nome: 'estoque-receita'; pratoId: string }
   | { nome: 'estoque-compras' }
+  | { nome: 'estoque-pedido'; fornecedorId: string }
   | { nome: 'estoque-chegou'; listaId: string }
 
 /** Só caminho interno (evita mandar para outro site depois do login). */
@@ -49,9 +50,34 @@ function lerEstoque(caminho: string): Rota | null {
   if (item) return { nome: 'estoque-item', id: item }
   const prato = id(/^\/estoque\/receitas\/([^/]+)$/)
   if (prato) return { nome: 'estoque-receita', pratoId: prato }
+  const fornecedor = id(/^\/estoque\/compras\/f\/([^/]+)$/)
+  if (fornecedor) return { nome: 'estoque-pedido', fornecedorId: fornecedor }
   const lista = id(/^\/estoque\/compras\/([^/]+)\/chegou$/)
   if (lista) return { nome: 'estoque-chegou', listaId: lista }
   return null
+}
+
+/** Tela de cima, para o botão Voltar do topo (null no início). */
+export function voltaDe(rota: Rota): string | null {
+  switch (rota.nome) {
+    case 'inicio':
+    case 'login':
+      return null
+    case 'estoque-item':
+      return '/estoque/itens'
+    case 'estoque-receita':
+      return '/estoque/receitas'
+    case 'estoque-pedido':
+      return '/estoque/compras'
+    case 'estoque-itens':
+    case 'estoque-receitas':
+    case 'estoque-fornecedores':
+    case 'estoque-compras':
+    case 'estoque-chegou':
+      return '/estoque'
+    default:
+      return '/'
+  }
 }
 
 const MUDOU = 'popstate'

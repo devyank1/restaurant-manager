@@ -165,13 +165,14 @@ describe('Início', () => {
     expect(await within(minhas).findByText('2 prontos')).toHaveClass('selo--sucesso')
   })
 
-  it('dono vê o botão Produção e o garçom não', async () => {
-    const { unmount } = renderizar()
-    await screen.findByText('Nenhum chamado agora')
-    expect(screen.queryByRole('button', { name: 'Produção' })).not.toBeInTheDocument()
-    unmount()
+  it('dono não vê chamados, mesas nem produção: só o Estoque', async () => {
+    api.estado.chamados = [chamado({ id: 'c1' })]
     render(<Inicio usuario={{ ...ana, papel: 'DONO', emTurno: true }} />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Produção' }))
-    expect(window.location.pathname).toBe('/producao')
+    expect(await screen.findByRole('button', { name: 'Estoque' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Chamados' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Minhas mesas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Todas as mesas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Produção' })).not.toBeInTheDocument()
+    expect(api.chamadas('GET', /\/api\/equipe\/chamados$/)).toHaveLength(0)
   })
 })

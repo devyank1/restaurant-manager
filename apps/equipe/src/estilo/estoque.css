@@ -314,3 +314,99 @@ a.botao {
   font-size: var(--t-md);
   color: var(--texto);
 }
+
+/* ---------- Respiro e telas estreitas ---------- */
+.tela-estoque {
+  padding-bottom: var(--e-5);
+}
+
+.tela-estoque > .linha-estoque-sub {
+  display: block;
+  margin: 0 0 var(--e-4);
+}
+
+.bloco-estoque ul,
+.lista-estoque {
+  gap: var(--e-3);
+}
+
+.bloco-estoque h3 {
+  margin-bottom: var(--e-3);
+}
+
+.estoque-acoes {
+  gap: var(--e-3);
+  margin: var(--e-5) 0;
+}
+
+/* Linha de receita: campo + Remover quebram de linha no celular. */
+.linha-receita {
+  flex-wrap: wrap;
+  padding-bottom: var(--e-3);
+  border-bottom: 1px solid var(--borda);
+}
+
+.linha-receita .campo-quantidade {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.campo-quantidade,
+.campo-quantidade-linha,
+.form-estoque label {
+  min-width: 0;
+}
+
+.campo-quantidade + .estoque-acoes,
+.linha-receita + .campo-quantidade,
+.bloco-estoque > ul + .campo-quantidade {
+  margin-top: var(--e-3);
+}
+
+/* Linha do pedido / chegada: nome em cima, campos embaixo. */
+.linha-compra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  padding-bottom: var(--e-3);
+  border-bottom: 1px solid var(--borda);
+}
+
+.linha-compra:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.linha-compra-campos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+.linha-compra-campos > * {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.linha-compra-campos input,
+.linha-compra-campos select {
+  width: 100%;
+  min-width: 0;
+}
+
+.botao--pequeno {
+  min-height: 40px;
+  padding: var(--e-1) var(--e-3);
+  font-size: var(--t-sm);
+}
+
+.linha-estoque--destaque {
+  border-color: var(--alerta);
+  background: var(--alerta-fundo);
+  font-weight: 700;
+}
+
+.linha-estoque .botao,
+.linha-estoque a.botao {
+  margin-top: var(--e-2);
+}

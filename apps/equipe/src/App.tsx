@@ -8,7 +8,7 @@ import Login from './login/Login'
 import TelaMesa from './mesa/TelaMesa'
 import TodasMesas from './mesas/TodasMesas'
 import TelaProducao from './producao/TelaProducao'
-import { caminhoAtual, navegar, useRota } from './rotas'
+import { caminhoAtual, navegar, useRota, voltaDe } from './rotas'
 import './estilo/app.css'
 
 export default function App() {
@@ -45,19 +45,24 @@ export default function App() {
 
   return (
     <div className="app">
-      <Topo usuario={usuario} onMudou={setUsuario} onSair={sair} />
+      <Topo
+        usuario={usuario}
+        onMudou={setUsuario}
+        onSair={sair}
+        volta={usuario.papel === 'COZINHA' ? null : voltaDe(rota)}
+      />
       {usuario.papel === 'COZINHA' ? (
         // A cozinha só usa a tela da produção.
         <TelaProducao />
+      ) : usuario.papel === 'DONO' ? (
+        // O dono não cuida do salão nem da produção: início e estoque.
+        rota.nome.startsWith('estoque') ? <TelaEstoqueRotas rota={rota} /> : <Inicio usuario={usuario} />
       ) : (
         <>
           {rota.nome === 'inicio' && <Inicio usuario={usuario} />}
           {rota.nome === 'mesas' && <TodasMesas />}
           {rota.nome === 'mesa' && <TelaMesa key={rota.token} token={rota.token} />}
-          {rota.nome === 'producao' &&
-            (usuario.papel === 'DONO' ? <TelaProducao /> : <Inicio usuario={usuario} />)}
-          {rota.nome.startsWith('estoque') &&
-            (usuario.papel === 'DONO' ? <TelaEstoqueRotas rota={rota} /> : <Inicio usuario={usuario} />)}
+          {(rota.nome === 'producao' || rota.nome.startsWith('estoque')) && <Inicio usuario={usuario} />}
         </>
       )}
     </div>

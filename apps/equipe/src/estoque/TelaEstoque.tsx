@@ -42,7 +42,7 @@ export default function TelaEstoque() {
 
   return (
     <main className="tela-estoque">
-      <BarraTitulo titulo="Estoque" volta="/" rotuloVolta="Início" />
+      <BarraTitulo titulo="Estoque" />
       {erro && (
         <p className="erro" role="alert">
           {erro}
@@ -138,9 +138,13 @@ export default function TelaEstoque() {
                 className="botao botao--sucesso"
                 onClick={() => navegar(`/estoque/compras/${encodeURIComponent(l.id)}/chegou`)}
               >
-                {resumo.listasAbertas.length === 1
-                  ? 'Chegou compra'
-                  : `Chegou compra de ${new Date(l.criadaEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })}`}
+                {[
+                  'Chegou compra',
+                  ...l.fornecedores,
+                  ...(resumo.listasAbertas.length > 1
+                    ? [new Date(l.criadaEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })]
+                    : []),
+                ].join(' · ')}
               </button>
             ))}
             <button type="button" className="botao botao--secundario" onClick={() => navegar('/estoque/itens')}>

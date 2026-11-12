@@ -83,7 +83,7 @@ export type ResumoEstoque = {
     observacao: string | null;
     criadoEm: Date;
   }[];
-  listasAbertas: { id: string; criadaEm: Date }[];
+  listasAbertas: { id: string; criadaEm: Date; fornecedores: string[] }[];
 };
 
 type ItemComFornecedor = ItemEstoque & { fornecedor: Fornecedor | null };
@@ -509,8 +509,24 @@ export class EstoqueService {
     const listas = await this.prisma.listaCompra.findMany({
       where: { restauranteId, chegouEm: null },
       orderBy: { criadaEm: 'desc' },
-      select: { id: true, criadaEm: true },
+      select: { id: true, criadaEm: true, itens: true },
     });
+    // Fornecedores de cada lista aberta ("Chegou compra · Granja Boa").
+    const idsNasListas = [
+      ...new Set(
+        listas.flatMap((l) =>
+          (l.itens as { itemId: string }[]).map((i) => i.itemId),
+        ),
+      ),
+    ];
+    const fornecedorDoItem = new Map(
+      (
+        await this.prisma.itemEstoque.findMany({
+          where: { id: { in: idsNasListas } },
+          select: { id: true, fornecedor: { select: { nome: true } } },
+        })
+      ).map((i) => [i.id, i.fornecedor?.nome ?? null]),
+    );
 
     return {
       acabando: itens.filter((i) => i.nivel === 'ACABANDO').map(itemDto),
@@ -542,7 +558,17 @@ export class EstoqueService {
         observacao: m.observacao,
         criadoEm: m.criadoEm,
       })),
-      listasAbertas: listas,
+      listasAbertas: listas.map((l) => ({
+        id: l.id,
+        criadaEm: l.criadaEm,
+        fornecedores: [
+          ...new Set(
+            (l.itens as { itemId: string }[])
+              .map((i) => fornecedorDoItem.get(i.itemId))
+              .filter((n): n is string => !!n),
+          ),
+        ].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+      })),
     };
   }
 

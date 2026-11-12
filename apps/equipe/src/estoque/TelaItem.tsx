@@ -218,7 +218,7 @@ export default function TelaItem({ id }: { id: string }) {
 
   return (
     <main className="tela-estoque">
-      <BarraTitulo titulo={item?.nome ?? 'Item'} volta="/estoque/itens" rotuloVolta="Itens" />
+      <BarraTitulo titulo={item?.nome ?? 'Item'} />
       {erro && (
         <p className="erro" role="alert">
           {erro}

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CardapioPublico } from '../api/cardapio'
 import { buscarCardapio, buscarChamados, buscarMesa, ErroEquipe, ErroNaoAutenticado, marcarLido } from '../api/equipe'
 import type { MesaEquipe } from '../api/tipos'
-import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
 import { useMaisRecente } from '../tempo-real/useMaisRecente'
 import ContaMesa from './ContaMesa'
@@ -101,16 +100,9 @@ export default function TelaMesa({ token }: { token: string }) {
       })
   }
 
-  const voltar = (
-    <button type="button" className="voltar" onClick={() => navegar('/')}>
-      ‹ Início
-    </button>
-  )
-
   if (naoEncontrada) {
     return (
       <main className="tela-mesa">
-        {voltar}
         <p className="vazio">Mesa não encontrada</p>
       </main>
     )
@@ -142,7 +134,6 @@ export default function TelaMesa({ token }: { token: string }) {
   return (
     <main className="tela-mesa">
       <div className="barra-titulo">
-        {voltar}
         <h2>{`Mesa ${mesa.mesa.numero}`}</h2>
         <span className="mesa-quem">{mesa.garcomNome ?? 'Sem garçom'}</span>
       </div>

@@ -1,15 +1,12 @@
 // Peças pequenas repetidas nas telas do estoque.
 import type { ReactNode } from 'react'
 import type { NivelEstoque, Unidade } from '../api/tipos'
-import { navegar } from '../rotas'
 import { falarQuantidade, formatarQuantidade } from './unidades'
 
-export function BarraTitulo({ titulo, volta, rotuloVolta }: { titulo: string; volta: string; rotuloVolta: string }) {
+/** Título da tela (o Voltar fica no topo do app). */
+export function BarraTitulo({ titulo }: { titulo: string }) {
   return (
     <div className="barra-titulo">
-      <button type="button" className="voltar" onClick={() => navegar(volta)}>
-        {`‹ ${rotuloVolta}`}
-      </button>
       <h2>{titulo}</h2>
     </div>
   )

@@ -36,7 +36,7 @@ export default function TelaReceitas() {
 
   return (
     <main className="tela-estoque">
-      <BarraTitulo titulo="Receitas" volta="/estoque" rotuloVolta="Estoque" />
+      <BarraTitulo titulo="Receitas" />
       {erro && (
         <p className="erro" role="alert">
           {erro}

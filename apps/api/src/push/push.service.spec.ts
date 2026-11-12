@@ -123,7 +123,7 @@ describe('PushService', () => {
     expect(servico.chavePublica()).toBeNull();
   });
 
-  it('chamado paraTodos notifica todos em turno e o dono', async () => {
+  it('chamado paraTodos notifica os garçons em turno, não o dono', async () => {
     const { servico, prisma } = criar(VAPID, {
       inscricoes: [
         inscricao('1', 'ana'),
@@ -144,7 +144,8 @@ describe('PushService', () => {
     expect(prisma.usuario.findMany).toHaveBeenCalledWith({
       where: {
         restauranteId: 'r1',
-        OR: [{ papel: 'GARCOM', emTurno: true }, { papel: 'DONO' }],
+        papel: 'GARCOM',
+        emTurno: true,
       },
       select: { id: true },
     });

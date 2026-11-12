@@ -5,6 +5,7 @@ import TelaEstoque from './TelaEstoque'
 import TelaFornecedores from './TelaFornecedores'
 import TelaItem from './TelaItem'
 import TelaItens from './TelaItens'
+import TelaPedido from './TelaPedido'
 import TelaReceita from './TelaReceita'
 import TelaReceitas from './TelaReceitas'
 import '../estilo/estoque.css'
@@ -22,6 +23,8 @@ export default function TelaEstoqueRotas({ rota }: { rota: Rota }) {
       return <TelaReceita key={rota.pratoId} pratoId={rota.pratoId} />
     case 'estoque-compras':
       return <TelaCompras />
+    case 'estoque-pedido':
+      return <TelaPedido key={rota.fornecedorId} fornecedorId={rota.fornecedorId} />
     case 'estoque-chegou':
       return <TelaChegou key={rota.listaId} listaId={rota.listaId} />
     case 'estoque-fornecedores':

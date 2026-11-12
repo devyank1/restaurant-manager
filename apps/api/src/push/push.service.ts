@@ -122,7 +122,7 @@ export class PushService {
     );
   }
 
-  /** Garçom atribuído; se paraTodos, todos em turno + o dono. */
+  /** Garçom atribuído; se paraTodos, todos os garçons em turno (o dono não cuida do salão). */
   async notificarChamado(chamadoId: string): Promise<void> {
     const chamado = await this.prisma.chamado.findUnique({
       where: { id: chamadoId },
@@ -135,7 +135,8 @@ export class PushService {
       const usuarios = await this.prisma.usuario.findMany({
         where: {
           restauranteId: chamado.restauranteId,
-          OR: [{ papel: 'GARCOM', emTurno: true }, { papel: 'DONO' }],
+          papel: 'GARCOM',
+          emTurno: true,
         },
         select: { id: true },
       });

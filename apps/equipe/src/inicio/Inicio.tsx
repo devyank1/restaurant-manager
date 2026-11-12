@@ -17,9 +17,11 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
   const [push, setPush] = useState<EstadoPush>(estadoNotificacoes)
   const [avisoPush, setAvisoPush] = useState('')
 
+  // O dono não cuida do salão: não vê chamados nem mesas.
+  const dono = usuario.papel === 'DONO'
   // Falha de rede: mantém o que já tinha; a reconexão busca de novo.
-  const recarregarChamados = useMaisRecente(buscarChamados, setChamados)
-  const recarregarMesas = useMaisRecente(buscarMesas, setMesas)
+  const recarregarChamados = useMaisRecente(() => (dono ? Promise.resolve([]) : buscarChamados()), setChamados)
+  const recarregarMesas = useMaisRecente(() => (dono ? Promise.resolve([]) : buscarMesas()), setMesas)
 
   useEffect(() => {
     void recarregarChamados()
@@ -27,7 +29,6 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
   }, [recarregarChamados, recarregarMesas])
 
   // Gerente: quantos itens do estoque pedem atenção (acabando + acabou).
-  const dono = usuario.papel === 'DONO'
   const [atencao, setAtencao] = useState(0)
   const recarregarEstoque = useMaisRecente(
     () => (dono ? buscarResumo() : Promise.resolve(null)),
@@ -55,8 +56,7 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
     }
   }
 
-  // O dono vê as mesas de todos; o garçom, as que são dele.
-  const minhas = mesas.filter((m) => m.aberta && (usuario.papel === 'DONO' || m.garcomNome === usuario.nome))
+  const minhas = mesas.filter((m) => m.aberta && m.garcomNome === usuario.nome)
 
   const ler = async () => {
     setLendo(true)
@@ -92,6 +92,8 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
       )}
       {avisoPush && <p className="faixa-aviso faixa-aviso--perigo">{avisoPush}</p>}
 
+      {!dono && (
+      <>
       <section aria-labelledby="titulo-chamados">
         <h2 id="titulo-chamados">Chamados</h2>
         {chamados === null ? (
@@ -123,23 +125,22 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
           </ul>
         )}
       </section>
+      </>
+      )}
 
       <div className="inicio-acoes">
-        {suportaNfc() && (
+        {!dono && suportaNfc() && (
           <button type="button" className="botao botao--secundario" disabled={lendo} onClick={ler}>
             {lendo ? 'Encoste na etiqueta…' : '📡 Ler etiqueta'}
           </button>
         )}
-        <button type="button" className="botao botao--secundario" onClick={() => navegar('/mesas')}>
-          Todas as mesas
-        </button>
-        {usuario.papel === 'DONO' && (
-          <button type="button" className="botao botao--secundario" onClick={() => navegar('/producao')}>
-            Produção
+        {!dono && (
+          <button type="button" className="botao botao--secundario" onClick={() => navegar('/mesas')}>
+            Todas as mesas
           </button>
         )}
         {dono && (
-          <button type="button" className="botao botao--secundario" onClick={() => navegar('/estoque')}>
+          <button type="button" className="botao botao--primario" onClick={() => navegar('/estoque')}>
             {atencao > 0 ? `Estoque · ${atencao} acabando` : 'Estoque'}
           </button>
         )}

@@ -8,6 +8,10 @@ describe('WhatsApp do fornecedor', () => {
     expect(linkWhatsApp('1133334444', 'x')).toBe('https://wa.me/551133334444?text=x')
   })
 
+  it('sem texto abre só a conversa', () => {
+    expect(linkWhatsApp('(11) 98888-7777')).toBe('https://wa.me/5511988887777')
+  })
+
   it('sem telefone abre o WhatsApp para escolher o contato', () => {
     expect(linkWhatsApp(null, 'oi')).toBe('https://wa.me/?text=oi')
     expect(linkWhatsApp('', 'oi')).toBe('https://wa.me/?text=oi')

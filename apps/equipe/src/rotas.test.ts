@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { lerRota } from './rotas'
+import { lerRota, voltaDe } from './rotas'
 
 describe('rotas', () => {
   it('reconhece /mesa/abc e /login?volta=/mesa/abc', () => {
@@ -22,6 +22,23 @@ describe('rotas', () => {
     expect(lerRota('/estoque/receitas/p1', '')).toEqual({ nome: 'estoque-receita', pratoId: 'p1' })
     expect(lerRota('/estoque/compras', '')).toEqual({ nome: 'estoque-compras' })
     expect(lerRota('/estoque/compras/l1/chegou', '')).toEqual({ nome: 'estoque-chegou', listaId: 'l1' })
+    expect(lerRota('/estoque/compras/f/granja', '')).toEqual({ nome: 'estoque-pedido', fornecedorId: 'granja' })
+  })
+
+  it('Voltar leva para a tela de cima', () => {
+    expect(voltaDe({ nome: 'inicio' })).toBeNull()
+    expect(voltaDe({ nome: 'mesas' })).toBe('/')
+    expect(voltaDe({ nome: 'mesa', token: 't' })).toBe('/')
+    expect(voltaDe({ nome: 'producao' })).toBe('/')
+    expect(voltaDe({ nome: 'estoque' })).toBe('/')
+    expect(voltaDe({ nome: 'estoque-itens' })).toBe('/estoque')
+    expect(voltaDe({ nome: 'estoque-item', id: 'x' })).toBe('/estoque/itens')
+    expect(voltaDe({ nome: 'estoque-receitas' })).toBe('/estoque')
+    expect(voltaDe({ nome: 'estoque-receita', pratoId: 'p' })).toBe('/estoque/receitas')
+    expect(voltaDe({ nome: 'estoque-fornecedores' })).toBe('/estoque')
+    expect(voltaDe({ nome: 'estoque-compras' })).toBe('/estoque')
+    expect(voltaDe({ nome: 'estoque-pedido', fornecedorId: 'f' })).toBe('/estoque/compras')
+    expect(voltaDe({ nome: 'estoque-chegou', listaId: 'l' })).toBe('/estoque')
   })
 
   it('volta só aceita caminho interno', () => {

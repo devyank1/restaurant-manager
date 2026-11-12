@@ -36,8 +36,10 @@ export default function TelaChegou({ listaId }: { listaId: string }) {
 
   return (
     <main className="tela-estoque">
-      <BarraTitulo titulo="Chegou compra" volta="/estoque" rotuloVolta="Estoque" />
-      <p className="linha-estoque-sub">Confira o que chegou. Se algo não veio, deixe 0.</p>
+      <BarraTitulo titulo="Chegou compra" />
+      <p className="linha-estoque-sub">
+        Confira o que chegou e corrija se veio diferente (0 se não veio). Ao confirmar, tudo entra no estoque na hora.
+      </p>
       {linhas === null && !erro && <p className="carregando">Carregando…</p>}
       {linhas && (
         <LinhasCompra

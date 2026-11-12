@@ -868,3 +868,22 @@
   color: var(--alerta);
   font-weight: 600;
 }
+
+/* ---------- Voltar fixo no topo (toda tela menos o início) ---------- */
+.topo {
+  flex-wrap: wrap;
+  row-gap: var(--e-2);
+}
+
+.topo-voltar {
+  min-height: 44px;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: var(--t-md);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}

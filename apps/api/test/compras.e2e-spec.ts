@@ -174,7 +174,7 @@ describe('lista de compras', () => {
     expect(bebidas.getRow(2).getCell(3).value).toBe('L');
   });
 
-  it('resumo mostra todas as compras abertas, a mais nova primeiro', async () => {
+  it('resumo mostra todas as compras abertas, a mais nova primeiro, com o fornecedor', async () => {
     const a = await salvar([{ itemId: ovos, quantidade: 30 }]);
     const b = await salvar([{ itemId: chopp, quantidade: 30000 }]);
     const res = await http()
@@ -182,10 +182,13 @@ describe('lista de compras', () => {
       .set('Cookie', dono)
       .expect(200);
     expect(
-      (res.body as { listasAbertas: { id: string }[] }).listasAbertas.map(
-        (l) => l.id,
-      ),
-    ).toEqual([b.id, a.id]);
+      (
+        res.body as { listasAbertas: { id: string; fornecedores: string[] }[] }
+      ).listasAbertas.map((l) => [l.id, l.fornecedores]),
+    ).toEqual([
+      [b.id, ['Bebidas SA']],
+      [a.id, ['Granja Boa']],
+    ]);
   });
 
   it('desfazer a chegada reabre a lista para lançar de novo', async () => {

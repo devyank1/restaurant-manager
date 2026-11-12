@@ -138,7 +138,7 @@ export default function TelaReceita({ pratoId }: { pratoId: string }) {
 
   return (
     <main className="tela-estoque">
-      <BarraTitulo titulo={prato?.nome ?? 'Receita'} volta="/estoque/receitas" rotuloVolta="Receitas" />
+      <BarraTitulo titulo={prato?.nome ?? 'Receita'} />
       {erro && (
         <p className="erro" role="alert">
           {erro}

@@ -44,22 +44,22 @@ describe('Início do estoque', () => {
     expect(screen.queryByRole('button', { name: 'Chegou compra' })).not.toBeInTheDocument()
   })
 
-  it('lista aberta mostra Chegou compra', async () => {
-    api.estado.estoque.resumo.listasAbertas = [{ id: 'l9', criadaEm: new Date().toISOString() }]
+  it('lista aberta mostra Chegou compra com o fornecedor', async () => {
+    api.estado.estoque.resumo.listasAbertas = [{ id: 'l9', criadaEm: new Date().toISOString(), fornecedores: ['Granja Boa'] }]
     render(<TelaEstoque />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Chegou compra' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Chegou compra · Granja Boa' }))
     expect(window.location.pathname).toBe('/estoque/compras/l9/chegou')
   })
 
   it('duas listas abertas mostram um Chegou compra para cada, com a data', async () => {
     api.estado.estoque.resumo.listasAbertas = [
-      { id: 'l2', criadaEm: '2026-11-09T15:00:00.000Z' },
-      { id: 'l1', criadaEm: '2026-11-07T15:00:00.000Z' },
+      { id: 'l2', criadaEm: '2026-11-09T15:00:00.000Z', fornecedores: ['Granja Boa'] },
+      { id: 'l1', criadaEm: '2026-11-07T15:00:00.000Z', fornecedores: [] },
     ]
     render(<TelaEstoque />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Chegou compra de 07/11' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Chegou compra · 07/11' }))
     expect(window.location.pathname).toBe('/estoque/compras/l1/chegou')
-    expect(screen.getByRole('button', { name: 'Chegou compra de 09/11' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Chegou compra · Granja Boa · 09/11' })).toBeInTheDocument()
   })
 
   it('gerente desfaz o último lançamento dele pela barra Desfazer', async () => {

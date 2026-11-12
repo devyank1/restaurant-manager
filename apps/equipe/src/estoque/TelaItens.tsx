@@ -116,7 +116,7 @@ export default function TelaItens() {
 
   return (
     <main className="tela-estoque">
-      <BarraTitulo titulo="Itens" volta="/estoque" rotuloVolta="Estoque" />
+      <BarraTitulo titulo="Itens" />
       <div className="estoque-acoes">
         <button type="button" className="botao botao--primario" aria-expanded={criando} onClick={() => setCriando(!criando)}>
           Novo item

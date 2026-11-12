@@ -3,6 +3,7 @@ import { buscarFornecedores, criarFornecedor, editarFornecedor, excluirFornecedo
 import type { Fornecedor } from '../api/tipos'
 import { BarraTitulo, Confirmacao } from './comum'
 import { mensagemDe } from './textos'
+import { linkWhatsApp } from './whatsapp'
 
 type Rascunho = { id: string | null; nome: string; telefone: string; observacao: string }
 const NOVO: Rascunho = { id: null, nome: '', telefone: '', observacao: '' }
@@ -57,7 +58,7 @@ export default function TelaFornecedores() {
 
   return (
     <main className="tela-estoque">
-      <BarraTitulo titulo="Fornecedores" volta="/estoque" rotuloVolta="Estoque" />
+      <BarraTitulo titulo="Fornecedores" />
       {erro && (
         <p className="erro" role="alert">
           {erro}
@@ -113,6 +114,17 @@ export default function TelaFornecedores() {
                 {f.telefone && <span>{f.telefone}</span>}
               </div>
               {f.observacao && <span className="linha-estoque-sub">{f.observacao}</span>}
+              {f.telefone && (
+                <a
+                  className="botao botao--sucesso"
+                  href={linkWhatsApp(f.telefone)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Chamar ${f.nome} no WhatsApp`}
+                >
+                  Chamar no WhatsApp
+                </a>
+              )}
               <div className="confirmacao-botoes">
                 <button
                   type="button"
