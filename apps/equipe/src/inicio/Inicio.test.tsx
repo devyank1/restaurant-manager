@@ -169,6 +169,7 @@ describe('Início', () => {
     api.estado.chamados = [chamado({ id: 'c1' })]
     render(<Inicio usuario={{ ...ana, papel: 'DONO', emTurno: true }} />)
     expect(await screen.findByRole('button', { name: 'Estoque' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Meta da equipe' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Chamados' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Minhas mesas' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Todas as mesas' })).not.toBeInTheDocument()

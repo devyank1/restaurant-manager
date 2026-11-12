@@ -4,6 +4,7 @@ import { buscarChamados, buscarMesas } from '../api/equipe'
 import type { ChamadoEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
 import { lerEtiqueta, suportaNfc } from '../nfc/lerEtiqueta'
 import { ativarNotificacoes, estadoNotificacoes, type EstadoPush } from '../push/ativarNotificacoes'
+import PainelEquipe from '../paineis/PainelEquipe'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
 import { useMaisRecente } from '../tempo-real/useMaisRecente'
@@ -92,6 +93,8 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
       )}
       {avisoPush && <p className="faixa-aviso faixa-aviso--perigo">{avisoPush}</p>}
 
+      {dono && <PainelEquipe atencao={atencao} />}
+
       {!dono && (
       <>
       <section aria-labelledby="titulo-chamados">
@@ -137,11 +140,6 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
         {!dono && (
           <button type="button" className="botao botao--secundario" onClick={() => navegar('/mesas')}>
             Todas as mesas
-          </button>
-        )}
-        {dono && (
-          <button type="button" className="botao botao--primario" onClick={() => navegar('/estoque')}>
-            {atencao > 0 ? `Estoque · ${atencao} acabando` : 'Estoque'}
           </button>
         )}
       </div>

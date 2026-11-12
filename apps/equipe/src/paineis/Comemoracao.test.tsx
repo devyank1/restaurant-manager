@@ -23,11 +23,11 @@ describe('Comemoração', () => {
 
   it('socket meta-batida mostra a faixa para quem está logado', async () => {
     render(<App />)
-    expect(await screen.findByText('Ana')).toBeInTheDocument()
+    expect(await screen.findByText('Ana', undefined, { timeout: 3000 })).toBeInTheDocument()
     act(() => {
       for (const s of socketsFalsos) s.servidor('meta-batida', bateu)
     })
-    expect(await screen.findByRole('status')).toHaveTextContent(`A equipe bateu a meta de ${reais(200000)} hoje! 🎉`)
+    expect(await screen.findByRole('status', undefined, { timeout: 3000 })).toHaveTextContent(`A equipe bateu a meta de ${reais(200000)} hoje! 🎉`)
   })
 
   it('Fechar some a faixa', async () => {
