@@ -1,7 +1,7 @@
 # Imagens de produção: `api` (NestJS + Prisma) e `web` (nginx com os dois apps).
 # Build: docker build -f deploy/Dockerfile --target api -t cardapio-api .
 #        docker build -f deploy/Dockerfile --target web -t cardapio-web \
-#          --build-arg VITE_EQUIPE_URL=https://cardapio-equipe.devyank.com.br .
+#          --build-arg VITE_EQUIPE_URL=https://cardapio-garcom.devyank.com.br .
 
 FROM node:22-alpine AS build
 RUN apk add --no-cache openssl && corepack enable && corepack prepare pnpm@10.34.9 --activate

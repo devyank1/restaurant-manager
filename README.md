@@ -97,10 +97,10 @@ ffmpeg -f lavfi -i "color=c=0xff5a1f:s=512x512" -frames:v 1 -vf "drawtext=text='
 - Imagens montadas no PC e enviadas por SSH (o disco do servidor está quase cheio; nada é compilado lá):
   ```
   docker build -f deploy/Dockerfile --target api -t cardapio-api .
-  docker build -f deploy/Dockerfile --target web -t cardapio-web --build-arg VITE_EQUIPE_URL=https://cardapio-equipe.devyank.com.br .
+  docker build -f deploy/Dockerfile --target web -t cardapio-web --build-arg VITE_EQUIPE_URL=https://cardapio-garcom.devyank.com.br .
   docker save cardapio-api cardapio-web | gzip -1 | ssh marnessa@100.105.122.90 "gunzip | docker load"
   ssh marnessa@100.105.122.90 "cd ~/cardapio && docker compose up -d"
   ```
 - No servidor: `~/cardapio/docker-compose.yml` (cópia de `deploy/docker-compose.yml`) e `~/cardapio/.env` (segredos: `DB_SENHA`, `JWT_SEGREDO`, VAPID — só lá).
 - A API aplica as migrations sozinha ao subir. Banco próprio (`cardapio-db-1`, volume `cardapio_dados`), separado do dev.
-- O nginx escuta só em `127.0.0.1:8160`; o túnel da Cloudflare publica `cardapio.devyank.com.br` (cardápio) e `cardapio-equipe.devyank.com.br` (equipe), ambos para `http://localhost:8160`.
+- O nginx escuta só em `127.0.0.1:8160`; o túnel da Cloudflare publica `cardapio.devyank.com.br` (cardápio) e `cardapio-garcom`, `cardapio-cozinha`, `cardapio-gerente` (e `cardapio-equipe`) `.devyank.com.br` (mesmo app da equipe, um login por endereço), todos para `http://localhost:8160`.
