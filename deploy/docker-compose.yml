@@ -1,0 +1,41 @@
+# Produção no servidor (pasta ~/cardapio). Segredos no .env ao lado (nunca no git).
+# Sobe: docker compose up -d   ·   Logs: docker compose logs -f api
+name: cardapio
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cardapio
+      POSTGRES_PASSWORD: ${DB_SENHA:?defina DB_SENHA no .env}
+      POSTGRES_DB: cardapio
+    volumes:
+      - dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cardapio"]
+      interval: 5s
+      retries: 20
+
+  api:
+    image: cardapio-api:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://cardapio:${DB_SENHA}@db:5432/cardapio
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: cardapio-web:latest
+    restart: unless-stopped
+    # Só local: quem expõe para a internet é o túnel da Cloudflare.
+    ports:
+      - "127.0.0.1:8160:80"
+    depends_on:
+      - api
+
+volumes:
+  dados:
