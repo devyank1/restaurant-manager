@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { EquipeModule } from '../equipe/equipe.module';
 import { CentralController } from './central.controller';
+import { CentralService } from './central.service';
 import { LimitesService } from './limites.service';
 import { MetaBatidaListener } from './meta-batida.listener';
 import { MetasController } from './metas.controller';
@@ -23,6 +24,7 @@ import { TemposService } from './tempos.service';
     MetasService,
     PaineisService,
     LimitesService,
+    CentralService,
     MetaBatidaListener,
   ],
   exports: [MetasService],

@@ -3,11 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Meta, PeriodoMeta, Prisma } from '@prisma/client';
+import type { Meta, PeriodoMeta } from '@prisma/client';
 import { inicioDoDiaDeServico } from '../comum/dia-servico';
 import { exigirDono, exigirProducao } from '../equipe/papel';
 import type { UsuarioToken } from '../equipe/equipe.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { confirmadasEm, fechadasEm, horaSP, type Intervalo } from './consultas';
 import { avisosDeCuidado } from './cuidado';
 import { MetasService } from './metas.service';
 import type {
@@ -20,19 +21,11 @@ import { medirPedidos, type MedidaEstacao } from './pedidos-estacao';
 import { periodoDe } from './periodo';
 import { progresso, type ProgressoMeta } from './progresso';
 
-type Intervalo = { inicio: Date; fim: Date };
-
 const DIA_MS = 24 * 60 * 60 * 1000;
 /** Chamado que levou mais que isso para ser lido/resolvido = demorou. */
 export const CHAMADO_DEMORADO_SEG = 180;
 const DIAS_MEDIA_SEMANA = 28;
 const MAIS_VENDIDOS = 10;
-
-const horaSP = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/Sao_Paulo',
-  hour: '2-digit',
-  hourCycle: 'h23',
-});
 
 const vazia = (estacao: string): MedidaEstacao => ({
   estacao,
@@ -492,17 +485,6 @@ export class PaineisService {
           String(a.motivo).localeCompare(String(b.motivo)),
       );
   }
-}
-
-function confirmadasEm(i: Intervalo): Prisma.RodadaWhereInput {
-  return {
-    status: 'CONFIRMADA',
-    confirmadaEm: { gte: i.inicio, lt: i.fim },
-  };
-}
-
-function fechadasEm(i: Intervalo): Prisma.SessaoMesaWhereInput {
-  return { status: 'FECHADA', fechadaEm: { gte: i.inicio, lt: i.fim } };
 }
 
 function total(m: Map<string | null, number>): number {

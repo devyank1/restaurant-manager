@@ -14,6 +14,7 @@ import type { UsuarioToken } from '../equipe/equipe.types';
 import { exigirDono } from '../equipe/papel';
 import { UsuarioAtual } from '../equipe/usuario-atual.decorator';
 import { LIMITES_PADRAO, type TipoAlerta } from './alertas';
+import { CentralService } from './central.service';
 import { LimitesService } from './limites.service';
 
 /** Faixa do valor dos tipos configuráveis; os demais só ligam/desligam. */
@@ -39,7 +40,15 @@ function tipoAlerta(tipo: string): TipoAlerta {
 @Controller('equipe/painel/central')
 @UseGuards(EquipeGuard)
 export class CentralController {
-  constructor(private readonly limites: LimitesService) {}
+  constructor(
+    private readonly limites: LimitesService,
+    private readonly central: CentralService,
+  ) {}
+
+  @Get()
+  ler(@UsuarioAtual() usuario: UsuarioToken) {
+    return this.central.central(usuario);
+  }
 
   @Get('limites')
   lerLimites(@UsuarioAtual() usuario: UsuarioToken) {
