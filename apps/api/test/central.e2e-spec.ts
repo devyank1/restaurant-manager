@@ -1,4 +1,8 @@
+import type { Server } from 'node:http';
+import { AddressInfo } from 'node:net';
+import { io, Socket } from 'socket.io-client';
 import request from 'supertest';
+import { CentralAgendador } from '../src/paineis/central.agendador';
 import { CentralService } from '../src/paineis/central.service';
 import type { CentralResposta } from '../src/paineis/central.types';
 import { AppTeste, criarAppTeste, loginComo } from './app-teste';
@@ -386,6 +390,100 @@ describe('central de alertas', () => {
       const r = (await central.calcular(t.restauranteId, agora)).resposta;
       expect(r.contexto.faturamentoCentavos).toBe(base + 15_000);
       expect(r.contexto.ticketMedioCentavos).not.toBeNull();
+    });
+  });
+  describe('tempo real', () => {
+    const sockets: Socket[] = [];
+    const MIN = 60_000;
+
+    afterEach(() => {
+      sockets.splice(0).forEach((s) => s.disconnect());
+      jest.restoreAllMocks();
+    });
+
+    it('emite central-mudou uma vez quando o alerta se confirma', async () => {
+      await t.app.listen(0);
+      const { port } = (
+        t.app.getHttpServer() as unknown as Server
+      ).address() as AddressInfo;
+      const cookie = await loginComo(t.app, 'dono@demo.com');
+      const socket = io(`http://localhost:${port}`, {
+        transports: ['websocket'],
+        extraHeaders: { Cookie: cookie },
+        forceNew: true,
+      });
+      sockets.push(socket);
+      await new Promise<void>((ok) => socket.once('connect', () => ok()));
+      await new Promise((ok) => setTimeout(ok, 100));
+      let recebidos = 0;
+      socket.on('central-mudou', () => recebidos++);
+      const agendador = t.app.get(CentralAgendador);
+
+      // Horário futuro: o estado em memória só anda para frente.
+      const t0 = new Date(Date.now() + 60 * MIN);
+      // Assenta qualquer resto de outros testes antes de contar.
+      await agendador.verificar(t0);
+      await agendador.verificar(new Date(t0.getTime() + 61_000));
+      await new Promise((ok) => setTimeout(ok, 150));
+      recebidos = 0;
+
+      const mesa = await t.prisma.mesa.create({
+        data: {
+          restauranteId: t.restauranteId,
+          numero: 9100,
+          token: `central-tr-${Date.now()}`,
+        },
+      });
+      try {
+        const sessao = await t.prisma.sessaoMesa.create({
+          data: { restauranteId: t.restauranteId, mesaId: mesa.id },
+        });
+        const velho = new Date(t0.getTime() - 4 * MIN);
+        await t.prisma.chamado.create({
+          data: {
+            restauranteId: t.restauranteId,
+            mesaId: mesa.id,
+            sessaoId: sessao.id,
+            tipo: 'ATENDENTE',
+            criadoEm: velho,
+            atribuidoEm: velho,
+          },
+        });
+        const t1 = new Date(t0.getTime() + 5 * MIN);
+        await agendador.verificar(t1);
+        await agendador.verificar(new Date(t1.getTime() + 61_000));
+        await agendador.verificar(new Date(t1.getTime() + 62_000));
+        await new Promise((ok) => setTimeout(ok, 300));
+        expect(recebidos).toBe(1);
+      } finally {
+        await t.prisma.mesa.delete({ where: { id: mesa.id } });
+      }
+    });
+
+    it('erro em um restaurante não impede os demais', async () => {
+      const outro = await t.prisma.restaurante.create({
+        data: { nome: 'Outro Agendador', slug: 'outro-agendador' },
+      });
+      try {
+        const central = t.app.get(CentralService);
+        const chamados: string[] = [];
+        const original = central.calcular.bind(central);
+        jest.spyOn(central, 'calcular').mockImplementation((id, agora) => {
+          chamados.push(id);
+          if (id === t.restauranteId) return Promise.reject(new Error('boom'));
+          return original(id, agora);
+        });
+        await expect(
+          t.app
+            .get(CentralAgendador)
+            .verificar(new Date(Date.now() + 120 * MIN)),
+        ).resolves.toBeUndefined();
+        expect(chamados).toEqual(
+          expect.arrayContaining([t.restauranteId, outro.id]),
+        );
+      } finally {
+        await t.prisma.restaurante.delete({ where: { id: outro.id } });
+      }
     });
   });
 });
