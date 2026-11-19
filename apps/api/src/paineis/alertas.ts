@@ -97,6 +97,11 @@ export type EntradaAlertas = {
 const MIN_MS = 60_000;
 const HORA_MS = 3_600_000;
 
+/** Mínimo de pedidos na última hora para o aviso de movimento alto. */
+const MIN_PEDIDOS_MOVIMENTO = 10;
+
+const padrao = (tipo: TipoAlerta) => LIMITES_PADRAO[tipo].valor ?? 0;
+
 const minutosDesde = (de: Date, agora: Date) =>
   (agora.getTime() - de.getTime()) / MIN_MS;
 
@@ -106,7 +111,7 @@ const plural = (n: number, um: string, varios: string) =>
 type Regra = (e: EntradaAlertas, valor: number | null) => AlertaBruto[];
 
 function mesasSemAtendimento(e: EntradaAlertas, valor: number | null) {
-  const limite = valor ?? 10;
+  const limite = valor ?? padrao('MESA_SEM_ATENDIMENTO');
   return e.mesas
     .filter(
       (m) =>
@@ -125,7 +130,7 @@ function mesasSemAtendimento(e: EntradaAlertas, valor: number | null) {
 }
 
 function chamadosSemResposta(e: EntradaAlertas, valor: number | null) {
-  const limite = valor ?? 3;
+  const limite = valor ?? padrao('CHAMADO_SEM_RESPOSTA');
   return e.chamados
     .filter((c) => !c.paraTodos && minutosDesde(c.criadoEm, e.agora) > limite)
     .map((c): AlertaBruto => ({
@@ -193,7 +198,7 @@ function pedidos(e: EntradaAlertas, limites: LimitesAlerta) {
 }
 
 function filasAcumuladas(e: EntradaAlertas, valor: number | null) {
-  const limite = valor ?? 6;
+  const limite = valor ?? padrao('FILA_ACUMULADA');
   return e.filas
     .filter((f) => f.naFila > limite)
     .map((f): AlertaBruto => ({
@@ -270,11 +275,16 @@ function estoqueCritico(e: EntradaAlertas) {
 
 function movimentoAlto(e: EntradaAlertas, valor: number | null) {
   const { ultimaHora, mediaHistorica, semanasComDados } = e.movimento;
-  if (semanasComDados <= 0 || mediaHistorica === null || mediaHistorica <= 0) {
+  if (
+    ultimaHora < MIN_PEDIDOS_MOVIMENTO ||
+    semanasComDados <= 0 ||
+    mediaHistorica === null ||
+    mediaHistorica <= 0
+  ) {
     return [];
   }
   const pct = (100 * ultimaHora) / mediaHistorica;
-  if (pct < (valor ?? 140)) return [];
+  if (pct < (valor ?? padrao('MOVIMENTO_ALTO'))) return [];
   return [
     {
       chave: 'MOVIMENTO_ALTO',

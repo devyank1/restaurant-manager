@@ -314,6 +314,16 @@ describe('calcularAlertas', () => {
       expect(calcular(mov(9, 10, 2))).toEqual([]);
     });
 
+    it('3 contra média 2 (150%) não gera: abaixo de 10 pedidos', () => {
+      expect(calcular(mov(3, 2, 2))).toEqual([]);
+    });
+
+    it('10 contra média 7 (>= 140%) gera', () => {
+      expect(calcular(mov(10, 7, 2)).map((a) => a.tipo)).toEqual([
+        'MOVIMENTO_ALTO',
+      ]);
+    });
+
     it('sem semanas com dados não gera', () => {
       expect(calcular(mov(15, 10, 0))).toEqual([]);
     });
