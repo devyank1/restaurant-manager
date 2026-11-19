@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { buscarLimites, salvarLimite } from '../api/paineis'
 import type { LimitesAlerta, TipoAlerta } from '../api/tipos'
 import { BarraTitulo } from '../estoque/comum'
 import { mensagemDe } from '../estoque/textos'
 import { lerInteiro } from '../paineis/numeros'
+import '../estilo/central.css'
 import '../estilo/estoque.css'
 
 const NOMES: [TipoAlerta, string][] = [
@@ -43,6 +44,10 @@ function Linha({
   avisar: Avisar
 }) {
   const regra = VALOR[tipo]
+  const atual = useRef(config)
+  useEffect(() => {
+    atual.current = config
+  }, [config])
   const [texto, setTexto] = useState(config.valor === null ? '' : String(config.valor))
 
   const gravar = async (novo: LimitesAlerta[TipoAlerta]) => {
@@ -52,7 +57,8 @@ function Linha({
       await salvarLimite(tipo, novo)
       avisar('Salvo')
     } catch (e) {
-      onMudou(antes)
+      // Só desfaz se nenhuma mudança mais nova entrou depois desta.
+      if (atual.current === novo) onMudou(antes)
       avisar('', mensagemDe(e))
     }
   }
@@ -112,7 +118,7 @@ export default function TelaLimites() {
     <main className="tela-estoque">
       <BarraTitulo titulo="Limites dos alertas" />
       {erro && (
-        <p className="erro" role="alert">
+        <p className="central-erro" role="alert">
           {erro}
         </p>
       )}

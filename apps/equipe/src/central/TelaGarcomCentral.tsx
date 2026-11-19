@@ -3,6 +3,7 @@ import { buscarDetalheGarcom } from '../api/paineis'
 import type { DetalheGarcom } from '../api/tipos'
 import { BarraTitulo } from '../estoque/comum'
 import { mensagemDe } from '../estoque/textos'
+import '../estilo/central.css'
 import '../estilo/estoque.css'
 
 const minutosDesde = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000))
@@ -28,7 +29,7 @@ export default function TelaGarcomCentral({ id }: { id: string }) {
     <main className="tela-estoque">
       <BarraTitulo titulo={d?.nome ?? 'Garçom'} />
       {erro && (
-        <p className="erro" role="alert">
+        <p className="central-erro" role="alert">
           {erro}
         </p>
       )}

@@ -56,5 +56,7 @@ describe('Detalhe do garçom na Central', () => {
   it('garçom inexistente mostra aviso amigável', async () => {
     render(<TelaGarcomCentral id="nao-existe" />)
     expect(await screen.findByRole('alert')).toHaveTextContent('Garçom não encontrado')
+    expect(screen.getByRole('alert')).toHaveClass('central-erro')
+    expect(screen.getByRole('alert')).not.toHaveClass('erro')
   })
 })
