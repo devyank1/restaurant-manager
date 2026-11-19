@@ -111,6 +111,30 @@ describe('App da equipe', () => {
     expect(screen.queryByRole('heading', { name: 'Agora' })).not.toBeInTheDocument()
   })
 
+  it('dono abre os limites e o detalhe do garçom', async () => {
+    api.estado.usuario = { ...carla }
+    window.history.replaceState({}, '', '/limites')
+    const { unmount } = render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Limites dos alertas' })).toBeInTheDocument()
+    unmount()
+    api.uma('GET', /central\/garcom\/u-ana$/, () => ({
+      status: 200,
+      corpo: {
+        id: 'u-ana',
+        nome: 'Ana',
+        emTurno: false,
+        emTurnoDesde: null,
+        horasEmTurno: null,
+        mesasAbertas: [],
+        chamadosPendentes: [],
+      },
+    }))
+    window.history.replaceState({}, '', '/central/garcom/u-ana')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Ana' })).toBeInTheDocument()
+    expect(screen.getByText('Fora de turno')).toBeInTheDocument()
+  })
+
   it('dono não tem interruptor de turno', async () => {
     api.estado.usuario = { ...carla }
     window.history.replaceState({}, '', '/')
