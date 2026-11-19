@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { EquipeModule } from '../equipe/equipe.module';
+import { CentralController } from './central.controller';
+import { LimitesService } from './limites.service';
 import { MetaBatidaListener } from './meta-batida.listener';
 import { MetasController } from './metas.controller';
 import { PaineisController } from './paineis.controller';
@@ -10,8 +12,19 @@ import { TemposService } from './tempos.service';
 
 @Module({
   imports: [EquipeModule],
-  controllers: [TemposController, MetasController, PaineisController],
-  providers: [TemposService, MetasService, PaineisService, MetaBatidaListener],
+  controllers: [
+    TemposController,
+    MetasController,
+    PaineisController,
+    CentralController,
+  ],
+  providers: [
+    TemposService,
+    MetasService,
+    PaineisService,
+    LimitesService,
+    MetaBatidaListener,
+  ],
   exports: [MetasService],
 })
 export class PaineisModule {}

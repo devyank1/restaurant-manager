@@ -54,6 +54,7 @@ model Restaurante {
   listasCompra      ListaCompra[]
   turnos            TurnoEquipe[]
   metas             Meta[]
+  limitesAlerta     LimiteAlerta[]
 }
 
 model Mesa {
@@ -517,4 +518,17 @@ model Meta {
   atualizadoEm  DateTime    @updatedAt
 
   @@index([restauranteId, escopo])
+}
+
+/// Limite configurável de um tipo de alerta da central do gerente.
+model LimiteAlerta {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  tipo          String
+  ativo         Boolean     @default(true)
+  /// Minutos, pedidos na fila ou percentual; nulo = padrão do tipo.
+  valor         Int?
+
+  @@unique([restauranteId, tipo])
 }
