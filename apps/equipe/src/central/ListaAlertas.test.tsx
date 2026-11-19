@@ -57,4 +57,10 @@ describe('ListaAlertas', () => {
     await userEvent.click(botoes[0])
     expect(window.location.pathname).toBe('/mesas')
   })
+
+  it('alerta de estoque crítico tem Ver que leva ao estoque', async () => {
+    render(<ListaAlertas agora={AGORA} alertas={[alerta({ tipo: 'ESTOQUE_CRITICO', link: '/estoque' })]} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ver' }))
+    expect(window.location.pathname).toBe('/estoque')
+  })
 })

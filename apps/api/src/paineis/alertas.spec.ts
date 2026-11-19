@@ -266,6 +266,7 @@ describe('calcularAlertas', () => {
       chave: 'ESTOQUE_CRITICO',
       tipo: 'ESTOQUE_CRITICO',
       gravidade: 'MEDIA',
+      link: '/estoque',
     });
     const alto = calcular(
       entrada({
@@ -276,6 +277,7 @@ describe('calcularAlertas', () => {
       }),
     );
     expect(alto[0].gravidade).toBe('ALTA');
+    expect(alto[0].link).toBe('/estoque');
   });
 
   it('mesas abertas sem garçom em turno gera SEM_GARCOM ALTA', () => {

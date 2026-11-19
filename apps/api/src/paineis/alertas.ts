@@ -268,7 +268,7 @@ function estoqueCritico(e: EntradaAlertas) {
           ? `${plural(zerados, 'item zerado', 'itens zerados')}. Em nível crítico: ${nomes}`
           : `Em nível crítico: ${nomes}`,
       desde: null,
-      link: null,
+      link: '/estoque',
     } satisfies AlertaBruto,
   ];
 }
