@@ -18,17 +18,26 @@ async function limpar(r) {
   const sessoes = await prisma.sessaoMesa.deleteMany({
     where: { restauranteId: r.id, dispositivos: { some: { dispositivoId: MARCA } } },
   });
-  const eventos = await prisma.evento.findMany({ where: { restauranteId: r.id, tipo: EVENTO } });
+  const eventos = await prisma.evento.findMany({
+    where: { restauranteId: r.id, tipo: EVENTO },
+    orderBy: { criadoEm: 'asc' },
+  });
+  // O snapshot mais antigo vale: uma execução interrompida não é sobrescrita.
+  const usuariosVistos = new Set();
+  const itensVistos = new Set();
   const feito = [`${sessoes.count} sessão(ões) de demo removida(s) (com rodadas e chamados)`];
   for (const e of eventos) {
     const d = e.dados;
     for (const u of d.usuarios ?? []) {
+      if (usuariosVistos.has(u.id)) continue;
+      usuariosVistos.add(u.id);
       await prisma.usuario.update({
         where: { id: u.id },
         data: { emTurno: u.emTurno, emTurnoDesde: u.emTurnoDesde ? new Date(u.emTurnoDesde) : null },
       });
     }
-    if (d.item) {
+    if (d.item && !itensVistos.has(d.item.id)) {
+      itensVistos.add(d.item.id);
       await prisma.itemEstoque.update({
         where: { id: d.item.id },
         data: { quantidade: d.item.quantidade, nivel: d.item.nivel },
@@ -101,10 +110,10 @@ async function main() {
       },
     });
 
-  // Ana: até 7 mesas. 1ª parada há 15 min; 2ª com chamado; 3ª com pedido esquecido.
+  // Ana: até 7 mesas. 1ª parada há 15 min (as outras, 6 min: abaixo do limite de 10); 2ª com chamado; 3ª com pedido esquecido.
   const daAna = mesas.slice(0, 7);
   const sessoes = [];
-  for (const [i, m] of daAna.entries()) sessoes.push(await abrir(m, ana, minAtras(i === 0 ? 15 : 12)));
+  for (const [i, m] of daAna.entries()) sessoes.push(await abrir(m, ana, minAtras(i === 0 ? 15 : 6)));
   feito.push(`Ana com ${sessoes.length} mesa(s) aberta(s) (mesa ${daAna[0].numero} parada há 15 min)`);
 
   await prisma.chamado.create({
@@ -154,7 +163,7 @@ async function main() {
 
   const dele = mesas[7];
   if (dele) {
-    await abrir(dele, bruno, minAtras(12));
+    await abrir(dele, bruno, minAtras(6));
     feito.push(`Bruno com 1 mesa aberta (mesa ${dele.numero})`);
   }
 
