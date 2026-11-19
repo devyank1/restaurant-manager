@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { UsuarioToken } from '../equipe/equipe.types';
 import { exigirDono } from '../equipe/papel';
 import { PrismaService } from '../prisma/prisma.service';
 import { calcularAlertas, type EntradaAlertas } from './alertas';
 import { cargaEstacao, cargaGarcom, faixaDeCarga } from './carga';
 import { confirmadasEm, fechadasEm, horaSP } from './consultas';
-import type { CentralResposta } from './central.types';
+import type { CentralResposta, DetalheGarcom } from './central.types';
 import { EstadoAlertas } from './estado-alertas';
 import { LimitesService } from './limites.service';
 import { FATOR_ESQUECIDO } from './pedidos-estacao';
@@ -39,6 +39,63 @@ export class CentralService {
   ): Promise<CentralResposta> {
     exigirDono(usuario);
     return (await this.calcular(usuario.restauranteId, agora)).resposta;
+  }
+
+  /** Contexto de um garçom do restaurante do dono; sem comparação com colegas. */
+  async detalheGarcom(
+    usuario: UsuarioToken,
+    id: string,
+    agora = new Date(),
+  ): Promise<DetalheGarcom> {
+    exigirDono(usuario);
+    const r = usuario.restauranteId;
+    const garcom = await this.prisma.usuario.findFirst({
+      where: { id, restauranteId: r, papel: 'GARCOM' },
+      select: { id: true, nome: true, emTurno: true, emTurnoDesde: true },
+    });
+    if (!garcom) {
+      throw new NotFoundException({ mensagem: 'Garçom não encontrado' });
+    }
+    const [sessoes, chamados] = await Promise.all([
+      this.prisma.sessaoMesa.findMany({
+        where: { restauranteId: r, status: 'ABERTA', garcomId: id },
+        select: { abertaEm: true, mesa: { select: { numero: true } } },
+        orderBy: { abertaEm: 'asc' },
+      }),
+      this.prisma.chamado.findMany({
+        where: {
+          restauranteId: r,
+          status: 'ABERTO',
+          garcomId: id,
+          paraTodos: false,
+        },
+        select: {
+          id: true,
+          criadoEm: true,
+          mesa: { select: { numero: true } },
+        },
+        orderBy: { criadoEm: 'asc' },
+      }),
+    ]);
+    const desde = garcom.emTurno ? garcom.emTurnoDesde : null;
+    return {
+      id: garcom.id,
+      nome: garcom.nome,
+      emTurno: garcom.emTurno,
+      emTurnoDesde: garcom.emTurnoDesde?.toISOString() ?? null,
+      horasEmTurno: desde
+        ? arredonda1((agora.getTime() - desde.getTime()) / HORA_MS)
+        : null,
+      mesasAbertas: sessoes.map((s) => ({
+        numero: s.mesa.numero,
+        abertaEm: s.abertaEm.toISOString(),
+      })),
+      chamadosPendentes: chamados.map((c) => ({
+        id: c.id,
+        mesa: c.mesa.numero,
+        criadoEm: c.criadoEm.toISOString(),
+      })),
+    };
   }
 
   async calcular(

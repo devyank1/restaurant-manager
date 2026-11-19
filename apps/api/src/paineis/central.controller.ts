@@ -50,6 +50,14 @@ export class CentralController {
     return this.central.central(usuario);
   }
 
+  @Get('garcom/:id')
+  detalheGarcom(
+    @Param('id') id: string,
+    @UsuarioAtual() usuario: UsuarioToken,
+  ) {
+    return this.central.detalheGarcom(usuario, id);
+  }
+
   @Get('limites')
   lerLimites(@UsuarioAtual() usuario: UsuarioToken) {
     exigirDono(usuario);

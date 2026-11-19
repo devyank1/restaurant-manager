@@ -5,7 +5,10 @@ import { io, Socket } from 'socket.io-client';
 import request from 'supertest';
 import { CentralAgendador } from '../src/paineis/central.agendador';
 import { CentralService } from '../src/paineis/central.service';
-import type { CentralResposta } from '../src/paineis/central.types';
+import type {
+  CentralResposta,
+  DetalheGarcom,
+} from '../src/paineis/central.types';
 import { AppTeste, criarAppTeste, loginComo } from './app-teste';
 
 type Limites = Record<string, { ativo: boolean; valor: number | null }>;
@@ -391,6 +394,100 @@ describe('central de alertas', () => {
       const r = (await central.calcular(t.restauranteId, agora)).resposta;
       expect(r.contexto.faturamentoCentavos).toBe(base + 15_000);
       expect(r.contexto.ticketMedioCentavos).not.toBeNull();
+    });
+
+    describe('detalhe do garçom', () => {
+      const url = (id: string) => `/equipe/painel/central/garcom/${id}`;
+      const anaId = () =>
+        t.prisma.usuario
+          .findUniqueOrThrow({ where: { email: 'ana@demo.com' } })
+          .then((u) => u.id);
+
+      it('dono lê mesas abertas e chamados pendentes da Ana', async () => {
+        const id = await anaId();
+        const antes = await t.prisma.usuario.findUniqueOrThrow({
+          where: { id },
+        });
+        const desde = new Date(Date.now() - 90 * MIN);
+        await t.prisma.usuario.update({
+          where: { id },
+          data: { emTurno: true, emTurnoDesde: desde },
+        });
+        try {
+          const a = new Date(Date.now() - 20 * MIN);
+          const b = new Date(Date.now() - 10 * MIN);
+          const s2 = await novaSessao(t.restauranteId, {
+            abertaEm: b,
+            garcomId: id,
+          });
+          const s1 = await novaSessao(t.restauranteId, {
+            abertaEm: a,
+            garcomId: id,
+          });
+          const c = await chamar(t.restauranteId, s1, b, { garcomId: id });
+          await chamar(t.restauranteId, s2, b, {
+            garcomId: id,
+            paraTodos: true,
+          });
+          const r = await http().get(url(id)).set('Cookie', dono).expect(200);
+          const d = r.body as DetalheGarcom;
+          expect(d.id).toBe(id);
+          expect(d.emTurno).toBe(true);
+          expect(d.emTurnoDesde).toBe(desde.toISOString());
+          expect(d.horasEmTurno).toBeCloseTo(1.5, 1);
+          expect(d.mesasAbertas).toEqual([
+            { numero: s1.mesa.numero, abertaEm: a.toISOString() },
+            { numero: s2.mesa.numero, abertaEm: b.toISOString() },
+          ]);
+          expect(d.chamadosPendentes).toEqual([
+            { id: c.id, mesa: s1.mesa.numero, criadoEm: b.toISOString() },
+          ]);
+        } finally {
+          await t.prisma.usuario.update({
+            where: { id },
+            data: { emTurno: antes.emTurno, emTurnoDesde: antes.emTurnoDesde },
+          });
+        }
+      });
+
+      it('garçom recebe 403', async () => {
+        await http()
+          .get(url(await anaId()))
+          .set('Cookie', ana)
+          .expect(403);
+      });
+
+      it('garçom de outro restaurante recebe 404', async () => {
+        const outro = await t.prisma.restaurante.create({
+          data: { nome: 'Outro', slug: 'outro-central-detalhe' },
+        });
+        restaurantesExtras.push(outro.id);
+        const g = await t.prisma.usuario.create({
+          data: {
+            restauranteId: outro.id,
+            nome: 'Estranho',
+            email: 'estranho-central@demo.com',
+            senhaHash: 'x',
+            papel: 'GARCOM',
+          },
+        });
+        const r = await http().get(url(g.id)).set('Cookie', dono).expect(404);
+        expect(r.body).toMatchObject({ mensagem: 'Garçom não encontrado' });
+      });
+
+      it('id inexistente recebe 404', async () => {
+        await http()
+          .get(url('00000000-0000-4000-8000-000000000000'))
+          .set('Cookie', dono)
+          .expect(404);
+      });
+
+      it('o id do próprio dono recebe 404', async () => {
+        const u = await t.prisma.usuario.findUniqueOrThrow({
+          where: { email: 'dono@demo.com' },
+        });
+        await http().get(url(u.id)).set('Cookie', dono).expect(404);
+      });
     });
   });
   describe('tempo real', () => {

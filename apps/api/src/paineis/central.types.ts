@@ -39,3 +39,14 @@ export type CentralResposta = {
     porHora: { hora: number; hoje: number; media: number }[];
   };
 };
+
+/** Contexto de cuidado de um garçom: o que ele carrega agora, sem comparar com colegas. */
+export type DetalheGarcom = {
+  id: string;
+  nome: string;
+  emTurno: boolean;
+  emTurnoDesde: string | null;
+  horasEmTurno: number | null;
+  mesasAbertas: { numero: number; abertaEm: string }[];
+  chamadosPendentes: { id: string; mesa: number; criadoEm: string }[];
+};
