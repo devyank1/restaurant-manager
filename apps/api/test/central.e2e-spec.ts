@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { Server } from 'node:http';
 import { AddressInfo } from 'node:net';
 import { io, Socket } from 'socket.io-client';
@@ -395,6 +396,18 @@ describe('central de alertas', () => {
   describe('tempo real', () => {
     const sockets: Socket[] = [];
     const MIN = 60_000;
+    // Relógio único e monotônico do bloco: o estado em memória da central
+    // só anda para frente, então toda hora usada aqui vem deste helper.
+    const base = Date.now() + 60 * MIN;
+    let passo = 0;
+    const proximaHora = () => new Date(base + passo++ * 10 * MIN);
+    const esperar = async (cond: () => boolean, ms = 2000) => {
+      const fim = Date.now() + ms;
+      while (!cond() && Date.now() < fim) {
+        await new Promise((ok) => setTimeout(ok, 20));
+      }
+    };
+    const assentar = () => new Promise((ok) => setTimeout(ok, 200));
 
     afterEach(() => {
       sockets.splice(0).forEach((s) => s.disconnect());
@@ -419,12 +432,11 @@ describe('central de alertas', () => {
       socket.on('central-mudou', () => recebidos++);
       const agendador = t.app.get(CentralAgendador);
 
-      // Horário futuro: o estado em memória só anda para frente.
-      const t0 = new Date(Date.now() + 60 * MIN);
+      const t0 = proximaHora();
       // Assenta qualquer resto de outros testes antes de contar.
       await agendador.verificar(t0);
       await agendador.verificar(new Date(t0.getTime() + 61_000));
-      await new Promise((ok) => setTimeout(ok, 150));
+      await assentar();
       recebidos = 0;
 
       const mesa = await t.prisma.mesa.create({
@@ -438,7 +450,8 @@ describe('central de alertas', () => {
         const sessao = await t.prisma.sessaoMesa.create({
           data: { restauranteId: t.restauranteId, mesaId: mesa.id },
         });
-        const velho = new Date(t0.getTime() - 4 * MIN);
+        const t1 = proximaHora();
+        const velho = new Date(t1.getTime() - 4 * MIN);
         await t.prisma.chamado.create({
           data: {
             restauranteId: t.restauranteId,
@@ -449,11 +462,17 @@ describe('central de alertas', () => {
             atribuidoEm: velho,
           },
         });
-        const t1 = new Date(t0.getTime() + 5 * MIN);
+        // Primeira vez que a condição aparece: ainda na janela de 1 min.
         await agendador.verificar(t1);
+        await assentar();
+        expect(recebidos).toBe(0);
+        // Confirmada: emite exatamente uma vez.
         await agendador.verificar(new Date(t1.getTime() + 61_000));
+        await esperar(() => recebidos > 0);
+        expect(recebidos).toBe(1);
+        // Mesma condição: não emite de novo.
         await agendador.verificar(new Date(t1.getTime() + 62_000));
-        await new Promise((ok) => setTimeout(ok, 300));
+        await assentar();
         expect(recebidos).toBe(1);
       } finally {
         await t.prisma.mesa.delete({ where: { id: mesa.id } });
@@ -473,11 +492,13 @@ describe('central de alertas', () => {
           if (id === t.restauranteId) return Promise.reject(new Error('boom'));
           return original(id, agora);
         });
+        const erro = jest
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation(() => undefined);
         await expect(
-          t.app
-            .get(CentralAgendador)
-            .verificar(new Date(Date.now() + 120 * MIN)),
+          t.app.get(CentralAgendador).verificar(proximaHora()),
         ).resolves.toBeUndefined();
+        expect(erro).toHaveBeenCalled();
         expect(chamados).toEqual(
           expect.arrayContaining([t.restauranteId, outro.id]),
         );
