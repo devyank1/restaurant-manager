@@ -72,6 +72,26 @@ O sistema nunca marca prato como esgotado sozinho: quando um item acaba, o Estoq
 
 Abaixo da meta a barra fica cinza, nunca vermelha. Os avisos de cuidado ("X h em turno sem pausa", padrão 4 h em **Metas → Cuidado com a equipe**; "Pegou bem mais mesas que os colegas") aparecem em amarelo, só no cartão da pessoa.
 
+## Central do gerente
+
+1. Entre como dono em `http://localhost:5174` (`dono@demo.com`): no início, a **Central** mostra os alertas do momento, do mais grave ao menos grave, com o cartão de carga de cada garçom e da fila de cada estação. Ela atualiza sozinha, sem recarregar a página.
+2. O que cada alerta quer dizer:
+   - **Mesa sem atendimento**: sessão aberta sem movimento (pedido ou chamado atendido) há mais de 10 min.
+   - **Chamado sem resposta**: chamado aberto há mais de 3 min.
+   - **Chamado para todos**: chamado que ninguém assumiu há mais de 3 min.
+   - **Pedido atrasado**: pedido passou do tempo esperado + 10%.
+   - **Pedido esquecido**: pedido passou do dobro do tempo esperado.
+   - **Fila acumulada**: mais de 6 pedidos na fila de uma estação.
+   - **Carga alta no salão**: um garçom com bem mais mesas que os colegas.
+   - **Garçom sem pausa**: há mais de 4 h em turno sem pausa.
+   - **Estoque crítico**: itens acabando ou zerados.
+   - **Movimento alto**: pedidos na última hora acima de 140% do habitual.
+   - **Sem garçom**: mesas abertas e ninguém em turno.
+3. Um alerta só aparece depois que a condição se mantém por 1 minuto, e some sozinho quando ela acaba.
+4. **Limites** (na Central) liga/desliga cada tipo e ajusta os minutos, a fila e o percentual.
+5. **Detalhes do dia** abre o painel da equipe.
+6. **Para ver na demo:** `pnpm --filter api dev:central` cria mesas abertas (Ana com 7), uma mesa parada, um chamado velho e um pedido esquecido na Cozinha, e liga Ana e Bruno em turno; os alertas surgem em ~1 min. Se rodou `dev:estoque` antes, um item também fica acabando. Pode rodar de novo (refaz o cenário). `pnpm --filter api dev:central --limpar` desfaz tudo e devolve turnos e estoque ao que estavam. Não use o seed no dev.
+
 ## Celular com HTTPS (Tailscale)
 
 Notificação push, instalar como app e o botão "Ler etiqueta" (Web NFC) só funcionam em HTTPS.

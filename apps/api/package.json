@@ -23,6 +23,7 @@
     "dev:conta": "node scripts/dev-conta.mjs",
     "dev:estoque": "node scripts/dev-estoque.mjs",
     "dev:paineis": "node scripts/dev-paineis.mjs",
+    "dev:central": "node scripts/dev-central.mjs",
     "db:seed": "prisma db seed"
   },
   "dependencies": {
