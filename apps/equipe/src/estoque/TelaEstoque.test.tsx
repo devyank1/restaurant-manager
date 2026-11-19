@@ -99,7 +99,7 @@ describe('Início do estoque', () => {
   })
 
   it('dono vê o botão Estoque com quantos precisam de atenção', async () => {
-    window.history.pushState({}, '', '/')
+    window.history.pushState({}, '', '/dia')
     render(<App />)
     const botao = await screen.findByRole('button', { name: 'Estoque · 2 acabando' })
     await userEvent.click(botao)

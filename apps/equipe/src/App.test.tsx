@@ -99,6 +99,18 @@ describe('App da equipe', () => {
     expect(screen.queryByRole('button', { name: 'Cozinha' })).not.toBeInTheDocument()
   })
 
+  it('dono vê a Central em / e o início antigo em /dia', async () => {
+    api.estado.usuario = { ...carla }
+    window.history.replaceState({}, '', '/')
+    const { unmount } = render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Agora' })).toBeInTheDocument()
+    unmount()
+    window.history.replaceState({}, '', '/dia')
+    render(<App />)
+    expect(await screen.findByRole('button', { name: /^Estoque/ })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Agora' })).not.toBeInTheDocument()
+  })
+
   it('dono não tem interruptor de turno', async () => {
     api.estado.usuario = { ...carla }
     window.history.replaceState({}, '', '/')

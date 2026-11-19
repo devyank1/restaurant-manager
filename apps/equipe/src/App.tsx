@@ -5,6 +5,7 @@ import TelaEstoqueRotas from './estoque/TelaEstoqueRotas'
 import TelaMetaPessoa from './gestao/TelaMetaPessoa'
 import TelaMetas from './gestao/TelaMetas'
 import TelaTempos from './gestao/TelaTempos'
+import Central from './central/Central'
 import Inicio from './inicio/Inicio'
 import Topo from './inicio/Topo'
 import Login from './login/Login'
@@ -74,8 +75,10 @@ export default function App() {
           <TelaMetas />
         ) : rota.nome === 'meta-pessoa' ? (
           <TelaMetaPessoa key={rota.id} id={rota.id} />
-        ) : (
+        ) : rota.nome === 'dia' ? (
           <Inicio usuario={usuario} />
+        ) : (
+          <Central />
         )
       ) : (
         <>
