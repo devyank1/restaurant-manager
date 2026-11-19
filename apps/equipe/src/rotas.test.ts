@@ -53,6 +53,19 @@ describe('rotas', () => {
     expect(voltaDe({ nome: 'estoque-chegou', listaId: 'l' })).toBe('/estoque')
   })
 
+  it('rotas da central', () => {
+    expect(lerRota('/', '')).toEqual({ nome: 'inicio' })
+    expect(lerRota('/central', '')).toEqual({ nome: 'central' })
+    expect(lerRota('/dia', '')).toEqual({ nome: 'dia' })
+    expect(lerRota('/limites', '')).toEqual({ nome: 'limites' })
+    expect(lerRota('/central/garcom/abc', '')).toEqual({ nome: 'central-garcom', id: 'abc' })
+    expect(lerRota('/central/garcom/u%2D1', '')).toEqual({ nome: 'central-garcom', id: 'u-1' })
+    expect(voltaDe({ nome: 'central' })).toBeNull()
+    expect(voltaDe({ nome: 'dia' })).toBe('/')
+    expect(voltaDe({ nome: 'limites' })).toBe('/')
+    expect(voltaDe({ nome: 'central-garcom', id: 'x' })).toBe('/')
+  })
+
   it('volta só aceita caminho interno', () => {
     expect(lerRota('/login', '?volta=https://mal.com')).toEqual({ nome: 'login' })
     expect(lerRota('/login', '?volta=//mal.com')).toEqual({ nome: 'login' })

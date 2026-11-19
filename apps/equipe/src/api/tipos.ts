@@ -282,3 +282,70 @@ export type PainelEstacao = {
 
 /** Dados do socket `meta-batida`. */
 export type MetaBatida = { tipo: TipoMeta; periodo: PeriodoMeta; alvo: number }
+
+// Central de alertas do gerente (espelha apps/api/src/paineis)
+export type TipoAlerta =
+  | 'MESA_SEM_ATENDIMENTO'
+  | 'CHAMADO_SEM_RESPOSTA'
+  | 'PEDIDO_ATRASADO'
+  | 'PEDIDO_ESQUECIDO'
+  | 'FILA_ACUMULADA'
+  | 'GARCOM_CARGA_ALTA'
+  | 'GARCOM_SEM_PAUSA'
+  | 'ESTOQUE_CRITICO'
+  | 'MOVIMENTO_ALTO'
+  | 'SEM_GARCOM'
+  | 'CHAMADO_PARA_TODOS'
+
+export type Gravidade = 'ALTA' | 'MEDIA' | 'BAIXA'
+
+export type FaixaCarga = 'TRANQUILO' | 'CHEIO' | 'SOBRECARREGADO'
+
+/** Minutos, pedidos na fila, ou percentual (MOVIMENTO_ALTO). */
+export type LimitesAlerta = Record<TipoAlerta, { ativo: boolean; valor: number | null }>
+
+export type CentralResposta = {
+  verificadoEm: string
+  alertas: {
+    chave: string
+    tipo: TipoAlerta
+    gravidade: Gravidade
+    titulo: string
+    detalhe: string
+    desde: string
+    link: string | null
+  }[]
+  cargaGarcons: {
+    id: string
+    nome: string
+    mesasAbertas: number
+    chamadosPendentes: number
+    carga: number
+    faixa: FaixaCarga
+    emTurnoDesde: string | null
+  }[]
+  cargaEstacoes: {
+    estacao: string
+    naFila: number
+    emPreparo: number
+    carga: number
+    maisAntigoMin: number | null
+  }[]
+  grupo: { garconsEmTurno: number; cargaTotal: number; cargaMedia: number | null }
+  contexto: {
+    faturamentoCentavos: number
+    ticketMedioCentavos: number | null
+    porHora: { hora: number; hoje: number; media: number }[]
+  }
+}
+
+/** Contexto de cuidado de um garçom: o que ele carrega agora, sem comparar com colegas. */
+export type DetalheGarcom = {
+  id: string
+  nome: string
+  emTurno: boolean
+  emTurnoDesde: string | null
+  horasEmTurno: number | null
+  mesasAbertas: { numero: number; abertaEm: string }[]
+  chamadosPendentes: { id: string; mesa: number; criadoEm: string }[]
+}

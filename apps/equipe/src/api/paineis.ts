@@ -1,6 +1,10 @@
 // Chamadas da etapa 4B: tempos de preparo, metas e painéis.
 import { chamar, enc, json } from './equipe'
 import type {
+  CentralResposta,
+  DetalheGarcom,
+  LimitesAlerta,
+  TipoAlerta,
   MetaPessoa,
   MetasConfig,
   MetaValor,
@@ -41,3 +45,10 @@ export const salvarHorasSemPausa = (horasSemPausa: number) =>
 export const buscarPainel = (periodo: PeriodoMeta) => chamar<PainelEquipe>(`${E}/painel?periodo=${periodo}`)
 export const buscarMeuPainel = () => chamar<PainelGarcom>(`${E}/painel/eu`)
 export const buscarPainelEstacao = (estacao: string) => chamar<PainelEstacao>(`${E}/painel/estacao/${enc(estacao)}`)
+
+// Central de alertas (gerente)
+export const buscarCentral = () => chamar<CentralResposta>(`${E}/painel/central`)
+export const buscarDetalheGarcom = (id: string) => chamar<DetalheGarcom>(`${E}/painel/central/garcom/${enc(id)}`)
+export const buscarLimites = () => chamar<LimitesAlerta>(`${E}/painel/central/limites`)
+export const salvarLimite = (tipo: TipoAlerta, v: { ativo: boolean; valor: number | null }) =>
+  chamar<object>(`${E}/painel/central/limites/${tipo}`, json('PUT', v))

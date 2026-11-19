@@ -8,6 +8,7 @@ export type AoMudarEquipe = {
   producao?: () => void
   estoque?: () => void
   painel?: () => void
+  central?: () => void
   metaBatida?: (dados: MetaBatida) => void
 }
 
@@ -32,6 +33,7 @@ export function useEquipeAoVivo(aoMudar: AoMudarEquipe): void {
       atual.current.producao?.()
       atual.current.estoque?.()
       atual.current.painel?.()
+      atual.current.central?.()
     }
     const socket = io({ transports: ['websocket', 'polling'] })
     socket.on('connect', recarregar)
@@ -40,6 +42,7 @@ export function useEquipeAoVivo(aoMudar: AoMudarEquipe): void {
     socket.on('producao-mudou', () => atual.current.producao?.())
     socket.on('estoque-mudou', () => atual.current.estoque?.())
     socket.on('painel-mudou', () => atual.current.painel?.())
+    socket.on('central-mudou', () => atual.current.central?.())
     socket.on('meta-batida', (dados) => atual.current.metaBatida?.(dados as MetaBatida))
 
     const reconectar = () => {

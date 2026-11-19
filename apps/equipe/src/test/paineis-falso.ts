@@ -1,5 +1,7 @@
 // Parte de painéis, metas e tempos da API falsa (etapa 4B).
 import type {
+  CentralResposta,
+  LimitesAlerta,
   MedidaEstacao,
   MetaPessoa,
   MetasConfig,
@@ -18,6 +20,8 @@ export type PaineisFalso = {
   equipe: PainelEquipe
   eu: PainelGarcom | null
   estacoes: Record<string, PainelEstacao>
+  central: CentralResposta
+  limites: LimitesAlerta
 }
 
 export const medidaVazia = (estacao: string): MedidaEstacao => ({
@@ -69,6 +73,29 @@ export function painelVazio(): PainelEquipe {
   }
 }
 
+export const centralVazia = (): CentralResposta => ({
+  verificadoEm: '2026-11-11T12:00:00.000Z',
+  alertas: [],
+  cargaGarcons: [],
+  cargaEstacoes: [],
+  grupo: { garconsEmTurno: 0, cargaTotal: 0, cargaMedia: null },
+  contexto: { faturamentoCentavos: 0, ticketMedioCentavos: null, porHora: [] },
+})
+
+export const limitesPadrao = (): LimitesAlerta => ({
+  MESA_SEM_ATENDIMENTO: { ativo: true, valor: 10 },
+  CHAMADO_SEM_RESPOSTA: { ativo: true, valor: 3 },
+  PEDIDO_ATRASADO: { ativo: true, valor: null },
+  PEDIDO_ESQUECIDO: { ativo: true, valor: null },
+  FILA_ACUMULADA: { ativo: true, valor: 6 },
+  GARCOM_CARGA_ALTA: { ativo: true, valor: null },
+  GARCOM_SEM_PAUSA: { ativo: true, valor: null },
+  ESTOQUE_CRITICO: { ativo: true, valor: null },
+  MOVIMENTO_ALTO: { ativo: true, valor: 140 },
+  SEM_GARCOM: { ativo: true, valor: null },
+  CHAMADO_PARA_TODOS: { ativo: true, valor: null },
+})
+
 export function paineisVazio(): PaineisFalso {
   return {
     tempos: { categorias: [] },
@@ -83,6 +110,8 @@ export function paineisVazio(): PaineisFalso {
     equipe: painelVazio(),
     eu: meuPainel(),
     estacoes: {},
+    central: centralVazia(),
+    limites: limitesPadrao(),
   }
 }
 
@@ -100,6 +129,29 @@ export function rotaPaineis(e: PaineisFalso, metodo: string, caminho: string, co
   }
   if ((m = /^\/painel(\?periodo=(DIA|SEMANA))?$/.exec(p)) && metodo === 'GET') {
     return { status: 200, corpo: { ...e.equipe, periodo: m[2] ?? 'DIA' } }
+  }
+  if (p === '/painel/central' && metodo === 'GET') return { status: 200, corpo: e.central }
+  if (p === '/painel/central/limites' && metodo === 'GET') return { status: 200, corpo: e.limites }
+  if ((m = /^\/painel\/central\/limites\/([A-Z_]+)$/.exec(p)) && metodo === 'PUT') {
+    e.limites[m[1] as keyof LimitesAlerta] = corpo as LimitesAlerta[keyof LimitesAlerta]
+    return { status: 200, corpo }
+  }
+  if ((m = /^\/painel\/central\/garcom\/([^/]+)$/.exec(p)) && metodo === 'GET') {
+    const id = decodeURIComponent(m[1])
+    const g = e.central.cargaGarcons.find((x) => x.id === id)
+    if (!g) return { status: 404, corpo: { mensagem: 'Garçom não encontrado' } }
+    return {
+      status: 200,
+      corpo: {
+        id,
+        nome: g.nome,
+        emTurno: g.emTurnoDesde !== null,
+        emTurnoDesde: g.emTurnoDesde,
+        horasEmTurno: null,
+        mesasAbertas: [],
+        chamadosPendentes: [],
+      },
+    }
   }
   if (p === '/painel/eu' && metodo === 'GET') {
     return e.eu ? { status: 200, corpo: e.eu } : { status: 403, corpo: { mensagem: 'Acesso só para garçom' } }
