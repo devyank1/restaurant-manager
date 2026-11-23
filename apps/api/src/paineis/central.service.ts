@@ -242,14 +242,20 @@ export class CentralService {
     // Mesas: última atividade e problema maior (esquecido / chamado vencido).
     const limiteChamado = limites.CHAMADO_SEM_RESPOSTA.valor ?? 3;
     const comProblema = new Set<string>();
-    for (const p of pedidos) {
-      if (minutosDesde(p.confirmadaEm) > p.esperadoMin * FATOR_ESQUECIDO) {
-        comProblema.add(p.sessaoId);
+    // Só conta como problema maior o tipo que o gerente deixou ligado: o
+    // desligado não gera alerta, então não pode esconder o da mesa parada.
+    if (limites.PEDIDO_ESQUECIDO.ativo) {
+      for (const p of pedidos) {
+        if (minutosDesde(p.confirmadaEm) > p.esperadoMin * FATOR_ESQUECIDO) {
+          comProblema.add(p.sessaoId);
+        }
       }
     }
-    for (const c of chamados) {
-      if (minutosDesde(c.criadoEm) > limiteChamado) {
-        comProblema.add(c.sessaoId);
+    if (limites.CHAMADO_SEM_RESPOSTA.ativo) {
+      for (const c of chamados) {
+        if (minutosDesde(c.criadoEm) > limiteChamado) {
+          comProblema.add(c.sessaoId);
+        }
       }
     }
     const mesas: EntradaAlertas['mesas'] = sessoes.map((s) => {

@@ -443,6 +443,42 @@ describe('central de alertas', () => {
       });
     });
 
+    describe('mesa parada com chamado vencido', () => {
+      const cenario = async () => {
+        const t0 = new Date();
+        const s = await novaSessao(t.restauranteId, {
+          abertaEm: new Date(t0.getTime() - 30 * MIN),
+        });
+        const c = await chamar(
+          t.restauranteId,
+          s,
+          new Date(t0.getTime() - 5 * MIN),
+        );
+        return { t0, s, c };
+      };
+
+      it('com CHAMADO_SEM_RESPOSTA ligado o chamado cobre a mesa', async () => {
+        const { t0, s, c } = await cenario();
+        const chaves = (await nosEstavel(t0)).alertas.map((a) => a.chave);
+        expect(chaves).toContain(`CHAMADO_SEM_RESPOSTA:${c.id}`);
+        expect(chaves).not.toContain(`MESA_SEM_ATENDIMENTO:${s.sessao.id}`);
+      });
+
+      it('com CHAMADO_SEM_RESPOSTA desligado a mesa parada ainda alerta', async () => {
+        const { t0, s, c } = await cenario();
+        await t.prisma.limiteAlerta.create({
+          data: {
+            restauranteId: t.restauranteId,
+            tipo: 'CHAMADO_SEM_RESPOSTA',
+            ativo: false,
+          },
+        });
+        const chaves = (await nosEstavel(t0)).alertas.map((a) => a.chave);
+        expect(chaves).not.toContain(`CHAMADO_SEM_RESPOSTA:${c.id}`);
+        expect(chaves).toContain(`MESA_SEM_ATENDIMENTO:${s.sessao.id}`);
+      });
+    });
+
     it('faturamento soma contas fechadas do dia de serviço', async () => {
       const agora = new Date();
       const base = (await central.calcular(t.restauranteId, agora)).resposta
