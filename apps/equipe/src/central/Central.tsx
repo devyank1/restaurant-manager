@@ -12,6 +12,8 @@ import ListaAlertas from './ListaAlertas'
 import '../estilo/paineis.css'
 import '../estilo/central.css'
 
+const ATUALIZAR_MS = 30_000
+
 const hora = new Intl.DateTimeFormat('pt-BR', {
   hour: '2-digit',
   minute: '2-digit',
@@ -34,7 +36,22 @@ export default function Central() {
   useEffect(() => {
     void recarregar()
   }, [recarregar])
-  useEquipeAoVivo({ central: recarregar })
+  // Cartões, filas, faturamento e "há N min" mudam sem mexer nos alertas:
+  // qualquer evento da equipe e um relógio de 30 s mantêm a tela em dia.
+  useEquipeAoVivo({
+    central: recarregar,
+    mesas: recarregar,
+    chamados: recarregar,
+    producao: recarregar,
+    estoque: recarregar,
+    painel: recarregar,
+  })
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') void recarregar()
+    }, ATUALIZAR_MS)
+    return () => clearInterval(id)
+  }, [recarregar])
 
   return (
     <main className="central">

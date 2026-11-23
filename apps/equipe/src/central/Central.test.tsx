@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { carla } from '../test/estoque-fixtures'
 import { criarApiFalsa, type ApiFalsa } from '../test/api-falsa'
 import { centralVazia } from '../test/paineis-falso'
@@ -56,6 +56,60 @@ describe('Central', () => {
       for (const s of socketsFalsos) s.servidor('central-mudou', {})
     })
     await waitFor(() => expect(pedidos()).toBeGreaterThan(antes))
+  })
+
+  it.each(['chamados-mudaram', 'mesa-mudou', 'producao-mudou', 'estoque-mudou', 'painel-mudou'])(
+    '%s também busca de novo',
+    async (evento) => {
+      render(<Central />)
+      await screen.findByText('Sem garçom')
+      const antes = pedidos()
+      act(() => {
+        for (const s of socketsFalsos) s.servidor(evento, {})
+      })
+      await waitFor(() => expect(pedidos()).toBeGreaterThan(antes))
+    },
+  )
+
+  describe('atualização periódica', () => {
+    const visibilidade = (valor: DocumentVisibilityState) =>
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(valor)
+
+    afterEach(() => {
+      vi.useRealTimers()
+      vi.restoreAllMocks()
+    })
+
+    it('busca de novo a cada 30 s', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      render(<Central />)
+      await screen.findByText('Sem garçom')
+      const antes = pedidos()
+      await act(() => vi.advanceTimersByTimeAsync(30_000))
+      expect(pedidos()).toBe(antes + 1)
+      await act(() => vi.advanceTimersByTimeAsync(30_000))
+      expect(pedidos()).toBe(antes + 2)
+    })
+
+    it('não busca enquanto a aba está escondida', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      render(<Central />)
+      await screen.findByText('Sem garçom')
+      const antes = pedidos()
+      visibilidade('hidden')
+      await act(() => vi.advanceTimersByTimeAsync(90_000))
+      expect(pedidos()).toBe(antes)
+    })
+
+    it('desmontar para o intervalo', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      const { unmount } = render(<Central />)
+      await screen.findByText('Sem garçom')
+      unmount()
+      const antes = pedidos()
+      await act(() => vi.advanceTimersByTimeAsync(90_000))
+      expect(pedidos()).toBe(antes)
+    })
   })
 
   it('atalhos navegam', async () => {
