@@ -119,3 +119,9 @@ Regras:
 - **Limites:** um número por tipo de alerta (tabela `LimiteAlerta`), com chave para desligar o tipo. Multiplicadores e a margem de +3 continuam constantes no código.
 - **Chamado pendente:** ABERTO atribuído ao garçom. Chamado "para todos" não entra na carga de ninguém e aparece como alerta próprio.
 - **Rota da home do dono:** o construtor confere links, deep links de push e testes que apontam para a rota atual. O acesso é só `DONO`; o host "gerente" da `deploy` usa o mesmo papel.
+
+## Desvios conhecidos
+
+- **Links dos alertas:** os alertas de mesa, de pedido e de fila têm `link: null`. O dono não tem tela de mesa nem de estação, então não há para onde levar o toque.
+- **Garçom com carga alta:** `GARCOM_CARGA_ALTA` dispara quando as mesas abertas do garçom passam da média dos colegas em mais de 3. Ele não exige, além disso, chamados pendentes: esta foi a leitura adotada do trecho ambíguo "e chamados pendentes".
+- **11º tipo e validação:** existe um 11º tipo de alerta, `CHAMADO_PARA_TODOS` (chamado "para todos", que não entra na carga de ninguém). Corpos inválidos nos limites respondem 422 e não 400, como no resto do código.
