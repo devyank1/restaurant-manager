@@ -5,6 +5,8 @@ import { io, Socket } from 'socket.io-client';
 import request from 'supertest';
 import { CentralAgendador } from '../src/paineis/central.agendador';
 import { CentralService } from '../src/paineis/central.service';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { periodoDe } from '../src/paineis/periodo';
 import type {
   CentralResposta,
   DetalheGarcom,
@@ -370,6 +372,75 @@ describe('central de alertas', () => {
       expect(r.alertas.map((a) => a.chave)).not.toContain(
         `CHAMADO_SEM_RESPOSTA:${c.id}`,
       );
+    });
+
+    describe('janelas de histórico das rodadas', () => {
+      const DIA = 24 * 60 * MIN;
+      const confirmar = (
+        restauranteId: string,
+        s: { sessao: { id: string } },
+        confirmadaEm: Date,
+      ) =>
+        t.prisma.rodada.create({
+          data: {
+            restauranteId,
+            sessaoId: s.sessao.id,
+            dispositivoId: 'x',
+            status: 'CONFIRMADA',
+            totalCentavos: 100,
+            confirmadaEm,
+          },
+        });
+
+      it('busca só hoje (com 1 h de folga) e o mesmo dia das 4 semanas anteriores', async () => {
+        const agora = new Date();
+        const espia = jest.spyOn(t.app.get(PrismaService).rodada, 'findMany');
+        try {
+          await central.calcular(t.restauranteId, agora);
+          const chamada = espia.mock.calls.find(
+            ([a]) => a?.select?.confirmadaEm === true,
+          );
+          const where = chamada?.[0]?.where as {
+            OR?: { confirmadaEm: { gte: Date; lt: Date } }[];
+          };
+          expect(where.OR).toHaveLength(5);
+          const duracoes = where.OR!.map(
+            (o) => o.confirmadaEm.lt.getTime() - o.confirmadaEm.gte.getTime(),
+          );
+          expect(duracoes.slice(1)).toEqual([DIA, DIA, DIA, DIA]);
+          expect(duracoes[0]).toBeLessThanOrEqual(DIA + 60 * MIN);
+        } finally {
+          espia.mockRestore();
+        }
+      });
+
+      it('rodadas fora das janelas não mexem na média; dentro delas, sim', async () => {
+        const agora = new Date();
+        const dia = periodoDe('DIA', agora);
+        const antes = (await central.calcular(t.restauranteId, agora)).resposta
+          .contexto.porHora;
+        const s = await novaSessao(t.restauranteId, { abertaEm: agora });
+
+        // 10 dias atrás: dentro de 28 dias, mas não é um mesmo-dia-da-semana.
+        await confirmar(
+          t.restauranteId,
+          s,
+          new Date(dia.inicio.getTime() - 10 * DIA + 2 * 60 * MIN),
+        );
+        const fora = (await central.calcular(t.restauranteId, agora)).resposta
+          .contexto.porHora;
+        expect(fora).toEqual(antes);
+
+        // Mesmo dia da semana, uma semana atrás: entra na média.
+        await confirmar(
+          t.restauranteId,
+          s,
+          new Date(dia.inicio.getTime() - 7 * DIA + 2 * 60 * MIN),
+        );
+        const dentro = (await central.calcular(t.restauranteId, agora)).resposta
+          .contexto.porHora;
+        expect(dentro).not.toEqual(antes);
+      });
     });
 
     it('faturamento soma contas fechadas do dia de serviço', async () => {

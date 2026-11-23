@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TempoRealService } from '../tempo-real/tempo-real.service';
 import { calcularAlertas, type EntradaAlertas } from './alertas';
 import { cargaEstacao, cargaGarcom, faixaDeCarga } from './carga';
-import { confirmadasEm, fechadasEm, horaSP } from './consultas';
+import { fechadasEm, horaSP } from './consultas';
 import type { CentralResposta, DetalheGarcom } from './central.types';
 import { EstadoAlertas } from './estado-alertas';
 import { LimitesService } from './limites.service';
@@ -114,9 +114,20 @@ export class CentralService {
     agora: Date,
   ): Promise<{ resposta: CentralResposta; mudou: boolean }> {
     const dia = periodoDe('DIA', agora);
-    const desdeHistorico = new Date(
-      dia.inicio.getTime() - SEMANAS_HISTORICO * SEMANA_MS,
-    );
+    // Só o que a central lê: hoje (com a última hora, que pode vir de antes da
+    // virada do dia) e o mesmo dia de serviço das 4 semanas anteriores.
+    const janelas = [
+      {
+        inicio: new Date(
+          Math.min(dia.inicio.getTime(), agora.getTime() - HORA_MS),
+        ),
+        fim: dia.fim,
+      },
+      ...Array.from({ length: SEMANAS_HISTORICO }, (_, i) => {
+        const inicio = new Date(dia.inicio.getTime() - (i + 1) * SEMANA_MS);
+        return { inicio, fim: new Date(inicio.getTime() + DIA_MS) };
+      }),
+    ];
     const [
       limites,
       restaurante,
@@ -188,10 +199,10 @@ export class CentralService {
       this.prisma.rodada.findMany({
         where: {
           restauranteId: r,
-          ...confirmadasEm({
-            inicio: desdeHistorico,
-            fim: new Date(dia.fim.getTime()),
-          }),
+          status: 'CONFIRMADA',
+          OR: janelas.map((j) => ({
+            confirmadaEm: { gte: j.inicio, lt: j.fim },
+          })),
         },
         select: { confirmadaEm: true },
       }),

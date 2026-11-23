@@ -207,6 +207,7 @@ model SessaoMesa {
   chamados      Chamado[]
 
   @@index([mesaId, status])
+  @@index([restauranteId, status])
 }
 
 model DispositivoSessao {
@@ -258,6 +259,8 @@ model Rodada {
   garcomId        String?
 
   itens ItemRodada[]
+
+  @@index([restauranteId, status, confirmadaEm])
 }
 
 model ItemRodada {
