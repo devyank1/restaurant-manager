@@ -576,6 +576,71 @@ describe('central de alertas', () => {
       }
     });
 
+    it('um GET do dono que vê a mudança emite central-mudou; o agendador não repete', async () => {
+      const servidor = t.app.getHttpServer() as unknown as Server;
+      if (!servidor.listening) await t.app.listen(0);
+      const { port } = servidor.address() as AddressInfo;
+      const cookie = await loginComo(t.app, 'dono@demo.com');
+      const socket = io(`http://localhost:${port}`, {
+        transports: ['websocket'],
+        extraHeaders: { Cookie: cookie },
+        forceNew: true,
+      });
+      sockets.push(socket);
+      await new Promise<void>((ok) => socket.once('connect', () => ok()));
+      await new Promise((ok) => setTimeout(ok, 100));
+      let recebidos = 0;
+      socket.on('central-mudou', () => recebidos++);
+      const agendador = t.app.get(CentralAgendador);
+      const central = t.app.get(CentralService);
+      const donoU = await t.prisma.usuario.findUniqueOrThrow({
+        where: { email: 'dono@demo.com' },
+      });
+
+      const t0 = proximaHora();
+      await agendador.verificar(t0);
+      await agendador.verificar(new Date(t0.getTime() + 61_000));
+      await assentar();
+      const mesa = await t.prisma.mesa.create({
+        data: {
+          restauranteId: t.restauranteId,
+          numero: 9101,
+          token: `central-get-${Date.now()}`,
+        },
+      });
+      try {
+        const sessao = await t.prisma.sessaoMesa.create({
+          data: { restauranteId: t.restauranteId, mesaId: mesa.id },
+        });
+        const t1 = proximaHora();
+        const velho = new Date(t1.getTime() - 4 * MIN);
+        await t.prisma.chamado.create({
+          data: {
+            restauranteId: t.restauranteId,
+            mesaId: mesa.id,
+            sessaoId: sessao.id,
+            tipo: 'ATENDENTE',
+            criadoEm: velho,
+            atribuidoEm: velho,
+          },
+        });
+        await agendador.verificar(t1);
+        await assentar();
+        recebidos = 0;
+        // O GET do tablet é quem enxerga a confirmação primeiro.
+        await central.central(
+          { id: donoU.id, restauranteId: t.restauranteId, papel: 'DONO' },
+          new Date(t1.getTime() + 61_000),
+        );
+        await agendador.verificar(new Date(t1.getTime() + 90_000));
+        await esperar(() => recebidos > 0);
+        await assentar();
+        expect(recebidos).toBe(1);
+      } finally {
+        await t.prisma.mesa.delete({ where: { id: mesa.id } });
+      }
+    });
+
     it('erro em um restaurante não impede os demais', async () => {
       const outro = await t.prisma.restaurante.create({
         data: { nome: 'Outro Agendador', slug: 'outro-agendador' },

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { UsuarioToken } from '../equipe/equipe.types';
 import { exigirDono } from '../equipe/papel';
 import { PrismaService } from '../prisma/prisma.service';
+import { TempoRealService } from '../tempo-real/tempo-real.service';
 import { calcularAlertas, type EntradaAlertas } from './alertas';
 import { cargaEstacao, cargaGarcom, faixaDeCarga } from './carga';
 import { confirmadasEm, fechadasEm, horaSP } from './consultas';
@@ -31,6 +32,7 @@ export class CentralService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly limites: LimitesService,
+    private readonly tempoReal: TempoRealService,
   ) {}
 
   async central(
@@ -38,7 +40,16 @@ export class CentralService {
     agora = new Date(),
   ): Promise<CentralResposta> {
     exigirDono(usuario);
-    return (await this.calcular(usuario.restauranteId, agora)).resposta;
+    const { resposta, mudou } = await this.calcular(
+      usuario.restauranteId,
+      agora,
+    );
+    // Este cálculo já guardou a nova assinatura: sem avisar, o agendador não
+    // veria mudança e os outros aparelhos ficariam com a lista velha.
+    if (mudou) {
+      this.tempoReal.paraEquipe(usuario.restauranteId, 'central-mudou', {});
+    }
+    return resposta;
   }
 
   /** Contexto de um garçom do restaurante do dono; sem comparação com colegas. */
