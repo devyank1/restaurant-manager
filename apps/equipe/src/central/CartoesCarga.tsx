@@ -8,6 +8,8 @@ const FAIXA: Record<FaixaCarga, string> = {
   SOBRECARREGADO: 'sobrecarregado',
 }
 
+const plural = (n: number, singular: string, plural: string) => `${n} ${n === 1 ? singular : plural}`
+
 type Props = {
   garcons: CentralResposta['cargaGarcons']
   estacoes: CentralResposta['cargaEstacoes']
@@ -35,7 +37,7 @@ export default function CartoesCarga({ garcons, estacoes, grupo }: Props) {
                 onClick={() => navegar(`/central/garcom/${encodeURIComponent(g.id)}`)}
               >
                 <span className="carga-nome">{g.nome}</span>
-                <span className="carga-sub">{`${g.mesasAbertas} mesas · ${g.chamadosPendentes} chamados`}</span>
+                <span className="carga-sub">{`${plural(g.mesasAbertas, 'mesa', 'mesas')} · ${plural(g.chamadosPendentes, 'chamado', 'chamados')}`}</span>
                 <span className="carga-trilho" aria-hidden="true">
                   <span className="carga-cheio" style={{ width: `${Math.min(100, (100 * g.carga) / escala)}%` }} />
                 </span>

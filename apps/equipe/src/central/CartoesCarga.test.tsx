@@ -32,7 +32,7 @@ describe('CartoesCarga', () => {
     expect(screen.getByText('2 garçons em turno · carga média 7')).toBeInTheDocument()
     const botoes = screen.getAllByRole('button')
     expect(botoes.map((b) => b.querySelector('.carga-nome')?.textContent)).toEqual(['Ana', 'Bia'])
-    expect(within(botoes[0]).getByText('2 mesas · 1 chamados')).toBeInTheDocument()
+    expect(within(botoes[0]).getByText('2 mesas · 1 chamado')).toBeInTheDocument()
     expect(within(botoes[0]).getByText('tranquilo')).toBeInTheDocument()
     expect(within(botoes[1]).getByText('sobrecarregado')).toBeInTheDocument()
     expect(screen.getByText('3 na fila · 2 em preparo')).toBeInTheDocument()
@@ -40,6 +40,11 @@ describe('CartoesCarga', () => {
     expect(container.innerHTML).not.toMatch(/perigo/)
     await userEvent.click(botoes[0])
     expect(window.location.pathname).toBe('/central/garcom/u-ana')
+  })
+
+  it('singular e zero nos cartões de garçom', () => {
+    render(<CartoesCarga garcons={[g({ mesasAbertas: 1, chamadosPendentes: 0 })]} estacoes={[]} grupo={grupo} />)
+    expect(screen.getByText('1 mesa · 0 chamados')).toBeInTheDocument()
   })
 
   it('listas vazias mostram mensagem neutra', () => {
