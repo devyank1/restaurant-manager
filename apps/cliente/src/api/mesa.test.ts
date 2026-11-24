@@ -3,9 +3,11 @@ import { criarApiFalsa, type ApiFalsa } from '../test/api-falsa'
 import { ErroMesaNaoEncontrada, ErroRede } from './cardapio'
 import {
   adicionarAoCarrinho,
+  buscarRodadas,
   chamarAtendente,
   enviarPedido,
   entrarNaMesa,
+  ErroContaFechada,
   ErroForaDaSessao,
   ErroPedido,
   souEquipe,
@@ -73,5 +75,11 @@ describe('api da mesa', () => {
   it('souEquipe sem rede é false', async () => {
     api.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     expect(await souEquipe()).toBe(false)
+  })
+
+  it('CONTA_FECHADA não tenta entrar de novo', async () => {
+    api.estado.contaFechada = true
+    await expect(buscarRodadas('tok')).rejects.toBeInstanceOf(ErroContaFechada)
+    expect(api.chamadas('POST', /\/entrar$/)).toHaveLength(0)
   })
 })

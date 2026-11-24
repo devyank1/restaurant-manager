@@ -1,13 +1,23 @@
 // API da equipe em memória para os testes. `uma(...)` desvia a próxima chamada.
 import { vi } from 'vitest'
-import { precoUnitario, resumirOpcoes } from '@cardapio/opcoes'
+import { calcularConta, precoUnitario, resumirOpcoes } from '@cardapio/opcoes'
 import type { CardapioPublico } from '../api/cardapio'
-import type { ChamadoEquipe, ItemRodadaEquipe, MesaEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
+import { estoqueVazio, rotaEstoque } from './estoque-falso'
+import { paineisVazio, rotaPaineis } from './paineis-falso'
+import type {
+  ChamadoEquipe,
+  FilaProducao,
+  ItemRodadaEquipe,
+  MesaEquipe,
+  MesaResumo,
+  UsuarioEquipe,
+} from '../api/tipos'
 
 type Resposta = { status: number; corpo?: unknown }
 type Rota = (corpo: unknown, caminho: string) => Resposta | undefined | Promise<Resposta>
 
 export const ana: UsuarioEquipe = { id: 'u-ana', nome: 'Ana', papel: 'GARCOM', emTurno: false }
+export const dani: UsuarioEquipe = { id: 'u-dani', nome: 'Dani', papel: 'COZINHA', emTurno: false }
 
 export function criarApiFalsa() {
   const estado = {
@@ -20,6 +30,10 @@ export function criarApiFalsa() {
     mesa: {} as Record<string, MesaEquipe>,
     cardapio: null as unknown,
     chavePush: null as string | null,
+    /** Fila por estação; a primeira chave é a estação padrão. */
+    producao: {} as Record<string, FilaProducao['pedidos']>,
+    estoque: estoqueVazio(),
+    paineis: paineisVazio(),
   }
   const desvios: { metodo: string; padrao: RegExp; rota: Rota }[] = []
 
@@ -86,7 +100,7 @@ export function criarApiFalsa() {
       }
       if (metodo === 'POST') {
         const novo = corpo as Omit<ItemRodadaEquipe, 'id' | 'nome' | 'resumoOpcoes' | 'precoUnitarioCentavos'>
-        const vazio = { id: `i-${r.itens.length + 100}`, nome: '', resumoOpcoes: '', precoUnitarioCentavos: 0 }
+        const vazio = { id: `i-${r.itens.length + 100}`, nome: '', resumoOpcoes: '', precoUnitarioCentavos: 0, status: 'NA_FILA' as const, estacao: 'Cozinha' }
         r.itens = [...r.itens, montar({ ...vazio, ...novo }, {})]
       } else {
         const edicao = corpo as Partial<ItemRodadaEquipe>
@@ -96,6 +110,49 @@ export function criarApiFalsa() {
       }
       r.totalCentavos = r.itens.reduce((s, i) => s + i.precoUnitarioCentavos * i.quantidade, 0)
       return { status: metodo === 'POST' ? 201 : 200, corpo: r }
+    }
+    const fechar = /^\/api\/equipe\/mesas\/([^/]+)\/fechar$/.exec(caminho)
+    if (fechar && metodo === 'POST') {
+      const m = estado.mesa[decodeURIComponent(fechar[1])]
+      if (!m) return { status: 404, corpo: { mensagem: 'Mesa não encontrada' } }
+      if (!m.aberta) return { status: 409, corpo: { mensagem: 'Esta mesa já foi fechada' } }
+      const c = corpo as { servico: boolean; couvert: boolean; pessoas?: number; totalCentavos: number }
+      const conta = calcularConta({
+        subtotalCentavos: m.totalConfirmadoCentavos,
+        servico: c.servico,
+        couvert: c.couvert,
+        pessoas: c.pessoas ?? 0,
+        couvertUnitarioCentavos: m.conta.couvert.valorCentavos,
+      })
+      if (conta.totalCentavos !== c.totalCentavos) {
+        return { status: 409, corpo: { mensagem: 'A conta mudou. Confira o novo total.' } }
+      }
+      estado.mesa[decodeURIComponent(fechar[1])] = { ...m, aberta: false, rodadas: [], totalConfirmadoCentavos: 0 }
+      return { status: 200, corpo: { mesa: { numero: m.mesa.numero }, totalCentavos: conta.totalCentavos } }
+    }
+    const depois = /^\/api\/equipe\/rodadas\/([^/]+)\/(entregar|cancelar)$/.exec(caminho)
+    if (depois) {
+      const [, id, acao] = depois
+      for (const m of Object.values(estado.mesa)) {
+        const r = m.rodadas.find((x) => x.id === id)
+        if (!r) continue
+        if (acao === 'cancelar') {
+          if (!r.cancelavelAte || new Date(r.cancelavelAte) <= new Date()) {
+            return { status: 409, corpo: { mensagem: 'O prazo para cancelar acabou' } }
+          }
+          r.status = 'CANCELADA'
+          r.fase = 'CANCELADA'
+          r.cancelavelAte = null
+          m.totalConfirmadoCentavos -= r.totalCentavos
+          return { status: 200, corpo: r }
+        }
+        if (!r.itens.some((i) => i.status === 'PRONTO')) {
+          return { status: 409, corpo: { mensagem: 'Nada pronto para entregar' } }
+        }
+        r.itens = r.itens.map((i) => (i.status === 'PRONTO' ? { ...i, status: 'ENTREGUE' } : i))
+        return { status: 200, corpo: r }
+      }
+      return { status: 404, corpo: { mensagem: 'Rodada não encontrada' } }
     }
     const rodada = /^\/api\/equipe\/rodadas\/([^/]+)\/(confirmar|recusar)$/.exec(caminho)
     if (rodada) {
@@ -107,14 +164,44 @@ export function criarApiFalsa() {
           return { status: 409, corpo: { mensagem: 'Esta rodada já foi confirmada ou recusada' } }
         }
         r.status = acao === 'confirmar' ? 'CONFIRMADA' : 'CANCELADA'
+        r.fase = r.status === 'CONFIRMADA' ? 'NA_COZINHA' : 'CANCELADA'
         if (r.status === 'CONFIRMADA') m.totalConfirmadoCentavos += r.totalCentavos
         return { status: 200, corpo: r }
       }
       return { status: 404, corpo: { mensagem: 'Rodada não encontrada' } }
     }
+    if (caminho.startsWith('/api/equipe/producao')) return producao(metodo, caminho, corpo)
+    const painel = rotaPaineis(estado.paineis, metodo, caminho, corpo)
+    if (painel) return painel
+    if (caminho.startsWith('/api/equipe/estoque') || caminho.startsWith('/api/equipe/pratos/')) {
+      return rotaEstoque(estado.estoque, metodo, caminho, corpo)
+    }
     if (caminho === '/api/equipe/push/chave') return { status: 200, corpo: { chavePublica: estado.chavePush } }
     if (caminho === '/api/equipe/push/inscricoes') return { status: 201 }
     return { status: 404, corpo: { mensagem: `rota falsa ausente: ${metodo} ${caminho}` } }
+  }
+
+  /** Produção: GET da fila, PATCH de item e de estação inteira. */
+  const producao = (metodo: string, caminho: string, corpo: unknown): Resposta => {
+    const estacoes = Object.keys(estado.producao).sort()
+    if (metodo === 'GET') {
+      const pedida = new URL(caminho, 'http://x').searchParams.get('estacao') ?? ''
+      const estacao = estacoes.includes(pedida) ? pedida : estacoes[0]
+      return { status: 200, corpo: { estacoes, pedidos: estado.producao[estacao] ?? [] } }
+    }
+    const { status, estacao } = corpo as { status: string; estacao?: string }
+    const item = /\/itens\/([^/]+)$/.exec(caminho)?.[1]
+    const rodada = /\/rodadas\/([^/]+)$/.exec(caminho)?.[1]
+    for (const [nome, pedidos] of Object.entries(estado.producao)) {
+      for (const p of pedidos) {
+        const alvos = p.itens.filter((i) => i.id === item || (p.rodadaId === rodada && nome === estacao))
+        if (alvos.length === 0) continue
+        if (p.cancelada) return { status: 409, corpo: { mensagem: 'Este pedido mudou' } }
+        for (const i of alvos) i.status = status as typeof i.status
+        return { status: 200, corpo: { ok: true } }
+      }
+    }
+    return { status: 404, corpo: { mensagem: 'Pedido não encontrado' } }
   }
 
   const fetch = vi.fn<typeof globalThis.fetch>(async (entrada, init) => {

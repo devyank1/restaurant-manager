@@ -27,6 +27,8 @@ export type MesaResumo = {
   garcomNome: string | null
   /** Rodadas aguardando garçom. */
   pendentes: number
+  /** Itens prontos esperando o garçom entregar. */
+  prontos: number
 }
 
 export type StatusRodada = 'AGUARDANDO_GARCOM' | 'CONFIRMADA' | 'CANCELADA'
@@ -40,11 +42,18 @@ export type ItemRodadaEquipe = {
   observacao: string
   quantidade: number
   precoUnitarioCentavos: number
+  status: StatusItem
+  estacao: string
 }
+
+export type FaseRodada = 'AGUARDANDO_GARCOM' | 'NA_COZINHA' | 'PRONTO' | 'ENTREGUE' | 'CANCELADA'
 
 export type RodadaEquipe = {
   id: string
   status: StatusRodada
+  fase: FaseRodada
+  /** Foi direto para a produção: o garçom cancela até esta hora (ISO). */
+  cancelavelAte: string | null
   criadoEm: string
   totalCentavos: number
   /** Celular que ainda não teve rodada confirmada nesta sessão. */
@@ -52,9 +61,291 @@ export type RodadaEquipe = {
   itens: ItemRodadaEquipe[]
 }
 
+/** Opções da conta que o restaurante liga (e se vêm marcadas). */
+export type ConfigConta = {
+  servico: { habilitado: boolean; padrao: boolean }
+  couvert: { habilitado: boolean; padrao: boolean; valorCentavos: number }
+}
+
+export type FormaPagamento = 'CARTAO' | 'PIX' | 'DINHEIRO'
+
 export type MesaEquipe = {
   mesa: { numero: number; token: string }
+  /** Há sessão aberta (dá para fechar a conta). */
+  aberta: boolean
+  conta: ConfigConta
   garcomNome: string | null
   rodadas: RodadaEquipe[]
   totalConfirmadoCentavos: number
+}
+
+// Produção (cozinha, bar)
+export type StatusItem = 'NA_FILA' | 'EM_PREPARO' | 'PRONTO' | 'ENTREGUE'
+export type StatusProducao = Exclude<StatusItem, 'ENTREGUE'>
+
+export type ItemProducao = {
+  id: string
+  nome: string
+  resumoOpcoes: string
+  observacao: string
+  quantidade: number
+  status: StatusItem
+}
+
+export type PedidoProducao = {
+  rodadaId: string
+  mesa: { numero: number }
+  garcomNome: string | null
+  confirmadaEm: string | null
+  /** Maior tempo esperado (min) dos itens desta estação. */
+  esperadoMin: number
+  cancelada: boolean
+  itens: ItemProducao[]
+}
+
+export type FilaProducao = { estacoes: string[]; pedidos: PedidoProducao[] }
+
+// ---------- Estoque (etapa 4A) ----------
+
+export type Unidade = 'UN' | 'G' | 'ML'
+export type NivelEstoque = 'OK' | 'ACABANDO' | 'ZERADO'
+export type MotivoPerda = 'ACIDENTE' | 'VALIDADE' | 'PREPARO' | 'OUTRO'
+export type TipoMovimento = 'VENDA' | 'ESTORNO' | 'ENTRADA' | 'CONTAGEM' | 'PERDA'
+export type Embalagem = { nome: string; quantidade: number }
+
+export type ItemEstoque = {
+  id: string
+  nome: string
+  unidade: Unidade
+  /** Na unidade base (un, g, ml). */
+  quantidade: number
+  minimo: number
+  cheio: number
+  nivel: NivelEstoque
+  fornecedor: { id: string; nome: string } | null
+  embalagem: Embalagem | null
+}
+
+export type PratoQueUsa = { id: string; nome: string; esgotado: boolean }
+
+export type PerdaHoje = {
+  itemId: string
+  nome: string
+  quantidade: number
+  unidade: Unidade
+  motivo: MotivoPerda | null
+  observacao: string | null
+  criadoEm: string
+}
+
+export type ResumoEstoque = {
+  acabando: ItemEstoque[]
+  acabou: (ItemEstoque & { pratos: PratoQueUsa[] })[]
+  perdasHoje: PerdaHoje[]
+  listasAbertas: { id: string; criadaEm: string; fornecedores: string[] }[]
+}
+
+export type Fornecedor = { id: string; nome: string; telefone: string | null; observacao: string | null }
+
+export type MovimentoEstoque = {
+  id: string
+  tipo: TipoMovimento
+  quantidade: number
+  motivo: MotivoPerda | null
+  observacao: string | null
+  usuario: string | null
+  criadoEm: string
+  desfeito: boolean
+}
+
+export type Desfazivel = { lote: string; descricao: string; ate: string }
+
+export type LinhaReceita = { itemId: string; nome: string; unidade: Unidade; quantidade: number }
+
+export type PratoReceita = {
+  id: string
+  nome: string
+  categoria: string
+  esgotado: boolean
+  receita: LinhaReceita[]
+  grupos: {
+    id: string
+    nome: string
+    tipo: 'UNICA' | 'MULTIPLA' | 'SABORES'
+    opcoes: { id: string; nome: string; multiplicadorPct: number; receita: LinhaReceita[] }[]
+  }[]
+}
+
+export type LinhaCompra = {
+  itemId: string
+  nome: string
+  unidade: Unidade
+  quantidade: number
+  texto: string
+  embalagem: Embalagem | null
+}
+
+export type GrupoCompra = {
+  fornecedor: { id: string; nome: string; telefone: string | null } | null
+  itens: LinhaCompra[]
+}
+
+export type ListaCompra = {
+  id: string
+  /** Nome do restaurante (texto do pedido no WhatsApp). */
+  restaurante: string
+  criadaEm: string; chegouEm: string | null; grupos: GrupoCompra[] }
+
+// ---------- Etapa 4B: painéis, metas e tempos ----------
+
+export type TemposCardapio = {
+  categorias: {
+    id: string
+    nome: string
+    estacao: string
+    tempoPreparoMin: number | null
+    pratos: { id: string; nome: string; tempoPreparoMin: number | null }[]
+  }[]
+}
+
+export type TipoMeta = 'VALOR' | 'MESAS' | 'NO_TEMPO' | 'ESQUECIDOS'
+export type PeriodoMeta = 'DIA' | 'SEMANA'
+export type TipoPessoa = 'VALOR' | 'MESAS'
+export type MetaValor = { periodo: PeriodoMeta; alvo: number } | null
+
+export type MetasConfig = {
+  equipe: Record<TipoPessoa, MetaValor>
+  garcomPadrao: Record<TipoPessoa, MetaValor>
+  estacoes: { estacao: string; noTempoPct: number | null; zeroEsquecidos: boolean }[]
+  garcons: { id: string; nome: string }[]
+  horasSemPausa: number
+}
+
+export type MetaPessoa = { id: string; nome: string } & Record<TipoPessoa, { padrao: MetaValor; ajuste: number | null }>
+
+export type ProgressoMeta = {
+  tipo: TipoMeta
+  periodo: PeriodoMeta
+  alvo: number
+  atual: number
+  batida: boolean
+  /** 0 a 100, para a barra. */
+  pct: number
+}
+
+export type CartaoPessoa = {
+  id: string
+  nome: string
+  emTurno: boolean
+  emTurnoDesde: string | null
+  avisos: string[]
+  metas: ProgressoMeta[]
+  mesasHoje: number
+}
+
+export type MedidaEstacao = {
+  estacao: string
+  pedidos: number
+  avaliados: number
+  noTempo: number
+  noTempoPct: number | null
+  mediaMin: number | null
+  esquecidos: { rodadaId: string; mesa: number; minutos: number }[]
+}
+
+export type PainelEquipe = {
+  periodo: PeriodoMeta
+  inicio: string
+  metaEquipe: ProgressoMeta[]
+  pessoas: CartaoPessoa[]
+  operacao: {
+    faturamentoCentavos: number
+    contas: number
+    ticketMedioCentavos: number | null
+    porHora: { hora: number; rodadas: number }[]
+    porDiaSemana: { dia: number; mediaRodadas: number }[]
+    maisVendidos: { nome: string; quantidade: number }[]
+    estacoes: MedidaEstacao[]
+    chamadosDemorados: { quantidade: number; mediaRespostaSeg: number | null }
+    perdasSemana: { item: string; unidade: Unidade; quantidade: number; motivo: MotivoPerda | null }[]
+  }
+}
+
+export type PainelGarcom = { metaEquipe: ProgressoMeta[]; eu: CartaoPessoa }
+
+export type PainelEstacao = {
+  estacao: string
+  metaEquipe: ProgressoMeta[]
+  metas: ProgressoMeta[]
+  medida: MedidaEstacao
+}
+
+/** Dados do socket `meta-batida`. */
+export type MetaBatida = { tipo: TipoMeta; periodo: PeriodoMeta; alvo: number }
+
+// Central de alertas do gerente (espelha apps/api/src/paineis)
+export type TipoAlerta =
+  | 'MESA_SEM_ATENDIMENTO'
+  | 'CHAMADO_SEM_RESPOSTA'
+  | 'PEDIDO_ATRASADO'
+  | 'PEDIDO_ESQUECIDO'
+  | 'FILA_ACUMULADA'
+  | 'GARCOM_CARGA_ALTA'
+  | 'GARCOM_SEM_PAUSA'
+  | 'ESTOQUE_CRITICO'
+  | 'MOVIMENTO_ALTO'
+  | 'SEM_GARCOM'
+  | 'CHAMADO_PARA_TODOS'
+
+export type Gravidade = 'ALTA' | 'MEDIA' | 'BAIXA'
+
+export type FaixaCarga = 'TRANQUILO' | 'CHEIO' | 'SOBRECARREGADO'
+
+/** Minutos, pedidos na fila, ou percentual (MOVIMENTO_ALTO). */
+export type LimitesAlerta = Record<TipoAlerta, { ativo: boolean; valor: number | null }>
+
+export type CentralResposta = {
+  verificadoEm: string
+  alertas: {
+    chave: string
+    tipo: TipoAlerta
+    gravidade: Gravidade
+    titulo: string
+    detalhe: string
+    desde: string
+    link: string | null
+  }[]
+  cargaGarcons: {
+    id: string
+    nome: string
+    mesasAbertas: number
+    chamadosPendentes: number
+    carga: number
+    faixa: FaixaCarga
+    emTurnoDesde: string | null
+  }[]
+  cargaEstacoes: {
+    estacao: string
+    naFila: number
+    emPreparo: number
+    carga: number
+    maisAntigoMin: number | null
+  }[]
+  grupo: { garconsEmTurno: number; cargaTotal: number; cargaMedia: number | null }
+  contexto: {
+    faturamentoCentavos: number
+    ticketMedioCentavos: number | null
+    porHora: { hora: number; hoje: number; media: number }[]
+  }
+}
+
+/** Contexto de cuidado de um garçom: o que ele carrega agora, sem comparar com colegas. */
+export type DetalheGarcom = {
+  id: string
+  nome: string
+  emTurno: boolean
+  emTurnoDesde: string | null
+  horasEmTurno: number | null
+  mesasAbertas: { numero: number; abertaEm: string }[]
+  chamadosPendentes: { id: string; mesa: number; criadoEm: string }[]
 }

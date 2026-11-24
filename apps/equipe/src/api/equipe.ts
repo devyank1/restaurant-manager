@@ -1,7 +1,16 @@
 // Chamadas da equipe. O cookie httpOnly `equipe` vai junto (mesma origem, via proxy /api).
 import type { CardapioPublico } from './cardapio'
 import { caminhoAtual, navegar } from '../rotas'
-import type { ChamadoEquipe, MesaEquipe, MesaResumo, RodadaEquipe, UsuarioEquipe } from './tipos'
+import type {
+  ChamadoEquipe,
+  FilaProducao,
+  FormaPagamento,
+  MesaEquipe,
+  MesaResumo,
+  RodadaEquipe,
+  StatusProducao,
+  UsuarioEquipe,
+} from './tipos'
 import type { Selecao } from '@cardapio/opcoes'
 
 /** Sem sessão (cookie ausente ou vencido): o app já foi para o login. */
@@ -34,7 +43,7 @@ function irParaLogin() {
   navegar(`/login?volta=${encodeURIComponent(caminhoAtual())}`)
 }
 
-async function chamar<T>(url: string, init?: RequestInit, opcoes: { semRedirecionar?: boolean } = {}): Promise<T> {
+export async function chamar<T>(url: string, init?: RequestInit, opcoes: { semRedirecionar?: boolean } = {}): Promise<T> {
   let resposta: Response
   try {
     resposta = await fetch(url, init)
@@ -53,13 +62,13 @@ async function chamar<T>(url: string, init?: RequestInit, opcoes: { semRedirecio
   throw new ErroRede(`HTTP ${resposta.status}`)
 }
 
-const json = (method: string, corpo?: unknown): RequestInit => ({
+export const json = (method: string, corpo?: unknown): RequestInit => ({
   method,
   headers: corpo === undefined ? undefined : { 'Content-Type': 'application/json' },
   body: corpo === undefined ? undefined : JSON.stringify(corpo),
 })
 
-const enc = encodeURIComponent
+export const enc = encodeURIComponent
 
 // Sessão
 export const login = (email: string, senha: string) =>
@@ -92,6 +101,28 @@ export const confirmarRodada = (rodadaId: string) =>
   chamar<RodadaEquipe>(`/api/equipe/rodadas/${enc(rodadaId)}/confirmar`, json('POST'))
 export const recusarRodada = (rodadaId: string) =>
   chamar<RodadaEquipe>(`/api/equipe/rodadas/${enc(rodadaId)}/recusar`, json('POST'))
+/** Rodada que foi direto para a produção, dentro da janela de cancelamento. */
+export const cancelarRodada = (rodadaId: string) =>
+  chamar<RodadaEquipe>(`/api/equipe/rodadas/${enc(rodadaId)}/cancelar`, json('POST'))
+/** Dá baixa na conta: o servidor confere o total que o garçom viu. */
+export const fecharConta = (
+  token: string,
+  corpo: { servico: boolean; couvert: boolean; pessoas?: number; formaPagamento: FormaPagamento; totalCentavos: number },
+) =>
+  chamar<{ mesa: { numero: number }; totalCentavos: number; formaPagamento: FormaPagamento }>(
+    `/api/equipe/mesas/${enc(token)}/fechar`,
+    json('POST', corpo),
+  )
+export const entregarRodada = (rodadaId: string) =>
+  chamar<RodadaEquipe>(`/api/equipe/rodadas/${enc(rodadaId)}/entregar`, json('POST'))
+
+// Produção (cozinha, bar)
+export const buscarProducao = (estacao?: string) =>
+  chamar<FilaProducao>(`/api/equipe/producao${estacao ? `?estacao=${enc(estacao)}` : ''}`)
+export const mudarItemProducao = (id: string, status: StatusProducao) =>
+  chamar<{ ok: true }>(`/api/equipe/producao/itens/${enc(id)}`, json('PATCH', { status }))
+export const mudarRodadaProducao = (id: string, estacao: string, status: StatusProducao) =>
+  chamar<{ ok: true }>(`/api/equipe/producao/rodadas/${enc(id)}`, json('PATCH', { estacao, status }))
 
 // Push
 export const chavePush = () => chamar<{ chavePublica: string | null }>('/api/equipe/push/chave')

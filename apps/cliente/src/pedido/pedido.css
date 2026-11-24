@@ -64,7 +64,9 @@
   font-weight: 700;
 }
 
-.pedidos-rodada--confirmada .pedidos-status {
+.pedidos-rodada--na_cozinha .pedidos-status,
+.pedidos-rodada--pronto .pedidos-status,
+.pedidos-rodada--entregue .pedidos-status {
   color: var(--sucesso, #2e9e5b);
 }
 

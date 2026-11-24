@@ -5,6 +5,7 @@ import {
   alterarQuantidade,
   buscarCarrinho,
   enviarPedido,
+  ErroContaFechada,
   ErroPedido,
   removerDoCarrinho,
 } from '../api/mesa'
@@ -26,6 +27,7 @@ function mensagemDe(erro: unknown): string {
 export function useCarrinhoMesa(
   token: string,
   aoErro?: (mensagem: string) => void,
+  aoFechar?: () => void,
 ): {
   itens: ItemCarrinho[]
   total: number
@@ -50,6 +52,18 @@ export function useCarrinhoMesa(
     setErroEstado(mensagem)
     if (mensagem) avisar.current?.(mensagem)
   }, [])
+  const fechou = useRef(aoFechar)
+  useEffect(() => {
+    fechou.current = aoFechar
+  })
+  /** Conta fechada vira a tela de agradecimento, não "sem conexão". */
+  const falhou = useCallback(
+    (e: unknown) => {
+      if (e instanceof ErroContaFechada) fechou.current?.()
+      else setErro(mensagemDe(e))
+    },
+    [setErro],
+  )
 
   const recarregar = useCallback(() => {
     buscarCarrinho(token)
@@ -69,12 +83,12 @@ export function useCarrinhoMesa(
         setErro(null)
         return true
       } catch (e) {
-        setErro(mensagemDe(e))
-        if (!(e instanceof ErroRede)) recarregar()
+        falhou(e)
+        if (!(e instanceof ErroRede) && !(e instanceof ErroContaFechada)) recarregar()
         return false
       }
     },
-    [recarregar, setCarrinho, setErro],
+    [falhou, recarregar, setCarrinho, setErro],
   )
 
   const despachar = useCallback(
@@ -100,12 +114,12 @@ export function useCarrinhoMesa(
       setErro(null)
       return rodada
     } catch (e) {
-      setErro(mensagemDe(e))
+      falhou(e)
       return null
     } finally {
       recarregar()
     }
-  }, [recarregar, setErro, token])
+  }, [falhou, recarregar, setErro, token])
 
   return {
     itens: carrinho.itens,

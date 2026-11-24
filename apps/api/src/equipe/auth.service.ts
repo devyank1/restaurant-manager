@@ -4,6 +4,8 @@ import { Usuario } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsuarioEquipe, UsuarioToken } from './equipe.types';
 import { conferirSenha } from './senha';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TURNO_MUDOU, type TurnoMudou } from '../paineis/paineis.types';
 
 type PayloadJwt = { sub: string; restauranteId: string; papel: string };
 
@@ -12,6 +14,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly emissor: EventEmitter2,
   ) {}
 
   /** null quando e-mail ou senha não conferem (sem dizer qual). */
@@ -56,11 +59,43 @@ export class AuthService {
     return usuario && paraUsuarioEquipe(usuario);
   }
 
+  /** Liga/desliga "Em turno" e registra o turno (pausa = desligar e ligar). */
   async mudarTurno(id: string, emTurno: boolean): Promise<UsuarioEquipe> {
-    const usuario = await this.prisma.usuario.update({
-      where: { id },
-      data: { emTurno, emTurnoDesde: emTurno ? new Date() : null },
+    const agora = new Date();
+    const usuario = await this.prisma.$transaction(async (tx) => {
+      const aberto = emTurno
+        ? await tx.turnoEquipe.findFirst({
+            where: { usuarioId: id, fim: null },
+          })
+        : null;
+      // Já em turno: ligar de novo não zera o "desde" (o aviso de pausa conta dele).
+      const u = await tx.usuario.update({
+        where: { id },
+        data: {
+          emTurno,
+          emTurnoDesde: emTurno ? (aberto?.inicio ?? agora) : null,
+        },
+      });
+      if (emTurno) {
+        if (!aberto) {
+          await tx.turnoEquipe.create({
+            data: {
+              restauranteId: u.restauranteId,
+              usuarioId: id,
+              inicio: agora,
+            },
+          });
+        }
+      } else {
+        await tx.turnoEquipe.updateMany({
+          where: { usuarioId: id, fim: null },
+          data: { fim: agora },
+        });
+      }
+      return u;
     });
+    const aviso: TurnoMudou = { restauranteId: usuario.restauranteId };
+    this.emissor.emit(TURNO_MUDOU, aviso);
     return paraUsuarioEquipe(usuario);
   }
 }

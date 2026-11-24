@@ -157,4 +157,23 @@ describe('Início', () => {
     await screen.findByText('Nenhum chamado agora')
     expect(screen.queryByRole('button', { name: /Ler etiqueta/ })).not.toBeInTheDocument()
   })
+
+  it('minhas mesas mostra 2 prontos', async () => {
+    api.estado.mesas = mesasDemo.map((m) => (m.numero === 7 ? { ...m, prontos: 2 } : m))
+    renderizar()
+    const minhas = await screen.findByRole('region', { name: 'Minhas mesas' })
+    expect(await within(minhas).findByText('2 prontos')).toHaveClass('selo--sucesso')
+  })
+
+  it('dono não vê chamados, mesas nem produção: só o Estoque', async () => {
+    api.estado.chamados = [chamado({ id: 'c1' })]
+    render(<Inicio usuario={{ ...ana, papel: 'DONO', emTurno: true }} />)
+    expect(await screen.findByRole('button', { name: 'Estoque' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Meta da equipe' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Chamados' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Minhas mesas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Todas as mesas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Produção' })).not.toBeInTheDocument()
+    expect(api.chamadas('GET', /\/api\/equipe\/chamados$/)).toHaveLength(0)
+  })
 })

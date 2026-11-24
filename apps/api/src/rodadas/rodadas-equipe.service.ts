@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -7,6 +8,8 @@ import {
 import { Prisma } from '@prisma/client';
 import type { UsuarioToken } from '../equipe/equipe.types';
 import { exigirSalao } from '../equipe/papel';
+import { AvisosEstoqueService } from '../estoque/avisos-estoque.service';
+import { baixarRodada, estornarRodada } from '../estoque/baixa';
 import { EventosService } from '../eventos/eventos.service';
 import { COM_OPCOES, NovoItem } from '../pedidos/pratos';
 import {
@@ -19,13 +22,14 @@ import { ITEM_NAO_ENCONTRADO, pratoValidado } from '../pedidos/validar-item';
 import { PrismaService } from '../prisma/prisma.service';
 import { travarMesa } from '../sessao-mesa/trava';
 import { TempoRealService } from '../tempo-real/tempo-real.service';
-import { paraEquipe, somarConfirmadas } from './mapear';
+import { cancelavelAte, paraEquipe, somarConfirmadas } from './mapear';
 import {
   COM_ITENS,
   MesaEquipe,
   MesaResumo,
   RodadaEquipe,
 } from './rodadas.types';
+import { tempoEsperadoDe } from '../paineis/tempo-esperado';
 
 type Tx = Prisma.TransactionClient;
 
@@ -51,6 +55,7 @@ export class RodadasEquipeService {
     private readonly prisma: PrismaService,
     private readonly eventos: EventosService,
     private readonly tempoReal: TempoRealService,
+    private readonly avisosEstoque: AvisosEstoqueService,
   ) {}
 
   private async nomes(ids: (string | null)[]): Promise<Map<string, string>> {
@@ -72,8 +77,10 @@ export class RodadasEquipeService {
           where: { status: 'ABERTA' },
           include: {
             rodadas: {
-              where: { status: 'AGUARDANDO_GARCOM' },
-              select: { id: true },
+              select: {
+                status: true,
+                itens: { where: { status: 'PRONTO' }, select: { id: true } },
+              },
             },
           },
         },
@@ -89,7 +96,13 @@ export class RodadasEquipeService {
         token: m.token,
         aberta: sessao !== undefined,
         garcomNome: (sessao?.garcomId && nomes.get(sessao.garcomId)) || null,
-        pendentes: sessao?.rodadas.length ?? 0,
+        pendentes:
+          sessao?.rodadas.filter((r) => r.status === 'AGUARDANDO_GARCOM')
+            .length ?? 0,
+        prontos:
+          sessao?.rodadas
+            .filter((r) => r.status === 'CONFIRMADA')
+            .reduce((soma, r) => soma + r.itens.length, 0) ?? 0,
       };
     });
   }
@@ -116,11 +129,35 @@ export class RodadasEquipeService {
         .map((d) => d.dispositivoId),
     );
     const rodadas = sessao?.rodadas ?? [];
+    const config = await this.prisma.restaurante.findUniqueOrThrow({
+      where: { id: usuario.restauranteId },
+      select: {
+        janelaCancelamentoSegundos: true,
+        servicoHabilitado: true,
+        servicoPadrao: true,
+        couvertHabilitado: true,
+        couvertPadrao: true,
+        couvertCentavos: true,
+      },
+    });
+    const janela = config.janelaCancelamentoSegundos;
     return {
       mesa: { numero: mesa.numero, token: mesa.token },
+      aberta: sessao !== null,
+      conta: {
+        servico: {
+          habilitado: config.servicoHabilitado,
+          padrao: config.servicoPadrao,
+        },
+        couvert: {
+          habilitado: config.couvertHabilitado,
+          padrao: config.couvertPadrao,
+          valorCentavos: config.couvertCentavos,
+        },
+      },
       garcomNome,
       rodadas: rodadas.map((r) =>
-        paraEquipe(r, !confirmados.has(r.dispositivoId)),
+        paraEquipe(r, !confirmados.has(r.dispositivoId), janela),
       ),
       totalConfirmadoCentavos: somarConfirmadas(rodadas),
     };
@@ -247,6 +284,8 @@ export class RodadasEquipeService {
           observacao: novo.observacao,
           quantidade: novo.quantidade,
           precoUnitarioCentavos: precoUnitario(prato, novo.selecao),
+          estacao: prato.categoria.estacao,
+          tempoEsperadoMin: tempoEsperadoDe(prato),
         },
       });
       return {
@@ -278,6 +317,8 @@ export class RodadasEquipeService {
           status: 'CONFIRMADA',
           confirmadaEm: agora,
           confirmadaPorId: usuario.id,
+          // Crédito: o responsável pela mesa; sem responsável, quem confirma vira.
+          garcomId: r.sessao.garcomId ?? usuario.id,
         },
       });
       if (!r.sessao.garcomId) {
@@ -291,7 +332,13 @@ export class RodadasEquipeService {
         data: { confirmado: true },
       });
       await this.resolverChamado(tx, rodadaId, agora);
-      return { rodada: await this.fecharEdicao(tx, rodadaId), r };
+      const estoque = await baixarRodada(
+        tx,
+        usuario.restauranteId,
+        rodadaId,
+        usuario.id,
+      );
+      return { rodada: await this.fecharEdicao(tx, rodadaId), r, estoque };
     });
     await this.eventos.publicar({
       restauranteId: usuario.restauranteId,
@@ -304,6 +351,7 @@ export class RodadasEquipeService {
         garcomId: usuario.id,
       },
     });
+    this.avisosEstoque.soltar(usuario.restauranteId, resultado.estoque);
     this.avisarDecisao(usuario.restauranteId, resultado.r.sessaoId);
     return resultado.rodada;
   }
@@ -335,6 +383,145 @@ export class RodadasEquipeService {
     return resultado.rodada;
   }
 
+  /**
+   * Rodada CONFIRMADA do restaurante, numa transação com a mesa travada.
+   * Para o que acontece depois de confirmada (cancelar na janela, entregar).
+   */
+  private async naConfirmada<T>(
+    rodadaId: string,
+    usuario: UsuarioToken,
+    trabalho: (
+      tx: Tx,
+      rodada: Prisma.RodadaGetPayload<{
+        include: { sessao: { include: { restaurante: true } } };
+      }>,
+    ) => Promise<T>,
+  ): Promise<T> {
+    exigirSalao(usuario);
+    const achada = await this.prisma.rodada.findFirst({
+      where: { id: rodadaId, restauranteId: usuario.restauranteId },
+      include: { sessao: true },
+    });
+    if (!achada) throw RODADA_NAO_ENCONTRADA();
+    return this.prisma.$transaction(async (tx) => {
+      await travarMesa(tx, achada.sessao.mesaId);
+      const rodada = await tx.rodada.findUniqueOrThrow({
+        where: { id: rodadaId },
+        include: { sessao: { include: { restaurante: true } } },
+      });
+      return trabalho(tx, rodada);
+    });
+  }
+
+  /**
+   * Cancela a rodada que foi direto para a produção, dentro da janela.
+   * Só o garçom responsável pela mesa ou o dono.
+   */
+  async cancelar(
+    rodadaId: string,
+    usuario: UsuarioToken,
+  ): Promise<RodadaEquipe> {
+    const agora = new Date();
+    const resultado = await this.naConfirmada(
+      rodadaId,
+      usuario,
+      async (tx, r) => {
+        if (usuario.papel !== 'DONO' && r.sessao.garcomId !== usuario.id) {
+          throw new ForbiddenException({
+            mensagem: 'Esta mesa é de outro garçom',
+          });
+        }
+        if (r.sessao.status === 'FECHADA') {
+          throw new ConflictException({ mensagem: 'Esta mesa já foi fechada' });
+        }
+        const janela = r.sessao.restaurante.janelaCancelamentoSegundos;
+        if (!cancelavelAte(r, janela, agora)) {
+          throw new ConflictException({
+            mensagem: 'O prazo para cancelar acabou',
+          });
+        }
+        await tx.rodada.update({
+          where: { id: rodadaId },
+          data: { status: 'CANCELADA', canceladaEm: agora },
+        });
+        const estoque = await estornarRodada(
+          tx,
+          usuario.restauranteId,
+          rodadaId,
+          usuario.id,
+        );
+        return { rodada: await this.fecharEdicao(tx, rodadaId), r, estoque };
+      },
+    );
+    await this.eventos.publicar({
+      restauranteId: usuario.restauranteId,
+      tipo: 'PedidoCancelado',
+      dados: {
+        rodadaId,
+        sessaoId: resultado.r.sessaoId,
+        mesaId: resultado.r.sessao.mesaId,
+        garcomId: usuario.id,
+        porJanela: true,
+      },
+    });
+    this.avisosEstoque.soltar(usuario.restauranteId, resultado.estoque);
+    this.avisarProducao(usuario.restauranteId, resultado.r.sessaoId);
+    return resultado.rodada;
+  }
+
+  /** Passa os itens prontos para entregues. */
+  async entregar(
+    rodadaId: string,
+    usuario: UsuarioToken,
+  ): Promise<RodadaEquipe> {
+    const agora = new Date();
+    const resultado = await this.naConfirmada(
+      rodadaId,
+      usuario,
+      async (tx, r) => {
+        const prontos =
+          r.status === 'CONFIRMADA'
+            ? await tx.itemRodada.updateMany({
+                where: { rodadaId, status: 'PRONTO' },
+                data: { status: 'ENTREGUE', entregueEm: agora },
+              })
+            : { count: 0 };
+        if (prontos.count === 0) {
+          throw new ConflictException({
+            mensagem: 'Nada pronto para entregar',
+          });
+        }
+        const faltam = await tx.itemRodada.count({
+          where: { rodadaId, status: { not: 'ENTREGUE' } },
+        });
+        return {
+          rodada: await this.fecharEdicao(tx, rodadaId),
+          r,
+          tudoEntregue: faltam === 0,
+        };
+      },
+    );
+    if (resultado.tudoEntregue) {
+      await this.eventos.publicar({
+        restauranteId: usuario.restauranteId,
+        tipo: 'PedidoEntregue',
+        dados: {
+          rodadaId,
+          sessaoId: resultado.r.sessaoId,
+          mesaId: resultado.r.sessao.mesaId,
+          garcomId: usuario.id,
+        },
+      });
+    }
+    this.avisarProducao(usuario.restauranteId, resultado.r.sessaoId);
+    return resultado.rodada;
+  }
+
+  private avisarProducao(restauranteId: string, sessaoId: string): void {
+    this.avisar(restauranteId, sessaoId);
+    this.tempoReal.paraEquipe(restauranteId, 'producao-mudou', {});
+  }
+
   private async resolverChamado(tx: Tx, rodadaId: string, agora: Date) {
     await tx.chamado.updateMany({
       where: { rodadaId, status: { not: 'RESOLVIDO' } },
@@ -345,5 +532,7 @@ export class RodadasEquipeService {
   private avisarDecisao(restauranteId: string, sessaoId: string): void {
     this.avisar(restauranteId, sessaoId);
     this.tempoReal.paraEquipe(restauranteId, 'chamados-mudaram', {});
+    // Confirmada entra na produção; recusada não muda nada lá, mas avisar é inofensivo.
+    this.tempoReal.paraEquipe(restauranteId, 'producao-mudou', {});
   }
 }

@@ -14,26 +14,47 @@ enum TipoGrupoOpcao {
 }
 
 model Restaurante {
-  id                    String   @id @default(uuid())
-  nome                  String
-  slug                  String   @unique
-  logoUrl               String?
-  wifiSsid              String?
-  wifiSenha             String?
-  googleAvaliacaoUrl    String?
+  id                         String   @id @default(uuid())
+  nome                       String
+  slug                       String   @unique
+  logoUrl                    String?
+  wifiSsid                   String?
+  wifiSenha                  String?
+  googleAvaliacaoUrl         String?
   /// Segundos sem leitura até o chamado passar para o próximo garçom.
-  janelaChamadoSegundos Int      @default(60)
-  criadoEm              DateTime @default(now())
+  janelaChamadoSegundos      Int      @default(60)
+  /// Rodada que vai direto para a produção: o garçom cancela dentro deste prazo.
+  janelaCancelamentoSegundos Int      @default(120)
+  /// Rodada acima deste total sempre pede confirmação na mesa (nulo = sem limite).
+  limiteConfirmacaoCentavos  Int?
+  /// Conta: checkbox "10% de serviço" aparece e vem marcado?
+  servicoHabilitado          Boolean  @default(true)
+  servicoPadrao              Boolean  @default(true)
+  /// Conta: checkbox "Couvert" (por pessoa) aparece, vem marcado e quanto custa.
+  couvertHabilitado          Boolean  @default(false)
+  couvertPadrao              Boolean  @default(false)
+  couvertCentavos            Int      @default(0)
+  /// Painel da equipe: avisa "X h em turno sem pausa" a partir destas horas.
+  horasSemPausa              Int      @default(4)
+  criadoEm                   DateTime @default(now())
 
-  mesas       Mesa[]
-  categorias  Categoria[]
-  pratos      Prato[]
-  gruposOpcao GrupoOpcao[]
-  opcoes      Opcao[]
-  usuarios    Usuario[]
-  sessoes     SessaoMesa[]
-  chamados    Chamado[]
-  eventos     Evento[]
+  mesas             Mesa[]
+  categorias        Categoria[]
+  pratos            Prato[]
+  gruposOpcao       GrupoOpcao[]
+  opcoes            Opcao[]
+  usuarios          Usuario[]
+  sessoes           SessaoMesa[]
+  chamados          Chamado[]
+  eventos           Evento[]
+  fornecedores      Fornecedor[]
+  itensEstoque      ItemEstoque[]
+  receitaItens      ReceitaItem[]
+  movimentosEstoque MovimentoEstoque[]
+  listasCompra      ListaCompra[]
+  turnos            TurnoEquipe[]
+  metas             Meta[]
+  limitesAlerta     LimiteAlerta[]
 }
 
 model Mesa {
@@ -51,12 +72,16 @@ model Mesa {
 }
 
 model Categoria {
-  id            String      @id @default(uuid())
-  restauranteId String
-  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
-  nome          String
-  ordem         Int
-  criadoEm      DateTime    @default(now())
+  id              String      @id @default(uuid())
+  restauranteId   String
+  restaurante     Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  nome            String
+  ordem           Int
+  /// Tela de produção que prepara os pratos desta categoria (ex.: Cozinha, Bar).
+  estacao         String      @default("Cozinha")
+  /// Tempo de preparo padrão dos pratos desta categoria (min); nulo = 15.
+  tempoPreparoMin Int?
+  criadoEm        DateTime    @default(now())
 
   pratos Prato[]
 }
@@ -73,12 +98,16 @@ model Prato {
   precoPromocionalCentavos Int?
   destaque                 Boolean     @default(false)
   esgotado                 Boolean     @default(false)
+  exigeConfirmacao         Boolean     @default(false)
   videoUrl                 String?
   posterUrl                String?
   ordem                    Int
+  /// Tempo de preparo esperado (min); nulo = o padrão da categoria.
+  tempoPreparoMin          Int?
   criadoEm                 DateTime    @default(now())
 
-  grupos GrupoOpcao[]
+  grupos  GrupoOpcao[]
+  receita ReceitaItem[]
 }
 
 model GrupoOpcao {
@@ -108,7 +137,11 @@ model Opcao {
   precoCentavos            Int
   precoPromocionalCentavos Int?
   ordem                    Int
+  /// Estoque: % da receita (base + sabores) quando esta opção é escolhida. Só vale em grupo UNICA (ex.: G = 150).
+  multiplicadorPct         Int         @default(100)
   criadoEm                 DateTime    @default(now())
+
+  receita ReceitaItem[]
 }
 
 enum PapelUsuario {
@@ -130,7 +163,9 @@ model Usuario {
   ultimoChamadoEm DateTime?
   criadoEm        DateTime     @default(now())
 
-  inscricoesPush InscricaoPush[]
+  inscricoesPush    InscricaoPush[]
+  movimentosEstoque MovimentoEstoque[]
+  turnos            TurnoEquipe[]
 
   @@index([restauranteId])
 }
@@ -140,17 +175,31 @@ enum StatusSessao {
   FECHADA
 }
 
+enum FormaPagamento {
+  CARTAO
+  PIX
+  DINHEIRO
+}
+
 model SessaoMesa {
-  id            String       @id @default(uuid())
-  restauranteId String
-  restaurante   Restaurante  @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
-  mesaId        String
-  mesa          Mesa         @relation(fields: [mesaId], references: [id], onDelete: Cascade)
-  status        StatusSessao @default(ABERTA)
-  garcomId      String?
-  garcomDesde   DateTime?
-  abertaEm      DateTime     @default(now())
-  fechadaEm     DateTime?
+  id               String          @id @default(uuid())
+  restauranteId    String
+  restaurante      Restaurante     @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  mesaId           String
+  mesa             Mesa            @relation(fields: [mesaId], references: [id], onDelete: Cascade)
+  status           StatusSessao    @default(ABERTA)
+  garcomId         String?
+  garcomDesde      DateTime?
+  abertaEm         DateTime        @default(now())
+  fechadaEm        DateTime?
+  /// Fechamento da conta (preenchidos juntos no ContaFechada).
+  formaPagamento   FormaPagamento?
+  subtotalCentavos Int?
+  servicoCentavos  Int?
+  couvertCentavos  Int?
+  pessoas          Int?
+  totalCentavos    Int?
+  fechadaPorId     String?
 
   dispositivos  DispositivoSessao[]
   itensCarrinho ItemCarrinho[]
@@ -158,6 +207,7 @@ model SessaoMesa {
   chamados      Chamado[]
 
   @@index([mesaId, status])
+  @@index([restauranteId, status])
 }
 
 model DispositivoSessao {
@@ -202,15 +252,22 @@ model Rodada {
   criadoEm        DateTime     @default(now())
   confirmadaEm    DateTime?
   confirmadaPorId String?
+  /// Nasceu confirmada, sem o garçom na mesa: só ela tem janela de cancelamento.
+  direta          Boolean      @default(false)
+  canceladaEm     DateTime?
+  /// Garçom responsável pela mesa na confirmação: recebe o crédito do valor vendido.
+  garcomId        String?
 
   itens ItemRodada[]
+
+  @@index([restauranteId, status, confirmadaEm])
 }
 
 model ItemRodada {
-  id                    String @id @default(uuid())
+  id                    String     @id @default(uuid())
   restauranteId         String
   rodadaId              String
-  rodada                Rodada @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+  rodada                Rodada     @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
   pratoId               String
   nome                  String
   resumoOpcoes          String
@@ -218,6 +275,23 @@ model ItemRodada {
   observacao            String
   quantidade            Int
   precoUnitarioCentavos Int
+  /// Estação congelada na criação, como o preço.
+  estacao               String     @default("Cozinha")
+  /// Tempo esperado (min) congelado na criação, como o preço.
+  tempoEsperadoMin      Int        @default(15)
+  status                StatusItem @default(NA_FILA)
+  emPreparoEm           DateTime?
+  prontoEm              DateTime?
+  entregueEm            DateTime?
+
+  @@index([restauranteId, estacao, status])
+}
+
+enum StatusItem {
+  NA_FILA
+  EM_PREPARO
+  PRONTO
+  ENTREGUE
 }
 
 enum TipoChamado {
@@ -273,4 +347,191 @@ model InscricaoPush {
   p256dh        String
   auth          String
   criadoEm      DateTime @default(now())
+}
+
+// ---------- Estoque (etapa 4A) ----------
+
+enum UnidadeEstoque {
+  UN
+  G
+  ML
+}
+
+enum TipoMovimento {
+  VENDA
+  ESTORNO
+  ENTRADA
+  CONTAGEM
+  PERDA
+}
+
+enum MotivoPerda {
+  ACIDENTE
+  VALIDADE
+  PREPARO
+  OUTRO
+}
+
+/// Nível do item para avisar uma vez por cruzamento do mínimo / do zero.
+enum NivelEstoque {
+  OK
+  ACABANDO
+  ZERADO
+}
+
+model Fornecedor {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  nome          String
+  telefone      String?
+  observacao    String?
+  criadoEm      DateTime    @default(now())
+
+  itens ItemEstoque[]
+
+  @@index([restauranteId])
+}
+
+/// Quantidades sempre na unidade base (un, g, ml), em inteiro.
+model ItemEstoque {
+  id                  String         @id @default(uuid())
+  restauranteId       String
+  restaurante         Restaurante    @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  nome                String
+  unidade             UnidadeEstoque
+  quantidade          Int            @default(0)
+  minimo              Int            @default(0)
+  cheio               Int            @default(0)
+  fornecedorId        String?
+  fornecedor          Fornecedor?    @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
+  embalagemNome       String?
+  embalagemQuantidade Int?
+  nivel               NivelEstoque   @default(OK)
+  ativo               Boolean        @default(true)
+  criadoEm            DateTime       @default(now())
+
+  receitas   ReceitaItem[]
+  movimentos MovimentoEstoque[]
+
+  @@unique([restauranteId, nome])
+}
+
+/// Linha de receita: de um prato (base) OU de uma opção.
+model ReceitaItem {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  pratoId       String?
+  prato         Prato?      @relation(fields: [pratoId], references: [id], onDelete: Cascade)
+  opcaoId       String?
+  opcao         Opcao?      @relation(fields: [opcaoId], references: [id], onDelete: Cascade)
+  itemId        String
+  item          ItemEstoque @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quantidade    Int
+
+  @@unique([pratoId, itemId])
+  @@unique([opcaoId, itemId])
+}
+
+model MovimentoEstoque {
+  id            String        @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante   @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  itemId        String
+  item          ItemEstoque   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tipo          TipoMovimento
+  /// Com sinal: venda e perda negativas.
+  quantidade    Int
+  motivo        MotivoPerda?
+  observacao    String?
+  usuarioId     String?
+  usuario       Usuario?      @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  /// Rodada da venda/estorno (sem chave estrangeira: o histórico fica mesmo se a sessão for apagada).
+  rodadaId      String?
+  /// Mesmo lote = lançados juntos (desfazer volta o lote todo).
+  lote          String
+  desfeitoEm    DateTime?
+  criadoEm      DateTime      @default(now())
+
+  @@index([restauranteId, criadoEm])
+  @@index([rodadaId])
+  @@index([lote])
+}
+
+model ListaCompra {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  /// [{ itemId, quantidade }] na unidade base.
+  itens         Json
+  criadaEm      DateTime    @default(now())
+  chegouEm      DateTime?
+  /// Lote da entrada lançada no "Chegou compra" (desfazer reabre a lista).
+  loteChegada   String?
+
+  @@index([restauranteId, criadaEm])
+}
+
+/// Cada "Em turno" de cada pessoa (pausa = desligar e ligar de novo).
+model TurnoEquipe {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  usuarioId     String
+  usuario       Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  inicio        DateTime    @default(now())
+  fim           DateTime?
+
+  @@index([restauranteId, inicio])
+  @@index([usuarioId, fim])
+}
+
+enum EscopoMeta {
+  EQUIPE
+  GARCOM
+  ESTACAO
+}
+
+enum TipoMeta {
+  VALOR
+  MESAS
+  NO_TEMPO
+  ESQUECIDOS
+}
+
+enum PeriodoMeta {
+  DIA
+  SEMANA
+}
+
+/// Meta definida pelo gerente. alvo: centavos (VALOR), mesas (MESAS), % (NO_TEMPO), 0 (ESQUECIDOS).
+/// GARCOM sem usuarioId = padrão de todos; com usuarioId = ajuste daquela pessoa.
+model Meta {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  escopo        EscopoMeta
+  tipo          TipoMeta
+  periodo       PeriodoMeta
+  alvo          Int
+  usuarioId     String?
+  estacao       String?
+  criadoEm      DateTime    @default(now())
+  atualizadoEm  DateTime    @updatedAt
+
+  @@index([restauranteId, escopo])
+}
+
+/// Limite configurável de um tipo de alerta da central do gerente.
+model LimiteAlerta {
+  id            String      @id @default(uuid())
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+  tipo          String
+  ativo         Boolean     @default(true)
+  /// Minutos, pedidos na fila ou percentual; nulo = padrão do tipo.
+  valor         Int?
+
+  @@unique([restauranteId, tipo])
 }

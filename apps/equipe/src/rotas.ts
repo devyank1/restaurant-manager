@@ -4,7 +4,25 @@ export type Rota =
   | { nome: 'login'; volta?: string }
   | { nome: 'inicio' }
   | { nome: 'mesas' }
+  | { nome: 'producao' }
   | { nome: 'mesa'; token: string }
+  | { nome: 'estoque' }
+  | { nome: 'tempos' }
+  | { nome: 'hoje'; estacao: string }
+  | { nome: 'central' }
+  | { nome: 'dia' }
+  | { nome: 'central-garcom'; id: string }
+  | { nome: 'limites' }
+  | { nome: 'metas' }
+  | { nome: 'meta-pessoa'; id: string }
+  | { nome: 'estoque-itens' }
+  | { nome: 'estoque-item'; id: string }
+  | { nome: 'estoque-fornecedores' }
+  | { nome: 'estoque-receitas' }
+  | { nome: 'estoque-receita'; pratoId: string }
+  | { nome: 'estoque-compras' }
+  | { nome: 'estoque-pedido'; fornecedorId: string }
+  | { nome: 'estoque-chegou'; listaId: string }
 
 /** Só caminho interno (evita mandar para outro site depois do login). */
 function voltaSegura(volta: string | null): string | undefined {
@@ -17,9 +35,72 @@ export function lerRota(caminho: string, busca: string): Rota {
     return volta ? { nome: 'login', volta } : { nome: 'login' }
   }
   if (caminho === '/mesas') return { nome: 'mesas' }
+  if (caminho === '/producao') return { nome: 'producao' }
+  if (caminho === '/tempos') return { nome: 'tempos' }
+  const hoje = /^\/hoje\/([^/]+)$/.exec(caminho)?.[1]
+  if (hoje) return { nome: 'hoje', estacao: decodeURIComponent(hoje) }
+  // '/' continua 'inicio': o App decide que o dono vê a Central ali; '/central' é um apelido explícito.
+  if (caminho === '/central') return { nome: 'central' }
+  if (caminho === '/dia') return { nome: 'dia' }
+  if (caminho === '/limites') return { nome: 'limites' }
+  const garcomCentral = /^\/central\/garcom\/([^/]+)$/.exec(caminho)?.[1]
+  if (garcomCentral) return { nome: 'central-garcom', id: decodeURIComponent(garcomCentral) }
+  if (caminho === '/metas') return { nome: 'metas' }
+  const pessoa = /^\/metas\/garcom\/([^/]+)$/.exec(caminho)?.[1]
+  if (pessoa) return { nome: 'meta-pessoa', id: decodeURIComponent(pessoa) }
+  const estoque = lerEstoque(caminho)
+  if (estoque) return estoque
   const mesa = /^\/mesa\/([^/]+)$/.exec(caminho)?.[1]
   if (mesa) return { nome: 'mesa', token: decodeURIComponent(mesa) }
   return { nome: 'inicio' }
+}
+
+/** Telas do estoque (só o gerente). */
+function lerEstoque(caminho: string): Rota | null {
+  const id = (padrao: RegExp) => {
+    const achado = padrao.exec(caminho)?.[1]
+    return achado ? decodeURIComponent(achado) : null
+  }
+  if (caminho === '/estoque') return { nome: 'estoque' }
+  if (caminho === '/estoque/itens') return { nome: 'estoque-itens' }
+  if (caminho === '/estoque/fornecedores') return { nome: 'estoque-fornecedores' }
+  if (caminho === '/estoque/receitas') return { nome: 'estoque-receitas' }
+  if (caminho === '/estoque/compras') return { nome: 'estoque-compras' }
+  const item = id(/^\/estoque\/itens\/([^/]+)$/)
+  if (item) return { nome: 'estoque-item', id: item }
+  const prato = id(/^\/estoque\/receitas\/([^/]+)$/)
+  if (prato) return { nome: 'estoque-receita', pratoId: prato }
+  const fornecedor = id(/^\/estoque\/compras\/f\/([^/]+)$/)
+  if (fornecedor) return { nome: 'estoque-pedido', fornecedorId: fornecedor }
+  const lista = id(/^\/estoque\/compras\/([^/]+)\/chegou$/)
+  if (lista) return { nome: 'estoque-chegou', listaId: lista }
+  return null
+}
+
+/** Tela de cima, para o botão Voltar do topo (null no início). */
+export function voltaDe(rota: Rota): string | null {
+  switch (rota.nome) {
+    case 'inicio':
+    case 'central':
+    case 'login':
+      return null
+    case 'estoque-item':
+      return '/estoque/itens'
+    case 'estoque-receita':
+      return '/estoque/receitas'
+    case 'estoque-pedido':
+      return '/estoque/compras'
+    case 'meta-pessoa':
+      return '/metas'
+    case 'estoque-itens':
+    case 'estoque-receitas':
+    case 'estoque-fornecedores':
+    case 'estoque-compras':
+    case 'estoque-chegou':
+      return '/estoque'
+    default:
+      return '/'
+  }
 }
 
 const MUDOU = 'popstate'

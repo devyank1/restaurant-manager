@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react'
 import { eu, logout } from './api/equipe'
 import type { UsuarioEquipe } from './api/tipos'
+import TelaEstoqueRotas from './estoque/TelaEstoqueRotas'
+import TelaMetaPessoa from './gestao/TelaMetaPessoa'
+import TelaMetas from './gestao/TelaMetas'
+import TelaTempos from './gestao/TelaTempos'
+import Central from './central/Central'
+import TelaGarcomCentral from './central/TelaGarcomCentral'
+import TelaLimites from './central/TelaLimites'
 import Inicio from './inicio/Inicio'
 import Topo from './inicio/Topo'
 import Login from './login/Login'
+import Comemoracao from './paineis/Comemoracao'
+import PainelEstacao from './paineis/PainelEstacao'
 import TelaMesa from './mesa/TelaMesa'
 import TodasMesas from './mesas/TodasMesas'
-import { caminhoAtual, navegar, useRota } from './rotas'
+import TelaProducao from './producao/TelaProducao'
+import { caminhoAtual, navegar, useRota, voltaDe } from './rotas'
 import './estilo/app.css'
 
 export default function App() {
@@ -43,10 +53,47 @@ export default function App() {
 
   return (
     <div className="app">
-      <Topo usuario={usuario} onMudou={setUsuario} onSair={sair} />
-      {rota.nome === 'inicio' && <Inicio usuario={usuario} />}
-      {rota.nome === 'mesas' && <TodasMesas />}
-      {rota.nome === 'mesa' && <TelaMesa key={rota.token} token={rota.token} />}
+      <Topo
+        usuario={usuario}
+        onMudou={setUsuario}
+        onSair={sair}
+        volta={usuario.papel !== 'COZINHA' || rota.nome === 'hoje' ? voltaDe(rota) : null}
+      />
+      <Comemoracao />
+      {usuario.papel === 'COZINHA' ? (
+        // A cozinha usa a produção e o "Hoje" da estação.
+        rota.nome === 'hoje' ? (
+          <PainelEstacao key={rota.estacao} estacao={rota.estacao} />
+        ) : (
+          <TelaProducao />
+        )
+      ) : usuario.papel === 'DONO' ? (
+        // O dono não cuida do salão nem da produção: início e estoque.
+        rota.nome.startsWith('estoque') ? (
+          <TelaEstoqueRotas rota={rota} />
+        ) : rota.nome === 'tempos' ? (
+          <TelaTempos />
+        ) : rota.nome === 'metas' ? (
+          <TelaMetas />
+        ) : rota.nome === 'meta-pessoa' ? (
+          <TelaMetaPessoa key={rota.id} id={rota.id} />
+        ) : rota.nome === 'limites' ? (
+          <TelaLimites />
+        ) : rota.nome === 'central-garcom' ? (
+          <TelaGarcomCentral key={rota.id} id={rota.id} />
+        ) : rota.nome === 'dia' ? (
+          <Inicio usuario={usuario} />
+        ) : (
+          <Central />
+        )
+      ) : (
+        <>
+          {rota.nome === 'inicio' && <Inicio usuario={usuario} />}
+          {rota.nome === 'mesas' && <TodasMesas />}
+          {rota.nome === 'mesa' && <TelaMesa key={rota.token} token={rota.token} />}
+          {(rota.nome === 'producao' || rota.nome.startsWith('estoque')) && <Inicio usuario={usuario} />}
+        </>
+      )}
     </div>
   )
 }

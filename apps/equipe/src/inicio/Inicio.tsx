@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import { buscarResumo } from '../api/estoque'
 import { buscarChamados, buscarMesas } from '../api/equipe'
 import type { ChamadoEquipe, MesaResumo, UsuarioEquipe } from '../api/tipos'
 import { lerEtiqueta, suportaNfc } from '../nfc/lerEtiqueta'
 import { ativarNotificacoes, estadoNotificacoes, type EstadoPush } from '../push/ativarNotificacoes'
+import MeuDia from '../paineis/MeuDia'
+import PainelEquipe from '../paineis/PainelEquipe'
 import { navegar } from '../rotas'
 import { useEquipeAoVivo } from '../tempo-real/useEquipeAoVivo'
 import { useMaisRecente } from '../tempo-real/useMaisRecente'
@@ -16,16 +19,28 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
   const [push, setPush] = useState<EstadoPush>(estadoNotificacoes)
   const [avisoPush, setAvisoPush] = useState('')
 
+  // O dono não cuida do salão: não vê chamados nem mesas.
+  const dono = usuario.papel === 'DONO'
   // Falha de rede: mantém o que já tinha; a reconexão busca de novo.
-  const recarregarChamados = useMaisRecente(buscarChamados, setChamados)
-  const recarregarMesas = useMaisRecente(buscarMesas, setMesas)
+  const recarregarChamados = useMaisRecente(() => (dono ? Promise.resolve([]) : buscarChamados()), setChamados)
+  const recarregarMesas = useMaisRecente(() => (dono ? Promise.resolve([]) : buscarMesas()), setMesas)
 
   useEffect(() => {
     void recarregarChamados()
     void recarregarMesas()
   }, [recarregarChamados, recarregarMesas])
 
-  useEquipeAoVivo({ chamados: recarregarChamados, mesas: recarregarMesas })
+  // Gerente: quantos itens do estoque pedem atenção (acabando + acabou).
+  const [atencao, setAtencao] = useState(0)
+  const recarregarEstoque = useMaisRecente(
+    () => (dono ? buscarResumo() : Promise.resolve(null)),
+    (r) => setAtencao(r ? r.acabando.length + r.acabou.length : 0),
+  )
+  useEffect(() => {
+    void recarregarEstoque()
+  }, [recarregarEstoque])
+
+  useEquipeAoVivo({ chamados: recarregarChamados, mesas: recarregarMesas, estoque: recarregarEstoque })
 
   // Permissão já dada: reenvia a inscrição (celular trocado, cookie novo, chave nova).
   useEffect(() => {
@@ -43,8 +58,7 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
     }
   }
 
-  // O dono vê as mesas de todos; o garçom, as que são dele.
-  const minhas = mesas.filter((m) => m.aberta && (usuario.papel === 'DONO' || m.garcomNome === usuario.nome))
+  const minhas = mesas.filter((m) => m.aberta && m.garcomNome === usuario.nome)
 
   const ler = async () => {
     setLendo(true)
@@ -62,7 +76,7 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
   return (
     <main className="inicio">
       {!usuario.emTurno && usuario.papel !== 'DONO' && (
-        <p className="faixa-aviso">Você está fora do turno: não recebe chamados novos.</p>
+        <p className="faixa-aviso faixa-aviso--alerta">Você está fora do turno: não recebe chamados novos.</p>
       )}
 
       {push === 'pendente' && (
@@ -71,14 +85,20 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
         </button>
       )}
       {push === 'negado' && (
-        <p className="faixa-aviso">Notificações bloqueadas no navegador</p>
+        <p className="faixa-aviso faixa-aviso--perigo">Notificações bloqueadas no navegador</p>
       )}
       {push === 'sem-suporte' && (
-        <p className="faixa-aviso">
+        <p className="faixa-aviso faixa-aviso--info">
           Notificações indisponíveis neste navegador: abra pelo endereço HTTPS e, no iPhone, adicione à Tela de Início.
         </p>
       )}
-      {avisoPush && <p className="faixa-aviso">{avisoPush}</p>}
+      {avisoPush && <p className="faixa-aviso faixa-aviso--perigo">{avisoPush}</p>}
+
+      {dono && <PainelEquipe atencao={atencao} />}
+
+      {!dono && (
+      <>
+      {usuario.papel === 'GARCOM' && <MeuDia />}
 
       <section aria-labelledby="titulo-chamados">
         <h2 id="titulo-chamados">Chamados</h2>
@@ -99,23 +119,32 @@ export default function Inicio({ usuario }: { usuario: UsuarioEquipe }) {
               <li key={m.token}>
                 <button type="button" className="mesa-cartao" onClick={() => navegar(`/mesa/${encodeURIComponent(m.token)}`)}>
                   <span className="mesa-numero">{`Mesa ${m.numero}`}</span>
-                  {m.pendentes > 0 && <span className="selo selo--alerta">{`${m.pendentes} aguardando`}</span>}
+                  <span className="mesa-selos">
+                    {m.prontos > 0 && (
+                      <span className="selo selo--sucesso">{`${m.prontos} ${m.prontos === 1 ? 'pronto' : 'prontos'}`}</span>
+                    )}
+                    {m.pendentes > 0 && <span className="selo selo--alerta">{`${m.pendentes} aguardando`}</span>}
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
         )}
       </section>
+      </>
+      )}
 
       <div className="inicio-acoes">
-        {suportaNfc() && (
+        {!dono && suportaNfc() && (
           <button type="button" className="botao botao--secundario" disabled={lendo} onClick={ler}>
             {lendo ? 'Encoste na etiqueta…' : '📡 Ler etiqueta'}
           </button>
         )}
-        <button type="button" className="botao botao--secundario" onClick={() => navegar('/mesas')}>
-          Todas as mesas
-        </button>
+        {!dono && (
+          <button type="button" className="botao botao--secundario" onClick={() => navegar('/mesas')}>
+            Todas as mesas
+          </button>
+        )}
       </div>
       {erroNfc && (
         <p className="erro" role="alert">

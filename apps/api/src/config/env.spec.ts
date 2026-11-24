@@ -31,6 +31,13 @@ describe('validarEnv', () => {
     ).toBe(0);
   });
 
+  it('verificação da central padrão 30000 ms e aceita 0', () => {
+    expect(validarEnv(BASE).CENTRAL_VERIFICAR_MS).toBe(30000);
+    expect(
+      validarEnv({ ...BASE, CENTRAL_VERIFICAR_MS: '0' }).CENTRAL_VERIFICAR_MS,
+    ).toBe(0);
+  });
+
   it('VAPID vazio (como no .env.example) conta como ausente', () => {
     const env = validarEnv({ ...BASE, VAPID_PUBLICA: '', VAPID_PRIVADA: '' });
     expect(env.VAPID_PUBLICA).toBeUndefined();

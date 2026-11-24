@@ -4,11 +4,15 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CardapioPublicoModule } from './cardapio-publico/cardapio-publico.module';
 import { CarrinhoModule } from './carrinho/carrinho.module';
 import { ChamadosModule } from './chamados/chamados.module';
+import { ContaModule } from './conta/conta.module';
 import { validarEnv } from './config/env';
 import { EquipeModule } from './equipe/equipe.module';
+import { EstoqueModule } from './estoque/estoque.module';
 import { EventosModule } from './eventos/eventos.module';
 import { HealthModule } from './health/health.module';
+import { PaineisModule } from './paineis/paineis.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProducaoModule } from './producao/producao.module';
 import { PushModule } from './push/push.module';
 import { RodadasModule } from './rodadas/rodadas.module';
 import { SessaoMesaModule } from './sessao-mesa/sessao-mesa.module';
@@ -20,6 +24,7 @@ import { TempoRealModule } from './tempo-real/tempo-real.module';
     EventEmitterModule.forRoot(),
     PrismaModule,
     EventosModule,
+    PaineisModule,
     TempoRealModule,
     HealthModule,
     CardapioPublicoModule,
@@ -28,7 +33,10 @@ import { TempoRealModule } from './tempo-real/tempo-real.module';
     CarrinhoModule,
     ChamadosModule,
     RodadasModule,
+    EstoqueModule,
     PushModule,
+    ProducaoModule,
+    ContaModule,
   ],
 })
 export class AppModule {}

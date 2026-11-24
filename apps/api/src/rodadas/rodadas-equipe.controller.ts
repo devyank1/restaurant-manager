@@ -69,6 +69,24 @@ export class RodadasEquipeController {
     return this.rodadas.confirmar(id, usuario);
   }
 
+  @Post('cancelar')
+  @HttpCode(200)
+  cancelar(
+    @Param('id') id: string,
+    @UsuarioAtual() usuario: UsuarioToken,
+  ): Promise<RodadaEquipe> {
+    return this.rodadas.cancelar(id, usuario);
+  }
+
+  @Post('entregar')
+  @HttpCode(200)
+  entregar(
+    @Param('id') id: string,
+    @UsuarioAtual() usuario: UsuarioToken,
+  ): Promise<RodadaEquipe> {
+    return this.rodadas.entregar(id, usuario);
+  }
+
   @Post('recusar')
   @HttpCode(200)
   recusar(

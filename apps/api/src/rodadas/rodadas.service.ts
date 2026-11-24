@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { CarrinhoService } from '../carrinho/carrinho.service';
 import { ChamadosService } from '../chamados/chamados.service';
+import { AvisosEstoqueService } from '../estoque/avisos-estoque.service';
+import { baixarRodada } from '../estoque/baixa';
 import { EventosService } from '../eventos/eventos.service';
 import { COM_OPCOES } from '../pedidos/pratos';
 import { precoUnitario, resumirOpcoes, Selecao } from '../pedidos/preco';
@@ -14,6 +16,7 @@ import { travarMesa } from '../sessao-mesa/trava';
 import { TempoRealService } from '../tempo-real/tempo-real.service';
 import { paraPublica, somarConfirmadas } from './mapear';
 import { COM_ITENS, RodadaPublica, RodadasDaMesa } from './rodadas.types';
+import { tempoEsperadoDe } from '../paineis/tempo-esperado';
 
 /** Lado do cliente: enviar o carrinho como rodada e ver as rodadas. */
 @Injectable()
@@ -24,6 +27,7 @@ export class RodadasService {
     private readonly chamados: ChamadosService,
     private readonly eventos: EventosService,
     private readonly tempoReal: TempoRealService,
+    private readonly avisosEstoque: AvisosEstoqueService,
   ) {}
 
   async listar(sessaoId: string): Promise<RodadasDaMesa> {
@@ -80,7 +84,9 @@ export class RodadasService {
       const dispositivo = await tx.dispositivoSessao.findUniqueOrThrow({
         where: { id: p.dispositivo.id },
       });
-      const precisaConfirmar = !sessao.garcomId || !dispositivo.confirmado;
+      const restaurante = await tx.restaurante.findUniqueOrThrow({
+        where: { id: p.restauranteId },
+      });
       const agora = new Date();
 
       const congelados = itens.map((item) => {
@@ -95,8 +101,21 @@ export class RodadasService {
           observacao: item.observacao,
           quantidade: item.quantidade,
           precoUnitarioCentavos: precoUnitario(prato, selecao),
+          estacao: prato.categoria.estacao,
+          tempoEsperadoMin: tempoEsperadoDe(prato),
         };
       });
+      const total = congelados.reduce(
+        (soma, i) => soma + i.precoUnitarioCentavos * i.quantidade,
+        0,
+      );
+      const limite = restaurante.limiteConfirmacaoCentavos;
+      // Exceções [spec §5.5]: acima do limite ou prato que exige confirmação.
+      const precisaConfirmar =
+        !sessao.garcomId ||
+        !dispositivo.confirmado ||
+        (limite !== null && total > limite) ||
+        pratos.some((prato) => prato.exigeConfirmacao);
       const rodada = await tx.rodada.create({
         data: {
           restauranteId: p.restauranteId,
@@ -104,14 +123,17 @@ export class RodadasService {
           dispositivoId: p.dispositivo.dispositivoId,
           status: precisaConfirmar ? 'AGUARDANDO_GARCOM' : 'CONFIRMADA',
           confirmadaEm: precisaConfirmar ? null : agora,
-          totalCentavos: congelados.reduce(
-            (soma, i) => soma + i.precoUnitarioCentavos * i.quantidade,
-            0,
-          ),
+          direta: !precisaConfirmar,
+          // Crédito do valor vendido: o responsável pela mesa na confirmação.
+          garcomId: precisaConfirmar ? null : sessao.garcomId,
+          totalCentavos: total,
           itens: { create: congelados },
         },
         include: COM_ITENS,
       });
+      const estoque = precisaConfirmar
+        ? []
+        : await baixarRodada(tx, p.restauranteId, rodada.id, null);
       // Só os itens lidos: algo adicionado agora fica para a próxima rodada.
       await tx.itemCarrinho.deleteMany({
         where: { id: { in: itens.map((i) => i.id) } },
@@ -131,6 +153,7 @@ export class RodadasService {
         rodada,
         chamado,
         garcomId: sessao.garcomId,
+        estoque,
       };
     });
 
@@ -143,7 +166,8 @@ export class RodadasService {
       });
     }
 
-    const { rodada, chamado, garcomId } = resultado;
+    const { rodada, chamado, garcomId, estoque } = resultado;
+    this.avisosEstoque.soltar(p.restauranteId, estoque);
     const dados = {
       rodadaId: rodada.id,
       sessaoId: p.sessao.id,
@@ -161,9 +185,11 @@ export class RodadasService {
       await this.eventos.publicar({
         restauranteId: p.restauranteId,
         tipo: 'PedidoConfirmado',
-        dados,
+        dados: { ...dados, direto: true, garcomId },
       });
       if (garcomId) this.tempoReal.paraGarcom(garcomId, 'chamados-mudaram', {});
+      // Foi direto: a tela da produção precisa buscar já (e tocar o bipe).
+      this.tempoReal.paraEquipe(p.restauranteId, 'producao-mudou', {});
     }
     this.tempoReal.paraSessao(p.sessao.id, 'rodadas-mudaram', {});
     this.tempoReal.paraEquipe(p.restauranteId, 'mesa-mudou', {

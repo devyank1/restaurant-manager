@@ -1,0 +1,256 @@
+/* Painéis e metas: barra neutra abaixo da meta, verde quando bate. */
+.barra-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  min-width: 0;
+}
+
+.barra-meta-topo {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e-2);
+  font-size: var(--t-sm);
+  color: var(--texto-suave);
+}
+
+.barra-meta-rotulo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.barra-meta-trilho {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.barra-meta-cheio {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--texto-suave);
+  transition: width 0.4s ease;
+}
+
+.barra-meta--batida .barra-meta-cheio {
+  background: var(--sucesso);
+}
+
+.barra-meta-texto {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--texto);
+}
+
+.barra-meta-batida {
+  color: var(--sucesso);
+}
+
+.comemoracao {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-2);
+  margin: 0 0 var(--e-3);
+  padding: var(--e-3);
+  border: 1px solid var(--sucesso);
+  border-radius: 12px;
+  background: var(--sucesso-fundo);
+  color: var(--texto);
+  font-size: var(--t-md);
+  font-weight: 700;
+}
+
+.comemoracao p {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Painel da equipe (Início do dono) */
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  margin: var(--e-3) 0;
+  min-width: 0;
+}
+
+/* Vence o espaçamento dos títulos do início. */
+.painel .bloco-painel h2 {
+  margin: 0;
+}
+
+.bloco-painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding: var(--e-4);
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  background: var(--superficie);
+  min-width: 0;
+}
+
+.bloco-painel h2,
+.bloco-painel h3 {
+  margin: 0;
+}
+
+.bloco-painel h3 {
+  margin-top: var(--e-2);
+  font-size: var(--t-md);
+}
+
+.bloco-painel--meta {
+  border-color: var(--texto-apagado);
+}
+
+.atalhos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--e-2);
+}
+
+.atalhos .botao {
+  min-width: 0;
+  white-space: normal;
+}
+
+.atalhos .botao:first-child {
+  grid-column: 1 / -1;
+}
+
+.link-botao {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--info);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.cartoes-pessoas {
+  display: grid;
+  gap: var(--e-3);
+}
+
+.cartao-pessoa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  padding: var(--e-3);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: var(--superficie-2);
+  min-width: 0;
+}
+
+.cartao-pessoa h3 {
+  margin: 0;
+  font-size: var(--t-lg);
+}
+
+.cartao-pessoa-turno {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--texto-suave);
+}
+
+/* Cuidado com a pessoa: amarelo informativo, nunca vermelho. */
+.aviso-cuidado {
+  margin: 0;
+  padding: var(--e-2) var(--e-3);
+  border-radius: 8px;
+  background: var(--alerta-fundo);
+  color: var(--alerta);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.numeros-grandes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--e-2);
+  margin: 0;
+}
+
+.numeros-grandes div {
+  min-width: 0;
+}
+
+.numeros-grandes dt {
+  font-size: var(--t-xs);
+  color: var(--texto-suave);
+}
+
+.numeros-grandes dd {
+  margin: 0;
+  font-size: var(--t-md);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.barras {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barras-linha {
+  display: grid;
+  grid-template-columns: 3.5em minmax(0, 1fr) 3em;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-sm);
+}
+
+.barras-trilho {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.barras-cheio {
+  display: block;
+  height: 100%;
+  background: var(--info);
+}
+
+.barras-valor {
+  text-align: right;
+  color: var(--texto-suave);
+}
+
+.lista-numerada,
+.lista-simples {
+  margin: 0;
+  padding-left: var(--e-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  overflow-wrap: anywhere;
+}
+
+.lista-simples {
+  list-style: none;
+  padding-left: 0;
+}
+
+.titulo-painel {
+  margin: 0;
+  font-size: var(--t-lg);
+}

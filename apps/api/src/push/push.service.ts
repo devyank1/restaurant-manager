@@ -13,6 +13,34 @@ const CORPO_POR_TIPO = {
   CONFIRMAR_RODADA: 'Novo pedido para confirmar',
 } as const;
 
+type MesaPush = { numero: number; token: string };
+
+/** Rodada foi direto para a produção: o garçom pode cancelar na janela. */
+export function mensagemPedidoDireto(
+  mesa: MesaPush,
+  janelaSegundos: number,
+): MensagemPush {
+  const minutos = Math.max(1, Math.round(janelaSegundos / 60));
+  return {
+    titulo: `Mesa ${mesa.numero}`,
+    corpo: `Novo pedido na produção. Dá para cancelar em ${minutos} min`,
+    url: `/mesa/${mesa.token}`,
+  };
+}
+
+/** Uma estação terminou a parte dela na rodada. */
+export function mensagemEstacaoPronta(
+  mesa: MesaPush,
+  estacao: string,
+  itens: number,
+): MensagemPush {
+  return {
+    titulo: `Mesa ${mesa.numero}`,
+    corpo: `Pronto (${estacao}): ${itens} ${itens === 1 ? 'item' : 'itens'}`,
+    url: `/mesa/${mesa.token}`,
+  };
+}
+
 /** Push para o celular da equipe. Falha de push nunca derruba requisição. */
 @Injectable()
 export class PushService {
@@ -94,7 +122,7 @@ export class PushService {
     );
   }
 
-  /** Garçom atribuído; se paraTodos, todos em turno + o dono. */
+  /** Garçom atribuído; se paraTodos, todos os garçons em turno (o dono não cuida do salão). */
   async notificarChamado(chamadoId: string): Promise<void> {
     const chamado = await this.prisma.chamado.findUnique({
       where: { id: chamadoId },
@@ -107,7 +135,8 @@ export class PushService {
       const usuarios = await this.prisma.usuario.findMany({
         where: {
           restauranteId: chamado.restauranteId,
-          OR: [{ papel: 'GARCOM', emTurno: true }, { papel: 'DONO' }],
+          papel: 'GARCOM',
+          emTurno: true,
         },
         select: { id: true },
       });
@@ -122,5 +151,65 @@ export class PushService {
       corpo: CORPO_POR_TIPO[chamado.tipo],
       url: `/mesa/${chamado.mesa.token}`,
     });
+  }
+
+  /** Todos os gerentes (DONO) do restaurante: avisos de estoque. */
+  async notificarGerentes(
+    restauranteId: string,
+    msg: MensagemPush,
+  ): Promise<void> {
+    const gerentes = await this.prisma.usuario.findMany({
+      where: { restauranteId, papel: 'DONO' },
+      select: { id: true },
+    });
+    if (gerentes.length === 0) return;
+    await this.enviarPara(
+      gerentes.map((g) => g.id),
+      msg,
+    );
+  }
+
+  /** Garçom responsável pela mesa da rodada (nada se a mesa não tem). */
+  private async garcomDaRodada(rodadaId: string) {
+    const rodada = await this.prisma.rodada.findUnique({
+      where: { id: rodadaId },
+      include: {
+        sessao: {
+          select: {
+            garcomId: true,
+            mesa: { select: { numero: true, token: true } },
+            restaurante: { select: { janelaCancelamentoSegundos: true } },
+          },
+        },
+      },
+    });
+    if (!rodada?.sessao.garcomId) return null;
+    const { mesa, restaurante } = rodada.sessao;
+    return { garcomId: rodada.sessao.garcomId, mesa, restaurante };
+  }
+
+  async notificarPedidoDireto(rodadaId: string): Promise<void> {
+    const alvo = await this.garcomDaRodada(rodadaId);
+    if (!alvo) return;
+    await this.enviar(
+      alvo.garcomId,
+      mensagemPedidoDireto(
+        alvo.mesa,
+        alvo.restaurante.janelaCancelamentoSegundos,
+      ),
+    );
+  }
+
+  async notificarEstacaoPronta(pronta: {
+    rodadaId: string;
+    estacao: string;
+    itens: number;
+  }): Promise<void> {
+    const alvo = await this.garcomDaRodada(pronta.rodadaId);
+    if (!alvo) return;
+    await this.enviar(
+      alvo.garcomId,
+      mensagemEstacaoPronta(alvo.mesa, pronta.estacao, pronta.itens),
+    );
   }
 }

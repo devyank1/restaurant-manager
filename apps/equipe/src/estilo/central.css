@@ -1,0 +1,248 @@
+/* Central do dono: alertas, carga e contexto. Sem vermelho: pessoas não são julgadas. */
+.central {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: 0 var(--e-4) var(--e-5);
+}
+
+.central-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-2);
+}
+
+.central-topo h1 {
+  margin: 0;
+  font-size: var(--t-xl);
+}
+
+.central-hora {
+  font-size: var(--t-sm);
+  color: var(--texto-suave);
+}
+
+.central-erro {
+  margin: 0;
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--raio);
+  background: var(--alerta-fundo);
+  color: var(--alerta);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.central-ok {
+  margin: 0;
+}
+
+.alertas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alerta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  border-left: 4px solid var(--info);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.alerta--alta {
+  border-left-color: var(--destaque);
+}
+
+.alerta--media {
+  border-left-color: var(--alerta);
+}
+
+.alerta--baixa {
+  border-left-color: var(--info);
+}
+
+.alerta-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  min-width: 0;
+}
+
+.alerta-rotulo {
+  font-size: var(--t-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.alerta--alta .alerta-rotulo {
+  color: var(--destaque);
+}
+
+.alerta--media .alerta-rotulo {
+  color: var(--alerta);
+}
+
+.alerta--baixa .alerta-rotulo {
+  color: var(--info);
+}
+
+.alerta-detalhe,
+.alerta-tempo {
+  font-size: var(--t-sm);
+  color: var(--texto-suave);
+  overflow-wrap: anywhere;
+}
+
+.bloco-central {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding: var(--e-4);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.bloco-central h2,
+.bloco-central h3 {
+  margin: 0;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  color: var(--texto-apagado);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.central-resumo {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--texto-suave);
+}
+
+.cartoes-carga {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carga-cartao {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--e-1);
+  width: 100%;
+  min-width: 0;
+  padding: var(--e-3);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie-2);
+  text-align: left;
+}
+
+.carga-cartao--fixo {
+  width: auto;
+}
+
+.carga-nome {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.carga-sub,
+.carga-faixa {
+  font-size: var(--t-sm);
+  color: var(--texto-suave);
+}
+
+.carga-trilho {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--fundo);
+  overflow: hidden;
+}
+
+.carga-cheio {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--info);
+}
+
+.por-hora {
+  margin: 0;
+}
+
+.por-hora-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.por-hora-eixo {
+  stroke: var(--borda);
+  stroke-width: 1;
+}
+
+.por-hora-rotulo {
+  fill: var(--texto-apagado);
+  font-size: var(--t-xs);
+}
+
+.por-hora-hoje {
+  stroke: var(--info);
+  stroke-width: 2;
+}
+
+.por-hora-media {
+  stroke: var(--texto-suave);
+  stroke-width: 2;
+}
+
+.por-hora-legenda {
+  display: flex;
+  gap: var(--e-4);
+  margin-top: var(--e-2);
+  font-size: var(--t-xs);
+  color: var(--texto-suave);
+}
+
+.legenda::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  margin-right: var(--e-1);
+  vertical-align: middle;
+  border-top: 2px solid var(--info);
+}
+
+.legenda--media::before {
+  border-top: 2px dashed var(--texto-suave);
+}
+
+.central-atalhos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--e-2);
+}
+
+.central-atalhos .botao {
+  min-width: 0;
+  white-space: normal;
+}
+
+.central-atalhos .botao:first-child {
+  grid-column: 1 / -1;
+}

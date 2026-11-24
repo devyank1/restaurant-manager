@@ -1,9 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
+import type { MetaBatida } from '../api/tipos'
 
 export type AoMudarEquipe = {
   chamados?: () => void
   mesas?: () => void
+  producao?: () => void
+  estoque?: () => void
+  painel?: () => void
+  central?: () => void
+  metaBatida?: (dados: MetaBatida) => void
 }
 
 /**
@@ -24,11 +30,20 @@ export function useEquipeAoVivo(aoMudar: AoMudarEquipe): void {
     const recarregar = () => {
       atual.current.chamados?.()
       atual.current.mesas?.()
+      atual.current.producao?.()
+      atual.current.estoque?.()
+      atual.current.painel?.()
+      atual.current.central?.()
     }
     const socket = io({ transports: ['websocket', 'polling'] })
     socket.on('connect', recarregar)
     socket.on('chamados-mudaram', () => atual.current.chamados?.())
     socket.on('mesa-mudou', () => atual.current.mesas?.())
+    socket.on('producao-mudou', () => atual.current.producao?.())
+    socket.on('estoque-mudou', () => atual.current.estoque?.())
+    socket.on('painel-mudou', () => atual.current.painel?.())
+    socket.on('central-mudou', () => atual.current.central?.())
+    socket.on('meta-batida', (dados) => atual.current.metaBatida?.(dados as MetaBatida))
 
     const reconectar = () => {
       socket.disconnect()

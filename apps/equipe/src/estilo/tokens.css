@@ -1,18 +1,63 @@
+/*
+ * Tokens do app da equipe: tema escuro, cores por significado, escala de texto.
+ * Regra: telas usam só estes nomes (nada de cor ou tamanho solto no CSS).
+ */
 :root {
-  --fundo: #0f0f10;
-  --superficie: #1f1f22;
-  --texto: #ffffff;
-  --texto-suave: #999999;
-  --texto-apagado: #777777;
-  --destaque: #ff5a1f;
-  --preco: #4ade80;
-  --preco-fundo: #052e12;
-  --selo: #facc15;
+  /* Superfícies */
+  --fundo: #0e0e10;
+  --superficie: #1a1a1e;
+  --superficie-2: #25252b;
+  --borda: #2e2e35;
+
+  /* Texto */
+  --texto: #f5f5f7;
+  --texto-suave: #a1a1aa;
+  --texto-apagado: #71717a;
+
+  /* Cores com significado (cor forte + fundo discreto) */
+  --destaque: #ff5a1f; /* marca: ação principal, chamado novo */
+  --destaque-fundo: rgba(255, 90, 31, 0.14);
+  --sucesso: #4ade80; /* confirmar, em turno, atendido */
+  --sucesso-fundo: rgba(74, 222, 128, 0.12);
+  --sucesso-escuro: #04210d; /* texto sobre botão verde */
+  --alerta: #facc15; /* aguardando, observação, atenção */
+  --alerta-fundo: rgba(250, 204, 21, 0.12);
+  --perigo: #f87171; /* recusar, remover, erro */
+  --perigo-fundo: rgba(248, 113, 113, 0.12);
+  --info: #60a5fa;
+  --info-fundo: rgba(96, 165, 250, 0.12);
+
+  /* Nomes antigos (usados pelo seletor de opções compartilhado) */
+  --preco: var(--sucesso);
+  --preco-fundo: var(--sucesso-fundo);
+  --selo: var(--alerta);
   --selo-video: #ff3d54;
-  --raio: 14px;
-  --raio-grande: 20px;
+
+  /* Escala de texto: só estes tamanhos */
+  --t-xs: 12px; /* selos, legendas */
+  --t-sm: 14px; /* texto de apoio, avisos */
+  --t-md: 16px; /* texto normal, botões */
+  --t-lg: 18px; /* nome da mesa, totais */
+  --t-xl: 22px; /* título de tela */
+  --t-2xl: 30px; /* login */
+
+  /* Espaços e cantos */
+  --e-1: 4px;
+  --e-2: 8px;
+  --e-3: 12px;
+  --e-4: 16px;
+  --e-5: 24px;
+  --raio-pequeno: 8px;
+  --raio: 12px;
+  --raio-grande: 18px;
+  --sombra: 0 8px 24px rgba(0, 0, 0, 0.45);
+
   color-scheme: dark;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--t-md);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -21,9 +66,16 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-button {
+button,
+input,
+textarea {
   font: inherit;
   color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--destaque);
+  outline-offset: 2px;
 }
 
 .aviso-tela {
@@ -32,8 +84,8 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 24px;
+  gap: var(--e-3);
+  padding: var(--e-5);
   text-align: center;
 }
 
@@ -41,6 +93,6 @@ button {
   background: var(--destaque);
   border: 0;
   border-radius: var(--raio);
-  padding: 12px 20px;
+  padding: var(--e-3) var(--e-5);
   font-weight: 700;
 }

@@ -19,6 +19,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "dotenv -e .env.test -- jest --config ./test/jest-e2e.json --runInBand",
     "vapid": "node scripts/gerar-vapid.mjs",
+    "dev:etapa3": "node scripts/dev-etapa3.mjs",
+    "dev:conta": "node scripts/dev-conta.mjs",
+    "dev:estoque": "node scripts/dev-estoque.mjs",
+    "dev:paineis": "node scripts/dev-paineis.mjs",
+    "dev:central": "node scripts/dev-central.mjs",
     "db:seed": "prisma db seed"
   },
   "dependencies": {
@@ -32,6 +37,7 @@
     "@nestjs/websockets": "^11.2.8",
     "@prisma/client": "^6.19.3",
     "cookie-parser": "^1.4.7",
+    "exceljs": "^4.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.4",

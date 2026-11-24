@@ -15,9 +15,9 @@ export function chamado(parcial: Partial<ChamadoEquipe> & { id: string }): Chama
 }
 
 export const mesasDemo: MesaResumo[] = [
-  { numero: 7, token: 'tok7', aberta: true, garcomNome: 'Ana', pendentes: 1 },
-  { numero: 8, token: 'tok8', aberta: true, garcomNome: 'Bruno', pendentes: 0 },
-  { numero: 9, token: 'tok9', aberta: false, garcomNome: null, pendentes: 0 },
+  { numero: 7, token: 'tok7', aberta: true, garcomNome: 'Ana', pendentes: 1, prontos: 0 },
+  { numero: 8, token: 'tok8', aberta: true, garcomNome: 'Bruno', pendentes: 0, prontos: 0 },
+  { numero: 9, token: 'tok9', aberta: false, garcomNome: null, pendentes: 0, prontos: 0 },
 ]
 
 export const pizza: PratoPublico = {
@@ -93,20 +93,42 @@ export const cardapioDemo: CardapioPublico = {
 export function mesa7(): MesaEquipe {
   return {
     mesa: { numero: 7, token: 'tok7' },
+    aberta: true,
+    conta: {
+      servico: { habilitado: true, padrao: true },
+      couvert: { habilitado: true, padrao: false, valorCentavos: 1500 },
+    },
     garcomNome: 'Ana',
     totalConfirmadoCentavos: 2380,
     rodadas: [
       {
         id: 'r0',
         status: 'CONFIRMADA',
+        fase: 'NA_COZINHA',
+        cancelavelAte: null,
         criadoEm: '2026-11-06T20:00:00.000Z',
         totalCentavos: 2380,
         dispositivoNovo: false,
-        itens: [{ id: 'i0', pratoId: 'chopp', nome: 'Chopp 500ml', resumoOpcoes: '', selecao: {}, observacao: '', quantidade: 2, precoUnitarioCentavos: 1190 }],
+        itens: [
+          {
+            id: 'i0',
+            pratoId: 'chopp',
+            nome: 'Chopp 500ml',
+            resumoOpcoes: '',
+            selecao: {},
+            observacao: '',
+            quantidade: 2,
+            precoUnitarioCentavos: 1190,
+            status: 'NA_FILA',
+            estacao: 'Bar',
+          },
+        ],
       },
       {
         id: 'r1',
         status: 'AGUARDANDO_GARCOM',
+        fase: 'AGUARDANDO_GARCOM',
+        cancelavelAte: null,
         criadoEm: '2026-11-06T20:10:00.000Z',
         totalCentavos: 7790,
         dispositivoNovo: true,
@@ -120,6 +142,8 @@ export function mesa7(): MesaEquipe {
             observacao: 'sem cebola',
             quantidade: 1,
             precoUnitarioCentavos: 7790,
+            status: 'NA_FILA',
+            estacao: 'Cozinha',
           },
         ],
       },

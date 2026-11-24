@@ -17,9 +17,6 @@ export default function TodasMesas() {
   return (
     <main className="todas-mesas">
       <div className="barra-titulo">
-        <button type="button" className="voltar" onClick={() => navegar('/')}>
-          ‹ Início
-        </button>
         <h2>Todas as mesas</h2>
       </div>
       {mesas === null ? (

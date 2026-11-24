@@ -129,7 +129,7 @@ export default function RodadaPendente({
           </button>
           <button
             type="button"
-            className="botao botao--primario"
+            className="botao botao--sucesso"
             disabled={ocupado || rodada.itens.length === 0}
             onClick={() => agir(() => confirmarRodada(rodada.id))}
           >

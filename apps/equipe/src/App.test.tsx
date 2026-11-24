@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { ana, criarApiFalsa, type ApiFalsa } from './test/api-falsa'
+import { ana, criarApiFalsa, dani, type ApiFalsa } from './test/api-falsa'
+import { carla } from './test/estoque-fixtures'
 
 async function entrar(senha = 'demo1234') {
   await userEvent.type(await screen.findByLabelText('E-mail'), 'ana@demo.com')
@@ -44,6 +45,29 @@ describe('App da equipe', () => {
     expect(await screen.findByText('E-mail ou senha inválidos')).toBeInTheDocument()
   })
 
+  it('cozinha logada cai na produção, sem interruptor de turno', async () => {
+    api.estado.usuario = { ...dani }
+    api.estado.producao = { Cozinha: [] }
+    render(<App />)
+    expect(await screen.findByRole('button', { name: 'Cozinha' })).toBeInTheDocument()
+    expect(screen.getByText('Dani')).toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: 'Em turno' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Chamados')).not.toBeInTheDocument()
+  })
+
+  it('cozinha abre Hoje pela produção e volta pelo topo', async () => {
+    api.estado.usuario = { ...dani }
+    api.estado.producao = { Cozinha: [] }
+    render(<App />)
+    expect(screen.queryByRole('button', { name: 'Voltar' })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Hoje' }))
+    expect(window.location.pathname).toBe('/hoje/Cozinha')
+    expect(await screen.findByText('Pedidos hoje: 0')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(window.location.pathname).toBe('/')
+    expect(await screen.findByRole('button', { name: 'Cozinha' })).toBeInTheDocument()
+  })
+
   it('sessão aberta vai direto para o início', async () => {
     api.estado.usuario = { ...ana }
     render(<App />)
@@ -60,6 +84,83 @@ describe('App da equipe', () => {
     expect(await screen.findByRole('button', { name: 'Entrar' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/login')
     expect(new URLSearchParams(window.location.search).get('volta')).toBe('/mesas')
+  })
+
+  it('dono não abre mesas nem produção: cai no início', async () => {
+    api.estado.usuario = { ...carla }
+    window.history.replaceState({}, '', '/mesas')
+    const { unmount } = render(<App />)
+    expect(await screen.findByRole('button', { name: 'Estoque' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Todas as mesas' })).not.toBeInTheDocument()
+    unmount()
+    window.history.replaceState({}, '', '/producao')
+    render(<App />)
+    expect(await screen.findByRole('button', { name: 'Estoque' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cozinha' })).not.toBeInTheDocument()
+  })
+
+  it('dono vê a Central em / e o início antigo em /dia', async () => {
+    api.estado.usuario = { ...carla }
+    window.history.replaceState({}, '', '/')
+    const { unmount } = render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Agora' })).toBeInTheDocument()
+    unmount()
+    window.history.replaceState({}, '', '/dia')
+    render(<App />)
+    expect(await screen.findByRole('button', { name: /^Estoque/ })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Agora' })).not.toBeInTheDocument()
+  })
+
+  it('dono abre os limites e o detalhe do garçom', async () => {
+    api.estado.usuario = { ...carla }
+    window.history.replaceState({}, '', '/limites')
+    const { unmount } = render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Limites dos alertas' })).toBeInTheDocument()
+    unmount()
+    api.uma('GET', /central\/garcom\/u-ana$/, () => ({
+      status: 200,
+      corpo: {
+        id: 'u-ana',
+        nome: 'Ana',
+        emTurno: false,
+        emTurnoDesde: null,
+        horasEmTurno: null,
+        mesasAbertas: [],
+        chamadosPendentes: [],
+      },
+    }))
+    window.history.replaceState({}, '', '/central/garcom/u-ana')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Ana' })).toBeInTheDocument()
+    expect(screen.getByText('Fora de turno')).toBeInTheDocument()
+  })
+
+  it('dono não tem interruptor de turno', async () => {
+    api.estado.usuario = { ...carla }
+    window.history.replaceState({}, '', '/')
+    render(<App />)
+    expect(await screen.findByRole('button', { name: 'Estoque' })).toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: 'Em turno' })).not.toBeInTheDocument()
+  })
+
+  it('Voltar no topo leva para a tela de cima; no início não aparece', async () => {
+    api.estado.usuario = { ...carla }
+    window.history.replaceState({}, '', '/estoque/itens')
+    render(<App />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Voltar' }))
+    expect(window.location.pathname).toBe('/estoque')
+    await userEvent.click(await screen.findByRole('button', { name: 'Voltar' }))
+    expect(window.location.pathname).toBe('/')
+    expect(await screen.findByRole('button', { name: 'Estoque' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Voltar' })).not.toBeInTheDocument()
+  })
+
+  it('garçom tem Voltar na lista de mesas', async () => {
+    api.estado.usuario = { ...ana }
+    window.history.replaceState({}, '', '/mesas')
+    render(<App />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Voltar' }))
+    expect(window.location.pathname).toBe('/')
   })
 
   it('Sair encerra a sessão e volta ao login', async () => {

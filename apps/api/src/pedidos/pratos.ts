@@ -7,6 +7,7 @@ export const COM_OPCOES = {
     orderBy: { ordem: 'asc' },
     include: { opcoes: { orderBy: { ordem: 'asc' } } },
   },
+  categoria: { select: { estacao: true, tempoPreparoMin: true } },
 } satisfies Prisma.PratoInclude;
 
 export type PratoComOpcoes = Prisma.PratoGetPayload<{

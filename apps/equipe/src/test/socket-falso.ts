@@ -34,6 +34,11 @@ export class SocketFalso {
     return this
   }
 
+  /** Conectado e com alguém ouvindo `evento` (o efeito da tela já rodou). */
+  ouve(evento: string) {
+    return !this.desconectado && (this.ouvintes.get(evento)?.length ?? 0) > 0
+  }
+
   /** Simula um evento vindo do servidor (inclui `connect`). */
   servidor(evento: string, dados?: unknown) {
     for (const ouvinte of this.ouvintes.get(evento) ?? []) ouvinte(dados)

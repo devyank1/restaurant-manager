@@ -34,150 +34,154 @@ const EQUIPE: { nome: string; email: string; papel: PapelUsuario }[] = [
   { nome: 'Ana', email: 'ana@demo.com', papel: 'GARCOM' },
   { nome: 'Bruno', email: 'bruno@demo.com', papel: 'GARCOM' },
   { nome: 'Carla', email: 'dono@demo.com', papel: 'DONO' },
+  { nome: 'Dani', email: 'cozinha@demo.com', papel: 'COZINHA' },
 ];
 
-const CARDAPIO: { categoria: string; pratos: PratoSeed[] }[] = [
-  {
-    categoria: 'Entradas',
-    pratos: [
-      {
-        nome: 'Mix da Casa',
-        video: 'mix-da-casa',
-        descricao:
-          'Bolinho de costela, mini coxinha, torresmo, isca de tilápia e mandioca frita.',
-        precoCentavos: 6990,
-        precoPromocionalCentavos: 5990,
-        destaque: true,
-      },
-      {
-        nome: 'Bruschetta Clássica',
-        video: 'bruschetta-classica',
-        descricao: 'Pão italiano, tomate, manjericão fresco e azeite.',
-        precoCentavos: 3290,
-      },
-      {
-        nome: 'Pastel de Carne Seca',
-        video: 'pastel-de-carne-seca',
-        descricao: 'Seis unidades com catupiry.',
-        precoCentavos: 3890,
-        esgotado: true,
-      },
-    ],
-  },
-  {
-    categoria: 'Pizzas',
-    pratos: [
-      {
-        nome: 'Pizza Margherita',
-        video: 'pizza-margherita',
-        descricao: 'Molho de tomate, muçarela de búfala e manjericão.',
-        // Preço definido pelo tamanho escolhido.
-        precoCentavos: 0,
-        destaque: true,
-        grupos: [
-          {
-            nome: 'Tamanho',
-            tipo: TipoGrupoOpcao.UNICA,
-            obrigatorio: true,
-            min: 1,
-            max: 1,
-            opcoes: [
-              { nome: 'P', precoCentavos: 4990 },
-              { nome: 'M', precoCentavos: 6990 },
-              { nome: 'G', precoCentavos: 8990 },
-            ],
-          },
-          {
-            nome: 'Sabores',
-            tipo: TipoGrupoOpcao.SABORES,
-            obrigatorio: true,
-            min: 1,
-            max: 2,
-            opcoes: [
-              { nome: 'Margherita', precoCentavos: 0 },
-              { nome: 'Calabresa', precoCentavos: 0 },
-              { nome: 'Quatro Queijos', precoCentavos: 1000 },
-            ],
-          },
-          {
-            nome: 'Adicionais',
-            tipo: TipoGrupoOpcao.MULTIPLA,
-            obrigatorio: false,
-            min: 0,
-            max: 3,
-            opcoes: [
-              { nome: 'Borda recheada', precoCentavos: 1200 },
-              { nome: 'Bacon', precoCentavos: 800 },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    categoria: 'Pratos',
-    pratos: [
-      {
-        nome: 'Parmegiana da Casa',
-        video: 'parmegiana-da-casa',
-        descricao: 'Filé empanado, molho de tomate, muçarela, arroz e fritas.',
-        precoCentavos: 7490,
-      },
-      {
-        nome: 'Risoto de Cogumelos',
-        descricao: 'Arroz arbóreo, shiitake, shimeji e parmesão.',
-        precoCentavos: 6890,
-      },
-      {
-        nome: 'Picanha na Chapa',
-        video: 'picanha-na-chapa',
-        descricao: 'Picanha fatiada, farofa, vinagrete e arroz.',
-        precoCentavos: 9890,
-        precoPromocionalCentavos: 8990,
-      },
-    ],
-  },
-  {
-    categoria: 'Bebidas',
-    pratos: [
-      {
-        nome: 'Chopp 500ml',
-        video: 'chopp-500ml',
-        descricao: 'Pilsen gelado.',
-        precoCentavos: 1490,
-        precoPromocionalCentavos: 1190,
-      },
-      {
-        nome: 'Suco Natural',
-        video: 'suco-natural',
-        descricao: 'Laranja, limão ou abacaxi com hortelã.',
-        precoCentavos: 990,
-      },
-      {
-        nome: 'Refrigerante Lata',
-        video: 'refrigerante-lata',
-        descricao: '350ml.',
-        precoCentavos: 690,
-      },
-    ],
-  },
-  {
-    categoria: 'Sobremesas',
-    pratos: [
-      {
-        nome: 'Petit Gâteau',
-        video: 'petit-gateau',
-        descricao: 'Bolo quente de chocolate com sorvete de creme.',
-        precoCentavos: 2890,
-      },
-      {
-        nome: 'Pudim de Leite',
-        descricao: 'Receita da casa.',
-        precoCentavos: 1690,
-      },
-    ],
-  },
-];
+const CARDAPIO: { categoria: string; estacao?: string; pratos: PratoSeed[] }[] =
+  [
+    {
+      categoria: 'Entradas',
+      pratos: [
+        {
+          nome: 'Mix da Casa',
+          video: 'mix-da-casa',
+          descricao:
+            'Bolinho de costela, mini coxinha, torresmo, isca de tilápia e mandioca frita.',
+          precoCentavos: 6990,
+          precoPromocionalCentavos: 5990,
+          destaque: true,
+        },
+        {
+          nome: 'Bruschetta Clássica',
+          video: 'bruschetta-classica',
+          descricao: 'Pão italiano, tomate, manjericão fresco e azeite.',
+          precoCentavos: 3290,
+        },
+        {
+          nome: 'Pastel de Carne Seca',
+          video: 'pastel-de-carne-seca',
+          descricao: 'Seis unidades com catupiry.',
+          precoCentavos: 3890,
+          esgotado: true,
+        },
+      ],
+    },
+    {
+      categoria: 'Pizzas',
+      pratos: [
+        {
+          nome: 'Pizza Margherita',
+          video: 'pizza-margherita',
+          descricao: 'Molho de tomate, muçarela de búfala e manjericão.',
+          // Preço definido pelo tamanho escolhido.
+          precoCentavos: 0,
+          destaque: true,
+          grupos: [
+            {
+              nome: 'Tamanho',
+              tipo: TipoGrupoOpcao.UNICA,
+              obrigatorio: true,
+              min: 1,
+              max: 1,
+              opcoes: [
+                { nome: 'P', precoCentavos: 4990 },
+                { nome: 'M', precoCentavos: 6990 },
+                { nome: 'G', precoCentavos: 8990 },
+              ],
+            },
+            {
+              nome: 'Sabores',
+              tipo: TipoGrupoOpcao.SABORES,
+              obrigatorio: true,
+              min: 1,
+              max: 2,
+              opcoes: [
+                { nome: 'Margherita', precoCentavos: 0 },
+                { nome: 'Calabresa', precoCentavos: 0 },
+                { nome: 'Quatro Queijos', precoCentavos: 1000 },
+              ],
+            },
+            {
+              nome: 'Adicionais',
+              tipo: TipoGrupoOpcao.MULTIPLA,
+              obrigatorio: false,
+              min: 0,
+              max: 3,
+              opcoes: [
+                { nome: 'Borda recheada', precoCentavos: 1200 },
+                { nome: 'Bacon', precoCentavos: 800 },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      categoria: 'Pratos',
+      pratos: [
+        {
+          nome: 'Parmegiana da Casa',
+          video: 'parmegiana-da-casa',
+          descricao:
+            'Filé empanado, molho de tomate, muçarela, arroz e fritas.',
+          precoCentavos: 7490,
+        },
+        {
+          nome: 'Risoto de Cogumelos',
+          descricao: 'Arroz arbóreo, shiitake, shimeji e parmesão.',
+          precoCentavos: 6890,
+        },
+        {
+          nome: 'Picanha na Chapa',
+          video: 'picanha-na-chapa',
+          descricao: 'Picanha fatiada, farofa, vinagrete e arroz.',
+          precoCentavos: 9890,
+          precoPromocionalCentavos: 8990,
+        },
+      ],
+    },
+    {
+      categoria: 'Bebidas',
+      estacao: 'Bar',
+      pratos: [
+        {
+          nome: 'Chopp 500ml',
+          video: 'chopp-500ml',
+          descricao: 'Pilsen gelado.',
+          precoCentavos: 1490,
+          precoPromocionalCentavos: 1190,
+        },
+        {
+          nome: 'Suco Natural',
+          video: 'suco-natural',
+          descricao: 'Laranja, limão ou abacaxi com hortelã.',
+          precoCentavos: 990,
+        },
+        {
+          nome: 'Refrigerante Lata',
+          video: 'refrigerante-lata',
+          descricao: '350ml.',
+          precoCentavos: 690,
+        },
+      ],
+    },
+    {
+      categoria: 'Sobremesas',
+      pratos: [
+        {
+          nome: 'Petit Gâteau',
+          video: 'petit-gateau',
+          descricao: 'Bolo quente de chocolate com sorvete de creme.',
+          precoCentavos: 2890,
+        },
+        {
+          nome: 'Pudim de Leite',
+          descricao: 'Receita da casa.',
+          precoCentavos: 1690,
+        },
+      ],
+    },
+  ];
 
 export async function seedDemo(
   prisma: PrismaClient,
@@ -201,6 +205,8 @@ export async function seedDemo(
           wifiSsid: 'Cantina-Clientes',
           wifiSenha: 'bemvindo123',
           googleAvaliacaoUrl: 'https://g.page/r/demo/review',
+          couvertHabilitado: true,
+          couvertCentavos: 1500,
         },
       });
       const restauranteId = restaurante.id;
@@ -215,7 +221,12 @@ export async function seedDemo(
 
       for (const [ordemCategoria, secao] of CARDAPIO.entries()) {
         const categoria = await tx.categoria.create({
-          data: { restauranteId, nome: secao.categoria, ordem: ordemCategoria },
+          data: {
+            restauranteId,
+            nome: secao.categoria,
+            ordem: ordemCategoria,
+            estacao: secao.estacao ?? 'Cozinha',
+          },
         });
 
         for (const [ordemPrato, prato] of secao.pratos.entries()) {

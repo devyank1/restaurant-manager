@@ -18,6 +18,8 @@ export function criarApiFalsa() {
     totalParcialCentavos: 0,
     chamadoAberto: false,
     versao: 0,
+    /** A conta da sessão deste celular foi fechada: 403 CONTA_FECHADA até entrar de novo. */
+    contaFechada: false,
   }
   const desvios: { metodo: string; padrao: RegExp; rota: Rota }[] = []
   let proximoId = 1
@@ -31,7 +33,13 @@ export function criarApiFalsa() {
   const padrao = (metodo: string, caminho: string, corpo: unknown): Resposta => {
     if (caminho === '/api/equipe/eu') return estado.equipe ? { status: 200, corpo: {} } : { status: 401 }
     const mesa = /^\/api\/publico\/mesas\/[^/]+\/(.*)$/.exec(caminho)?.[1] ?? ''
-    if (mesa === 'entrar') return { status: 200, corpo: { dispositivoConfirmado: false } }
+    if (mesa === 'entrar') {
+      estado.contaFechada = false
+      return { status: 200, corpo: { dispositivoConfirmado: false } }
+    }
+    if (estado.contaFechada && mesa !== 'cardapio') {
+      return { status: 403, corpo: { mensagem: 'Conta fechada', codigo: 'CONTA_FECHADA' } }
+    }
     if (mesa === 'cardapio') return { status: 200, corpo: cardapioDemo }
     if (mesa === 'carrinho') return { status: 200, corpo: carrinho() }
     if (mesa === 'carrinho/itens' && metodo === 'POST') {
@@ -66,6 +74,7 @@ export function criarApiFalsa() {
       const rodada: RodadaPublica = {
         id: `rodada-${proximoId++}`,
         status: 'AGUARDANDO_GARCOM',
+        fase: 'AGUARDANDO_GARCOM',
         criadoEm: new Date().toISOString(),
         totalCentavos: carrinho().totalCentavos,
         itens: estado.itens.map(({ nome, resumoOpcoes, observacao, quantidade, precoUnitarioCentavos }) => ({
